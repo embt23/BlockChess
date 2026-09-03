@@ -14,7 +14,31 @@ hold your keys and, in the default configuration, never hold your money.
 
 ## Status
 
-Design phase. The specification is being written before the code, in public.
+Episodes 01–03 implemented and green. `perft(6) = 119,060,324` exact.
+
+| Crate | Episode | What it is | Oracle |
+|---|---|---|---|
+| [`bc-hash`](crates/bc-hash) | 01 | SHA-256 & SHA-512 from FIPS 180-4, domain separation, hash chains | FIPS test vectors |
+| [`bc-sig`](crates/bc-sig) | 02 | Ed25519 from scratch — field arithmetic mod 2^255−19, twisted Edwards group law, point compression | RFC 8032 vectors |
+| [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft | published perft counts |
+
+Each crate is checked against an oracle *someone else* published. That is the
+standard for this project: no layer is built on top of rules that have only been
+verified by tests we wrote ourselves.
+
+```sh
+cargo test --workspace                          # fast suite
+cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
+
+cargo run --release --bin perft -- 6            # 119,060,324 nodes
+cargo run --release --bin perft -- divide 3     # per-move breakdown
+```
+
+**`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
+time; it exists to be read. The node will link `ed25519-dalek`.
+
+Bugs found along the way, and why they hid, are in
+[`docs/build-log.md`](docs/build-log.md).
 
 ## Specification
 
@@ -31,6 +55,7 @@ Design phase. The specification is being written before the code, in public.
 | [`spec/08-privacy.md`](spec/08-privacy.md) | The privacy ladder |
 | [`spec/09-open-questions.md`](spec/09-open-questions.md) | Decisions not yet made |
 | [`docs/atlas.md`](docs/atlas.md) | The knowledge map — every primitive, and the attack that motivates it |
+| [`docs/build-log.md`](docs/build-log.md) | Bugs found while building, and what each one teaches |
 
 ## Licence
 
