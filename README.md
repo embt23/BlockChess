@@ -14,13 +14,14 @@ hold your keys and, in the default configuration, never hold your money.
 
 ## Status
 
-Episodes 01–03 implemented and green. `perft(6) = 119,060,324` exact.
+Episodes 01–04 implemented and green. `perft(6) = 119,060,324` exact.
 
 | Crate | Episode | What it is | Oracle |
 |---|---|---|---|
 | [`bc-hash`](crates/bc-hash) | 01 | SHA-256 & SHA-512 from FIPS 180-4, domain separation, hash chains | FIPS test vectors |
 | [`bc-sig`](crates/bc-sig) | 02 | Ed25519 from scratch — field arithmetic mod 2^255−19, twisted Edwards group law, point compression | RFC 8032 vectors |
 | [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft | published perft counts |
+| [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (`tx_root`) and a sparse Merkle tree (`state_root`) with proofs of absence | Certificate Transparency vectors |
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been

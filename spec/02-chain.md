@@ -55,6 +55,28 @@ else. A proof is 256 sibling hashes, but all but ~log₂(n) of them are the know
 `empty[i]` constants and can be omitted from the wire format with a 256-bit
 bitmap saying which levels were non-empty.
 
+### Transaction and receipt roots use RFC 6962
+
+`tx_root` and `receipt_root` commit to an *ordered list*, not a key/value map,
+so they use a different tree: the Certificate Transparency one (RFC 6962).
+Leaves are prefixed `0x00`, internal nodes `0x01`, and odd levels split at the
+largest power of two below `n`.
+
+Both details are load-bearing.
+
+Without the leaf/node prefixes, the 64-byte concatenation of two child hashes is
+simultaneously a valid internal node and a valid leaf, so an attacker can
+present an internal node as a leaf and forge an inclusion proof — the
+**second-preimage attack**.
+
+Without the power-of-two split — Bitcoin pairs a trailing odd node with itself —
+the lists `[A,B,C]` and `[A,B,C,C]` produce the *same root*, so two different
+blocks get identical headers. That is **CVE-2012-2459**, a network-splitting
+denial of service.
+
+Using a published, deployed specification also means published test vectors,
+which is worth more than an in-house design here.
+
 ### Why this and not Ethereum's Merkle-Patricia Trie
 
 The MPT is a radix-16 trie with four node types, path compression, and RLP

@@ -204,3 +204,45 @@ from one they merely watch.
 
 Corollary: **write the episode's spec section before the code.** These files are
 the scripts.
+
+---
+
+## D15 — Sparse Merkle tree: compress paths now, or later?
+
+**Measured problem.** The straightforward sparse Merkle tree stores ~246 nodes
+per key at depth 256 — roughly `depth − log₂(n)`. Random keys diverge within
+about `log₂(n)` levels of the root, and below that each key owns a private chain
+of single-child nodes down to its leaf.
+
+```
+    n=10       2,539 nodes   253.9 / key
+    n=100     25,053 nodes   250.5 / key
+    n=1,000  247,154 nodes   247.2 / key
+```
+
+At ~64 bytes a node: ~16 MB for a thousand accounts, ~15 GB for a million.
+
+**The fix.** Path compression — store only nodes where the tree actually
+branches, and compute the single-child chains on demand. A chain node's hash is
+fully determined by the leaf beneath it plus the known empty hashes, so it can
+always be recomputed.
+
+**Why this is a safe thing to defer.** The compressed tree produces **the same
+root hashes and the same proofs**. It is a pure internal storage optimisation,
+invisible from outside the crate, so adding it later invalidates nothing already
+committed and requires no migration of any signed or on-chain data.
+
+That is unusual and worth noticing: most scaling problems in a blockchain are
+consensus-visible and therefore must be got right before launch. This one is
+not, because the *definition* of the tree and its *representation* were kept
+separate.
+
+| Option | For | Against |
+|---|---|---|
+| **Defer to after consensus works** ▶ | testnet scale is fine at 16 MB; the naive tree is already correct and tested, and makes an ideal oracle for the compressed one later | a million-account chain would need ~15 GB |
+| Do it now | done once, properly | ~1.5× the crate's size, and the chain it serves does not exist yet |
+
+▶ **Defer** — but keep the naive implementation and its dense-tree test as the
+oracle for the compressed version when it lands. Building the obvious thing
+first and then optimising against it as a reference is the same pattern used for
+proof-of-work before BFT (D4).
