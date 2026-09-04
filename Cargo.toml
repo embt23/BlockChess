@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = ["crates/bc-hash", "crates/bc-chess", "crates/bc-sig", "crates/bc-merkle"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/embt23/BlockChess"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# Tests (notably perft) are far too slow unoptimised.
+[profile.test]
+opt-level = 2
