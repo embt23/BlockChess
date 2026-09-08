@@ -182,3 +182,88 @@ fn a_damaged_game_is_skipped_not_fatal() {
     assert_eq!(errors.len(), 1);
     assert_eq!(errors[0].game_index, 1);
 }
+
+// ---------------------------------------------------------------------------
+// Pathologies found by running against PGN files we did not write.
+//
+// The source was python-chess's own test corpus — real files chosen by another
+// project because they break parsers. Every case below is reproduced here as a
+// minimal fixture rather than by vendoring their files, so the tests stay
+// self-contained and say plainly what they are about.
+//
+// 0.0's build log put it this way: an external oracle is worth more than any
+// number of self-written sanity checks. Ten of their twelve files now parse.
+// The two that do not are antichess and crazyhouse, which are different games
+// under different rules — and refusing them is correct behaviour, not a gap.
+// See papers/04-permanence.md §5 on RuleSetId.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_utf8_byte_order_mark_does_not_hide_the_first_tag() {
+    // Windows tooling writes these routinely. The BOM sits in front of
+    // `[Event`, so the line stops looking like a tag, and the whole file
+    // parses as one anonymous game with no moves.
+    let text = "\u{feff}[Event \"A\"]\n[Result \"1-0\"]\n\n1. e4 e5 2. Nf3 1-0\n";
+    let (games, errors) = bc_pgn::parse_all(text);
+    assert!(errors.is_empty(), "{}", errors[0]);
+    assert_eq!(games.len(), 1);
+    assert_eq!(games[0].moves.len(), 3);
+    assert_eq!(
+        games[0].tag("Event"),
+        Some("A"),
+        "the BOM ate the first tag"
+    );
+}
+
+#[test]
+fn a_null_move_truncates_the_game_instead_of_discarding_it() {
+    // `Z0` is ChessBase's null-move placeholder; `--` is the other spelling.
+    // A null move is not a chess move, so the game cannot be replayed past it
+    // — but throwing away the moves before it loses real data.
+    for token in ["Z0", "--"] {
+        let text = format!("[Event \"?\"]\n\n1. e4 e5 2. Nf3 {token} 3. Bb5 1-0\n");
+        let (games, errors) = bc_pgn::parse_all(&text);
+        assert!(errors.is_empty(), "{token} should truncate, not fail");
+        assert_eq!(games.len(), 1);
+        assert_eq!(games[0].moves.len(), 3, "kept the moves before {token}");
+        let (ply, tok) = games[0]
+            .truncated
+            .clone()
+            .unwrap_or_else(|| panic!("{token} should have been recorded"));
+        assert_eq!(ply, 3);
+        assert_eq!(tok, token);
+    }
+}
+
+#[test]
+fn a_whole_game_records_no_truncation() {
+    let (games, _) = bc_pgn::parse_all("[Event \"?\"]\n\n1. e4 e5 1-0\n");
+    assert!(games[0].truncated.is_none());
+}
+
+#[test]
+fn movetext_written_in_uci_is_accepted() {
+    // CCRL's archives write `g1f3` rather than `Nf3`. It is unambiguous, and
+    // refusing it would reject whole archives over a notation choice.
+    let text = "[Event \"?\"]\n[Result \"1/2-1/2\"]\n\ne2e4 c7c5 g1f3 d7d6 1/2-1/2\n";
+    let (games, errors) = bc_pgn::parse_all(text);
+    assert!(errors.is_empty(), "{}", errors[0]);
+    assert_eq!(games.len(), 1);
+    assert_eq!(games[0].moves.len(), 4);
+
+    // And it must agree with the SAN spelling of the same game.
+    let san = "[Event \"?\"]\n\n1. e4 c5 2. Nf3 d6 1/2-1/2\n";
+    let (other, _) = bc_pgn::parse_all(san);
+    assert_eq!(games[0].moves, other[0].moves);
+}
+
+#[test]
+fn uci_promotions_survive_the_round_trip() {
+    let text =
+        "[Event \"?\"]\n[FEN \"4k3/P7/8/8/8/8/8/4K3 w - - 0 1\"]\n[SetUp \"1\"]\n\na7a8q 1-0\n";
+    let (games, errors) = bc_pgn::parse_all(text);
+    assert!(errors.is_empty(), "{}", errors[0]);
+    assert_eq!(games[0].moves.len(), 1);
+    let m = games[0].moves[0];
+    assert_eq!(m.to_uci(), "a7a8q");
+}

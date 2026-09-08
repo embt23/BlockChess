@@ -42,6 +42,7 @@
 
 pub mod bignum;
 pub mod order;
+pub mod position;
 
 mod fixed;
 mod index;

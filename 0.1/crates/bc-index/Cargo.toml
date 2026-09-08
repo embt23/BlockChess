@@ -1,17 +1,10 @@
 [package]
-name = "bc-cli"
+name = "bc-index"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
-[[bin]]
-name = "blockchess"
-path = "src/main.rs"
-
 [dependencies]
 bc-chess = { workspace = true }
-bc-pgn = { workspace = true }
 bc-codec = { workspace = true }
-bc-grammar = { workspace = true }
-bc-index = { workspace = true }

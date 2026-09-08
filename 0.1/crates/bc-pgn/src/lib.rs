@@ -31,6 +31,15 @@ pub struct Game {
     pub start: Position,
     /// `1-0`, `0-1`, `1/2-1/2`, or `*` for unfinished.
     pub result: String,
+    /// Set when the movetext held a token that is not a chess move and the
+    /// game was cut short there: the ply reached, and the offending token.
+    ///
+    /// The usual culprit is a null move — `--`, or ChessBase's `Z0`. A null
+    /// move is not a move, so a game containing one cannot be replayed
+    /// faithfully; but throwing away forty good moves because the forty-first
+    /// is a placeholder is worse. So the prefix is kept and the reason is
+    /// recorded, and a caller that needs whole games can filter on it.
+    pub truncated: Option<(usize, String)>,
 }
 
 impl Default for Game {
@@ -40,6 +49,7 @@ impl Default for Game {
             moves: Vec::new(),
             start: Position::startpos(),
             result: String::new(),
+            truncated: None,
         }
     }
 }
@@ -93,6 +103,11 @@ impl std::error::Error for PgnError {}
 /// dumps contain damaged games, and a corpus tool that stops at the first one
 /// is a corpus tool that never finishes.
 pub fn parse_all(text: &str) -> (Vec<Game>, Vec<PgnError>) {
+    // A UTF-8 byte order mark sits in front of the first `[Event`, which
+    // stops it looking like a tag line and makes the whole file parse as
+    // one anonymous game with no moves. Windows tooling writes these
+    // routinely. Found by running against python-chess's `utf8-bom.pgn`.
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
     let mut games = Vec::new();
     let mut errors = Vec::new();
     for (i, (chunk, line)) in split_games(text).into_iter().enumerate() {
@@ -106,6 +121,19 @@ pub fn parse_all(text: &str) -> (Vec<Game>, Vec<PgnError>) {
         }
     }
     (games, errors)
+}
+
+/// Resolve a UCI token like `e2e4` or `e7e8q` against a position.
+fn parse_uci(pos: &Position, text: &str) -> Option<Move> {
+    let t = text.to_ascii_lowercase();
+    if t.len() < 4 || t.len() > 5 {
+        return None;
+    }
+    pos.generate_legal()
+        .as_slice()
+        .iter()
+        .copied()
+        .find(|m| m.to_uci() == t)
 }
 
 /// Split a document into per-game chunks with the line each one started on.
@@ -157,9 +185,23 @@ fn parse_game(chunk: &str) -> Result<Game, String> {
     for token in tokenise(&movetext) {
         match token {
             Token::Result(r) => game.result = r,
+            Token::Null(t) => {
+                // Stop here and say why. See `Game::truncated`.
+                game.truncated = Some((game.moves.len(), t));
+                break;
+            }
             Token::San(text) => {
-                let m = parse_san(&pos, &text)
-                    .map_err(|e| format!("move {}: {}", game.moves.len() + 1, e))?;
+                let m = match parse_san(&pos, &text) {
+                    Ok(m) => m,
+                    // Some producers — CCRL's archives among them — write
+                    // movetext in UCI rather than SAN. It is unambiguous and
+                    // cheap to accept, and refusing it would reject whole
+                    // archives over a notation choice.
+                    Err(e) => match parse_uci(&pos, &text) {
+                        Some(m) => m,
+                        None => return Err(format!("move {}: {}", game.moves.len() + 1, e)),
+                    },
+                };
                 game.moves.push(m);
                 pos = pos.make_move(m);
             }
@@ -175,6 +217,8 @@ fn parse_game(chunk: &str) -> Result<Game, String> {
 enum Token {
     San(String),
     Result(String),
+    /// A null-move placeholder: `--`, or ChessBase's `Z0`. Not a chess move.
+    Null(String),
 }
 
 /// Strip everything that is not a move: comments, variations, move numbers,
@@ -233,8 +277,13 @@ fn tokenise(movetext: &str) -> Vec<Token> {
 
 fn classify(word: &str, out: &mut Vec<Token>) {
     const RESULTS: [&str; 4] = ["1-0", "0-1", "1/2-1/2", "*"];
+    const NULLS: [&str; 3] = ["--", "Z0", "@@@@"];
     if RESULTS.contains(&word) {
         out.push(Token::Result(word.to_string()));
+        return;
+    }
+    if NULLS.contains(&word) {
+        out.push(Token::Null(word.to_string()));
         return;
     }
     // "12." or "12..." prefixes a move, and may or may not be glued to it.
@@ -244,6 +293,10 @@ fn classify(word: &str, out: &mut Vec<Token>) {
     }
     if RESULTS.contains(&rest) {
         out.push(Token::Result(rest.to_string()));
+        return;
+    }
+    if NULLS.contains(&rest) {
+        out.push(Token::Null(rest.to_string()));
         return;
     }
     out.push(Token::San(rest.to_string()));

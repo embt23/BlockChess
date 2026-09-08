@@ -5,9 +5,11 @@
 //! here than the convenience.
 
 mod board;
+mod grammar;
 mod measure;
 mod pack;
 mod play;
+mod study;
 
 use std::process::ExitCode;
 
@@ -31,6 +33,17 @@ MEASURING IT
 STORING IT
     pack <file.pgn> <out.bcg>     compress a PGN file
     unpack <in.bcg> [out.pgn]     decompress it again
+
+STUDYING IT
+    index <file.pgn>              build the index, report its shape
+    book <file.pgn> [moves...]    the opening book: what is played here
+    find <file.pgn> <FEN>         every game that reached a position,
+                                  by any move order or mirror image
+    grammar <file.pgn>            let a compressor that knows no chess find
+                                  the repeated patterns, then check them
+                                  against human opening theory  (X7)
+
+  Every command takes --limit N to stop after N games.
 ";
 
 fn main() -> ExitCode {
@@ -49,6 +62,10 @@ fn main() -> ExitCode {
         "measure" => measure::run(rest),
         "pack" => pack::pack(rest),
         "unpack" => pack::unpack(rest),
+        "index" => study::index(rest),
+        "book" => study::book(rest),
+        "find" => study::find(rest),
+        "grammar" => grammar::run(rest),
         "-h" | "--help" | "help" => {
             print!("{USAGE}");
             Ok(())

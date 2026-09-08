@@ -4,6 +4,8 @@ members = [
     "crates/bc-chess",
     "crates/bc-pgn",
     "crates/bc-codec",
+    "crates/bc-grammar",
+    "crates/bc-index",
     "crates/bc-cli",
 ]
 
@@ -17,6 +19,8 @@ repository = "https://github.com/embt23/BlockChess"
 bc-chess = { path = "crates/bc-chess" }
 bc-pgn = { path = "crates/bc-pgn" }
 bc-codec = { path = "crates/bc-codec" }
+bc-grammar = { path = "crates/bc-grammar" }
+bc-index = { path = "crates/bc-index" }
 
 [profile.release]
 opt-level = 3

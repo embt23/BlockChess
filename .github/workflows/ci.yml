@@ -71,6 +71,9 @@ jobs:
       # And the pipeline end to end, on the games in the repo.
       - run: cargo run --release -q -- pack corpus/classics.pgn /tmp/ci.bcg
       - run: cargo run --release -q -- unpack /tmp/ci.bcg /tmp/ci.pgn
+      - run: cargo run --release -q -- index corpus/classics.pgn
+      - run: cargo run --release -q -- book corpus/classics.pgn e4
+      - run: cargo run --release -q -- grammar corpus/classics.pgn --min 2
 
   # Every number quoted in the papers is produced by a script; this checks the
   # papers still match.
