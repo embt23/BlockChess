@@ -1,62 +1,53 @@
 # BlockChess
 
-A from-scratch blockchain for wagered peer-to-peer chess.
+Chess on a blockchain. Two versions live here, and they are different projects
+that happen to share a name.
 
-Games are played **off-chain**, directly between two players, over an encrypted
-link. Every position is signed by both players. The chain only ever sees two
-things: the moment money is locked, and the moment money is paid out. The full
-rules of chess exist on-chain as a **referee of last resort** — invoked only
-when someone lies or disappears.
+| | | |
+|---|---|---|
+| [**0.1**](0.1/) | current | A public, permanent, searchable record of chess games. No money. The work is the mathematics of compressing chess into a permanent log. |
+| [**0.0**](0.0/) | archived, complete as far as it went | A from-scratch blockchain for wagered peer-to-peer chess. Full protocol spec, plus SHA-256, Ed25519, a move generator passing `perft(6)`, and Merkle trees, all written from the standards. |
 
-Above that base layer, anyone can run a **server**: a matchmaker, a tournament
-organiser, a rating authority, a bot arena, a teaching ladder. Servers never
-hold your keys and, in the default configuration, never hold your money.
+## 0.0 — proof of concept
 
-## Status
+Archived, not abandoned. Nine specification documents, four Rust crates, every
+one checked against an oracle someone else published: FIPS 180-4 vectors,
+RFC 8032, RFC 6962, and the published perft counts. `perft(6) = 119,060,324`
+exact, first run.
 
-Episodes 01–04 implemented and green. `perft(6) = 119,060,324` exact.
+It is left exactly as it was, including `0.0/docs/build-log.md`, which is the
+most useful thing in it — three bugs and why each one hid. CI still builds and
+tests it; the only change made when archiving was the path.
 
-| Crate | Episode | What it is | Oracle |
-|---|---|---|---|
-| [`bc-hash`](crates/bc-hash) | 01 | SHA-256 & SHA-512 from FIPS 180-4, domain separation, hash chains | FIPS test vectors |
-| [`bc-sig`](crates/bc-sig) | 02 | Ed25519 from scratch — field arithmetic mod 2^255−19, twisted Edwards group law, point compression | RFC 8032 vectors |
-| [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft | published perft counts |
-| [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (`tx_root`) and a sparse Merkle tree (`state_root`) with proofs of absence | Certificate Transparency vectors |
+Its subject was money: escrow, disputes, adjudication, handicap odds, cheat
+detection. 0.1 removes all of that on purpose.
 
-Each crate is checked against an oracle *someone else* published. That is the
-standard for this project: no layer is built on top of rules that have only been
-verified by tests we wrote ourselves.
+## 0.1 — what the project is actually for
 
-```sh
-cargo test --workspace                          # fast suite
-cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
+The moves should be public. Not the wagers, not the ratings, not the economy —
+the games. A growing chess database anyone can study, that nobody owns, and that
+does not disappear when a company does.
 
-cargo run --release --bin perft -- 6            # 119,060,324 nodes
-cargo run --release --bin perft -- divide 3     # per-move breakdown
-```
+Which turns the project into one question with a real answer:
 
-**`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
-time; it exists to be read. The node will link `ed25519-dalek`.
+> **What is the cheapest permanent encoding of a chess game, and what does each
+> saving cost you in something other than bits?**
 
-Bugs found along the way, and why they hid, are in
-[`docs/build-log.md`](docs/build-log.md).
+Permanence is what makes this different from ordinary compression. A compressor
+can be upgraded; a consensus decoder cannot, and the price of that is
+computable. Four results so far, derived in [`0.1/papers/`](0.1/papers/) and
+computed by [`0.1/measure/`](0.1/measure/):
 
-## Specification
+1. **Store moves, not positions** — a position costs ~150 bits, a move ~5.
+2. **Chess has almost no symmetry** — a general middlegame position has a
+   symmetry group of order 1, so symmetry is worth ~0 bits as compression and
+   ~4× as an index key.
+3. **The opening trie and the entropy coder are the same saving** — you cannot
+   bank it twice, and the trie's real job is search.
+4. **Below ~50 bytes a game you are storing signatures, not chess** — batching
+   the attestations beats every move-encoding decision combined.
 
-| File | Contents |
-|---|---|
-| [`spec/00-overview.md`](spec/00-overview.md) | Layer stack, threat model, glossary |
-| [`spec/01-primitives.md`](spec/01-primitives.md) | Hashing, signatures, encoding, domain separation |
-| [`spec/02-chain.md`](spec/02-chain.md) | Accounts, sparse Merkle state, blocks, consensus, censorship |
-| [`spec/03-position.md`](spec/03-position.md) | Board encoding, move generation, Zobrist, terminal conditions |
-| [`spec/04-channel.md`](spec/04-channel.md) | The game channel — the heart of the protocol |
-| [`spec/05-adjudication.md`](spec/05-adjudication.md) | Disputes, clock dilation, fraud proofs |
-| [`spec/06-economics.md`](spec/06-economics.md) | Handicap odds, rake, Kelly, cheat detection |
-| [`spec/07-servers.md`](spec/07-servers.md) | The server layer and its trust ladder |
-| [`spec/08-privacy.md`](spec/08-privacy.md) | The privacy ladder |
-| [`spec/09-open-questions.md`](spec/09-open-questions.md) | Decisions not yet made |
-| [`docs/atlas.md`](docs/atlas.md) | The knowledge map — every primitive, and the attack that motivates it |
-| [`docs/build-log.md`](docs/build-log.md) | Bugs found while building, and what each one teaches |
+Start at [`0.1/README.md`](0.1/README.md).
 
 ## Licence
 
