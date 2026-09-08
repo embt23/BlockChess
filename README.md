@@ -60,6 +60,44 @@ cd 0.1 && cargo build --release
 Start at [`0.1/START-HERE.md`](0.1/START-HERE.md) if you want the walkthrough,
 or [`0.1/README.md`](0.1/README.md) for the summary.
 
+## Why folders and not branches
+
+Versions here are directories, and old versions are also git tags. They are not
+branches, and that is deliberate.
+
+**A branch is for a line of work that continues.** 0.0 is finished — it will
+never take another commit. Putting a frozen thing on a branch says the opposite
+of what is true about it.
+
+**0.1 reads 0.0 constantly.** That is most of why 0.0 was kept: the build log,
+the knowledge ledger, the atlas. Side by side you can grep both, open both, and
+link between them. On separate branches you can hold exactly one at a time, and
+every cross-reference in the papers becomes a dead link. `0.1/crates/bc-chess`
+came straight out of `0.0/` by copying a directory; across branches that is a
+cherry-pick.
+
+**One CI run covers both.** 0.0's tests still execute on every push, so the
+archive is provably intact rather than merely present. On separate branches
+nobody would notice the day it stopped building.
+
+**The archive is the tag, not the folder.** `v0.0` points at the last commit
+where 0.0 stood at the repository root:
+
+```sh
+git show v0.0            # what it was
+git checkout v0.0        # stand in it; git switch - to come back
+```
+
+Which gives the graceful exit from the thing folders are genuinely bad at —
+accumulating. `0.0/`, `0.1/`, `0.2/`, `0.3/` would be a mess. So the rule is:
+
+> **A version stays as a folder while a living version still reads it. Once
+> nothing refers to it, tag it and delete the folder.** The tag keeps it
+> forever, and `git show <tag>` brings it back.
+
+By that rule 0.0 stays for now, because 0.1 is still mining it, and 0.1 moves
+to the repository root once it is unambiguously *the* project.
+
 ## Licence
 
 TBD — intended to be permissive and open source.
