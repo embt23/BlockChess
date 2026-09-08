@@ -80,12 +80,19 @@ cherry-pick.
 archive is provably intact rather than merely present. On separate branches
 nobody would notice the day it stopped building.
 
-**The archive is the tag, not the folder.** `v0.0` points at the last commit
-where 0.0 stood at the repository root:
+**The archive is the tag, not the folder.** `v0.0` marks the last commit where
+0.0 stood at the repository root — `c54ea0e`, before the move into `0.0/`:
 
 ```sh
 git show v0.0            # what it was
 git checkout v0.0        # stand in it; git switch - to come back
+```
+
+To create and publish it (once, from a clone that can push tags):
+
+```sh
+git tag -a v0.0 c54ea0e -m "Version 0.0 — the proof of concept, exactly as it stood"
+git push origin v0.0
 ```
 
 Which gives the graceful exit from the thing folders are genuinely bad at —
