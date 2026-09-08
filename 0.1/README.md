@@ -79,7 +79,18 @@ argument about whether a learned model may live in consensus — shrinks the
 record by **13%**. Batching the attestations shrinks it by **12× on the dominant
 term**. Batch first, then compress, then re-evaluate.
 
-Result 4 is the one that reorders the work.
+**5. Compressing the corpus and deriving chess theory are the same search.**
+Chess theory is a list of things that recur often enough to be worth naming.
+Compression is a procedure for finding what recurs. Run grammar-based
+compression over a corpus and the first symbol it invents is an opening —
+nobody told it about the Najdorf, it found a twelve-ply string that repeats
+tens of thousands of times and named it because naming it made the file
+smaller. `papers/08-layers.md`. This is the project's real justification for
+being about compression at all, and it is much better than "storage is
+expensive".
+
+Result 4 is the one that reorders the work. Result 5 is the one that says what
+the project is for.
 
 ## The papers
 
@@ -92,6 +103,7 @@ Result 4 is the one that reorders the work.
 | [`04-permanence.md`](papers/04-permanence.md) | What immutability costs in bits, and where compression should stop |
 | [`05-index.md`](papers/05-index.md) | Transpositions, mirrors, proofs of absence, and where annotations go |
 | [`06-decisions.md`](papers/06-decisions.md) | Every fork, with recommendations |
+| [`08-layers.md`](papers/08-layers.md) | Why compressing the corpus **is** deriving chess theory |
 | [`07-sources.md`](papers/07-sources.md) | Every literature value, attributed, including the two weak ones |
 
 ## The arithmetic

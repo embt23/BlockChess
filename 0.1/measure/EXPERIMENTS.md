@@ -136,3 +136,75 @@ will cut distinct keys by about 4× in the pawn regime.
 
 **Output.** Sizes the index, and turns the symmetry claim in `01-position-space.md`
 §6 from a family-by-family measurement into a corpus-wide one.
+
+---
+
+## X6 — Is our output already incompressible? — *bounds how much room L3 has*
+
+**Question.** Take a packed `.bcg` file and try to compress it again with a
+general-purpose tool. Anything that shrinks is structure our encoding left
+behind.
+
+**Why it matters.** `papers/08-layers.md` §4: an optimal compressor's output is
+indistinguishable from random, because any remaining pattern is redundancy it
+failed to spend. So re-compressibility is a direct, free measure of how much
+room the layered idea has above what we already do. This is the cheapest
+experiment here and it bounds the value of the most expensive one (X7).
+
+**Protocol.** Pack a real corpus under E3 and E7. Run gzip -9, xz -9, and if
+available a general-purpose neural compressor over each. Report bytes before
+and after. Do the same to the source PGN as a control — it should shrink a lot.
+
+**Already run, on four games** (`corpus/classics.pgn`, too small to conclude
+from — gzip's header is a real fraction of these files):
+
+| file | bytes | gzip -9 | |
+|---|---|---|---|
+| PGN | 1,237 | 718 | shrinks 1.72× |
+| `.bcg` E3 | 304 | 321 | grows |
+| `.bcg` E7 | 145 | 167 | grows |
+
+The direction is right. Note that gzip only looks for repeated byte strings, so
+passing this rules out one family of leftover structure, not all of them.
+
+---
+
+## X7 — Grammar induction — *the test of the project's central claim*
+
+**Question.** Run Re-Pair or SEQUITUR over the corpus's move streams. What does
+it discover, and what does it cost?
+
+**Why it matters.** `papers/08-layers.md` §3 claims that searching for the
+shortest encoding of the corpus is the same search as searching for chess
+theory. This is the experiment that tests it.
+
+**Protocol.** Encode games as symbol sequences, induce a grammar, report:
+bits/ply against E7 and E9; the number of symbols discovered; the length
+distribution of the symbols.
+
+Then the part that is not a compression result, and is the actual point:
+**how many of the top 100 discovered symbols correspond to named openings?**
+Match against ECO codes. A high number is the most interesting single fact this
+project could produce — a compressor rediscovering opening theory from nothing
+but repetition.
+
+**Prediction on file** (`08-layers.md` §6): on bits alone this lands near the
+model-prior figure, ~1.5–2 bits/ply, and does **not** beat it. That is fine.
+The output is a list of named ideas, which a policy network does not give you,
+and the list is the deliverable.
+
+---
+
+## X8 — Do the layers keep paying? — *is L4 real*
+
+**Question.** Run the grammar procedure again on its own output, and again.
+Bits saved per layer.
+
+**Why it matters.** The layered claim is that each level of abstraction hands
+the next one new tools. If the saving collapses after two rounds, L3 is a
+one-off trick and should be described as one. If it keeps finding structure,
+there is a hierarchy in chess that nobody has named, and finding out what the
+symbols at level three and four *mean* is a research programme rather than an
+engineering task.
+
+**No prediction on file.** Nobody knows, which is the reason to run it.

@@ -62,6 +62,14 @@ it is bounded below by the conditional entropy of a game given the corpus.
 `03-corpus.md` shows that P3 and a good solution to P1 are the *same problem*,
 which is not obvious and which kills a design that otherwise looks clever.
 
+### P4 — encode the *structure*
+
+Having stacked the corpus, find the patterns in the pile, name them, and encode
+against the names. Then do it again on what that leaves. This is a different
+kind of question from P1–P3: there the units are handed to you by the rules,
+here they are discovered from the data. `08-layers.md`, and it is where the
+project's purpose lives rather than its storage budget.
+
 **P1 beats P2 by a factor of about thirty.** A move costs about five bits; a
 position costs about a hundred and fifty. Any design that stores positions
 where it could store moves has already lost more than every other decision on
@@ -109,3 +117,4 @@ Taken from what 0.0 got right, and they are the only thing carried over:
 | `05-index.md` | Making it searchable: transpositions, mirrors, and proofs about the corpus |
 | `06-decisions.md` | The forks, with recommendations |
 | `07-sources.md` | Every literature value, attributed |
+| `08-layers.md` | The layers above a game, and why the compression *is* the discovery |
