@@ -9,11 +9,28 @@ and their absence here is the point, not an omission.
 
 ## Status
 
-**A set of papers and the arithmetic behind them.** No protocol implementation,
-deliberately. The question this version exists to answer is a mathematical one,
-and answering it wrong in code is more expensive than answering it slowly on
-paper. `papers/06-decisions.md` D10 sets the build order, and measurement comes
-before the codec, which comes before the chain.
+**Papers, plus a working engine and codec you can run.** No chain yet, and
+that is the plan rather than a gap: `papers/06-decisions.md` D10 sets the order
+as measurement, then the codec, then the chain, and stages 1 and 2 are built.
+
+```sh
+cd 0.1 && cargo build --release
+./target/release/blockchess perft 5                    # the rules are right
+./target/release/blockchess play                       # a board, in the terminal
+./target/release/blockchess measure corpus/classics.pgn  # the real numbers
+./target/release/blockchess pack corpus/classics.pgn out.bcg
+```
+
+**New here, or lost? Read [`START-HERE.md`](START-HERE.md).** It walks through
+each command, says what each crate is for, and names the one thing that is easy
+to get catastrophically wrong.
+
+| crate | what it is |
+|---|---|
+| `bc-chess` | the rules — lifted from 0.0, passes `perft(6) = 119,060,324` |
+| `bc-pgn` | reading real games, so a corpus can get in |
+| `bc-codec` | E3 and E7: games to bytes and back, losslessly |
+| `bc-cli` | the `blockchess` command |
 
 ## The question
 
@@ -87,7 +104,8 @@ python measure/run_all.py           # regenerate measure/RESULTS.md
 python measure/run_all.py --check   # what CI runs
 ```
 
-Standard library only. See [`measure/README.md`](measure/README.md), and
+Standard library only, and no chess engine — anything needing one is a Rust
+command instead. See [`measure/README.md`](measure/README.md), and
 [`measure/EXPERIMENTS.md`](measure/EXPERIMENTS.md) for the five numbers the
 papers need and do not yet have — chiefly `E[log2 b]` over a real corpus, which
 tightens every storage figure here.

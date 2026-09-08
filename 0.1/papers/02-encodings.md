@@ -88,9 +88,21 @@ The same choice priced exactly: `log2 b` bits, with no rounding waste.
 | 218 | 8 | 7.768 | 77.7 |
 
 The number that matters is `E[log2 b]` over a real corpus, which is strictly
-below `log2 E[b]` by Jensen and which we have not measured. **Experiment X1.**
-Taking `b ≈ 30` as a working figure gives **≈49 bytes/game**, and a 3.3× win
-over E3 for the price of running a move generator.
+below `log2 E[b]` by Jensen. **`blockchess measure` now computes it**, and on
+the four games in `corpus/` it reports `E[log2 b] = 4.686` against
+`log2 E[b] = 4.974` — a Jensen gap of 0.29 bits, confirming the direction. Four
+games is not a corpus and that figure should not be quoted as one; **X1** is
+still open and is now one command away from being answered.
+
+Taking `b ≈ 30` as the working figure gives **≈49 bytes/game**, and a 3.3× win
+over E3 for the price of running a move generator. The measured 3.41× on the
+four games is consistent with it.
+
+**E7 is implemented**, in `crates/bc-codec`, and it hits the floor exactly: the
+payload is `⌈log2 ∏ bᵢ⌉` bits, verified per game by a test. It is not an
+approximation of an arithmetic coder — for uniform models it is the same code,
+reached through mixed-radix arithmetic instead of range tracking. The crate
+docs explain why that substitution is exact.
 
 ### E8 — rank the legal moves, then entropy-code the rank
 The moves are not equally likely. Order them by a cheap static heuristic —

@@ -1,4 +1,5 @@
 /0.0/target
+/0.1/target
 **/*.rs.bk
 Cargo.lock
 __pycache__/

@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/bc-chess",
+    "crates/bc-pgn",
+    "crates/bc-codec",
+    "crates/bc-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/embt23/BlockChess"
+
+[workspace.dependencies]
+bc-chess = { path = "crates/bc-chess" }
+bc-pgn = { path = "crates/bc-pgn" }
+bc-codec = { path = "crates/bc-codec" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# perft is unusably slow unoptimised, and the tests run it.
+[profile.test]
+opt-level = 2

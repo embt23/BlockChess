@@ -22,8 +22,8 @@ express, and that attribution is an argument, not a proof.
 
 | Value | Claim | Source |
 |---|---|---|
-| 218 | maximum legal moves in any position | Standard chess-programming result; the usual witness is `R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - -`. Verify with our own generator during X1. |
-| perft counts | move-generator correctness oracle | Chess Programming Wiki, "Perft Results". Used in 0.0; the same oracle applies to whatever generator X1 needs. |
+| 218 | maximum legal moves in any position | **No longer taken on trust.** Our own generator counts exactly 218 in the usual witness position `R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - -`; reproduce with `blockchess show "<that FEN>"`. It remains a literature claim that no position exceeds it — that is a search result, not something one position can confirm. |
+| perft counts | move-generator correctness oracle | Chess Programming Wiki, "Perft Results". `blockchess perft <n>` checks against them and prints MATCH or MISMATCH. The generator in `crates/bc-chess` passes all of them. |
 
 ## Compression figures
 

@@ -134,7 +134,30 @@ The candidate answers, and none of them is complete:
 | Permissioned writers | everything | that is a gatekeeper, which is the thing this project exists to remove |
 | **Post everything, filter in the index** ▶ | nothing at write time | the filter becomes the valuable and contested object |
 
-▶ **Provisionally: accept everything, and make provenance a first-class field.**
+### Decided for now: assume trust
+
+▶ **Assume trust, and design so that distrust can be added later.**
+
+At the start this is a thing for a handful of people who know each other. A
+friend who floods the database with a million fabricated games is a social
+problem before it is a protocol problem, and building an expensive defence
+against an attacker who does not exist yet is how a project dies before it
+runs.
+
+What "design so it can be added later" means concretely, and these are cheap:
+
+- **Every game carries the identity that submitted it.** Not because anyone is
+  checked today, but because a filter added in a year needs something to filter
+  *on*, and identity cannot be back-filled onto records that never had it.
+- **Attestation is a separate field from the game.** So that "who vouches for
+  this" can gain structure without touching the encoding.
+- **Rule sets are versioned already** (D9). If the answer one day is "fork and
+  add a rule", the machinery for a fork that keeps the old corpus readable is
+  the machinery that already exists.
+
+The longer-term shape, when it is needed:
+
+▶ **Accept everything, and make provenance a first-class field.**
 Reframe the problem. The chain's job is to record *that this identity claims
 this game happened*, permanently and publicly. It is not the chain's job to
 decide which games are worth studying. That judgement belongs to the index
@@ -150,8 +173,11 @@ because the index is derived, so *several* can exist; and a game signed by two
 identities that people have reason to trust is self-evidently different from one
 signed by two keys created that morning, without anyone having to rule on it.
 
-**This decision needs the most work and it should not be closed quietly.**
-It is the one that determines whether the thing is useful.
+**This is deferred, not solved.** The reason it is safe to defer is that the
+three cheap things above cost nothing now and keep every option open, and the
+reason it is not solved is that "several filters can exist" is a hope about the
+ecosystem rather than a property of the design. Revisit when there are more
+people writing to it than you know by name.
 
 ---
 
@@ -186,7 +212,11 @@ with permanent ids and their own game corpora, comparable side by side.
 
 ---
 
-## D10 — What gets built first? ▶ **measurement, then a codec, then a chain**
+## D10 — What gets built first? **SETTLED: measurement, then a codec, then a chain**
+
+*Stages 1 and 2 are now built. `crates/` holds the engine, the PGN reader and
+the codec; `blockchess measure` is experiment X1 waiting on a corpus.*
+
 
 The papers rest on three literature figures and one unmeasured quantity. Until
 X1–X3 (`measure/EXPERIMENTS.md`) are done, D3 and D4 rest on other people's
@@ -214,7 +244,7 @@ blockchain still absent. If the chain never arrives, that is still a real thing.
 
 ---
 
-## D11 — Implementation language ▶ **Python to measure, Rust for the codec**
+## D11 — Implementation language **SETTLED: Rust, with Python for throwaway arithmetic**
 
 The measurement layer is a data-processing job over a corpus and it is
 throwaway; Python is correct for it and `measure/` is already Python.
@@ -227,3 +257,37 @@ Rust, as in 0.0.
 The two are cleanly separated by the round-trip test, which either passes on the
 whole corpus or does not, and which can be run against both implementations
 independently.
+
+In practice the split landed further toward Rust than that: `measure/` stays
+Python because it is pure combinatorics that never touches a chess position,
+and everything that touches a game is Rust, including the measurement command.
+The reason is that measuring `E[log2 b]` means generating the legal moves at
+every ply of every game in a corpus, which is the engine's hot loop — the same
+work as perft. In Python a million-game corpus would take days.
+
+---
+
+## D12 — Can a Rust project have a friendly visual front end? **Yes, and it should**
+
+Recorded because it was a real worry and the answer is not obvious from
+outside.
+
+Rust does not make a GUI harder; it makes you pick which kind. Three routes,
+and the choice is downstream of what the front end is *for*:
+
+| Route | What it is | Fits when |
+|---|---|---|
+| **Compile the core to WebAssembly** ▶ | the same `bc-chess` and `bc-codec` crates run in a browser; the interface is ordinary HTML and CSS | the thing being built is a **public** database that anyone should be able to open without installing something |
+| Native GUI (`egui`, `iced`) | a real desktop window, pure Rust, no web stack | tools for yourself: a corpus browser, a debugger for the codec |
+| Rust core, separate front end | the codec behind a small local server, any UI on top | you want to use a UI toolkit that is not Rust |
+
+▶ **WebAssembly, when the time comes.** A chess database whose whole argument
+is "anyone can read it" should not require anyone to install a binary, and
+compiling the *same* codec that wrote the file is what stops the browser and
+the command line ever disagreeing about what a game says.
+
+Nothing about this needs deciding now. It matters only that the decision does
+not get harder by waiting, and it does not: the core crates have no
+dependencies and no I/O, which is exactly the shape that compiles to Wasm
+without a fight. Keeping them that way is the only thing to be careful about,
+and it is worth being careful about for other reasons anyway.

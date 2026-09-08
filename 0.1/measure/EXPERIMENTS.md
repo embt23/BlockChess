@@ -20,17 +20,32 @@ strictly below `log2 E[b]` by Jensen, so 4.907 is an *upper* bound on the E7
 cost and the real number is better. How much better is unknown, and every
 storage table in `04-permanence.md` moves with it.
 
+**Status: the tool is built; it needs a corpus.**
+
+```sh
+cd 0.1 && cargo build --release
+./target/release/blockchess measure <file.pgn> --csv per-ply.csv
+```
+
+Steps 1 and 3 below are done — `crates/bc-chess` passes perft and
+`blockchess measure` reports every statistic listed. What is missing is step 2,
+which is a download.
+
 **Protocol.**
-1. A move generator that passes perft(6) = 119,060,324 and Kiwipete
-   perft(5) = 193,690,690 exactly. No figure may be quoted before this passes.
-2. A corpus. Any large public archive; state which, and its size, with the
+1. ~~A move generator that passes perft.~~ Done: `blockchess perft 6` prints
+   the published count and MATCH. No figure may be quoted if it does not.
+2. **A corpus.** Any large public archive; state which, and its size, with the
    result. Record the selection — a database of master games has a different
-   branching profile from a database of blitz.
-3. For every ply of every game, record `b`. Report the histogram, `E[b]`,
-   `E[log2 b]`, `E[⌈log2 b⌉]`, and all four split by ply number in buckets of
-   ten so the phase dependence is visible.
-4. Confirm the 218-move maximum against the generator while the corpus is
-   loaded. It is a `[lit]` value in `07-sources.md` and it is free to check.
+   branching profile from a database of blitz. *This is the outstanding step.*
+3. ~~For every ply of every game, record `b`.~~ Done: the command reports the
+   histogram, `E[b]`, `E[log2 b]`, `E[⌈log2 b⌉]`, and the split by ply bucket.
+   `--csv` writes the per-ply rows for plotting.
+4. Confirm the 218-move maximum: `blockchess show` on the known witness
+   position counts its legal moves. Free, and it removes a `[lit]` value.
+
+**Sanity figure.** On the four games in `corpus/classics.pgn` the command
+reports `E[log2 b] = 4.686`, `log2 E[b] = 4.974`, max `b = 52`. Four games is
+not a corpus; this is here to show the pipeline works, not as a result.
 
 **Output.** Replaces the `b = 30` row in `02-encodings.md` and every derived
 byte figure in `04-permanence.md`.

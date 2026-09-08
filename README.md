@@ -5,7 +5,7 @@ that happen to share a name.
 
 | | | |
 |---|---|---|
-| [**0.1**](0.1/) | current | A public, permanent, searchable record of chess games. No money. The work is the mathematics of compressing chess into a permanent log. |
+| [**0.1**](0.1/) | current | A public, permanent, searchable record of chess games. No money. The mathematics of compressing chess into a permanent log — and a Rust engine and codec you can run today. |
 | [**0.0**](0.0/) | archived, complete as far as it went | A from-scratch blockchain for wagered peer-to-peer chess. Full protocol spec, plus SHA-256, Ed25519, a move generator passing `perft(6)`, and Merkle trees, all written from the standards. |
 
 ## 0.0 — proof of concept
@@ -47,7 +47,18 @@ computed by [`0.1/measure/`](0.1/measure/):
 4. **Below ~50 bytes a game you are storing signatures, not chess** — batching
    the attestations beats every move-encoding decision combined.
 
-Start at [`0.1/README.md`](0.1/README.md).
+### Run it
+
+```sh
+cd 0.1 && cargo build --release
+./target/release/blockchess perft 5                      # the rules are right
+./target/release/blockchess play                         # a board in the terminal
+./target/release/blockchess measure corpus/classics.pgn  # the real numbers
+./target/release/blockchess pack corpus/classics.pgn out.bcg
+```
+
+Start at [`0.1/START-HERE.md`](0.1/START-HERE.md) if you want the walkthrough,
+or [`0.1/README.md`](0.1/README.md) for the summary.
 
 ## Licence
 

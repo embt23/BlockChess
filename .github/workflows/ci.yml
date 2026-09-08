@@ -45,8 +45,35 @@ jobs:
       - run: cargo test --workspace --release
       - run: cargo test -p bc-chess --release -- --ignored --nocapture
 
-  # Version 0.1 is a measurement repo: every number quoted in the papers is
-  # produced by a script here, and this job checks the papers still match.
+  # 0.1's Rust workspace: the engine, the PGN reader and the codec.
+  # The load-bearing tests are the SAN round trip over ~200k generated moves
+  # and the codec round trip over 300 random games. Both either pass on
+  # everything or fail loudly.
+  zero-one:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "0.1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "0.1"
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --all-features
+      - run: cargo test --workspace
+      # The rules are the oracle for everything above them. If this is red,
+      # nothing else in 0.1 means anything.
+      - run: cargo test -p bc-chess --release -- --ignored --nocapture
+      # And the pipeline end to end, on the games in the repo.
+      - run: cargo run --release -q -- pack corpus/classics.pgn /tmp/ci.bcg
+      - run: cargo run --release -q -- unpack /tmp/ci.bcg /tmp/ci.pgn
+
+  # Every number quoted in the papers is produced by a script; this checks the
+  # papers still match.
   measurements:
     runs-on: ubuntu-latest
     defaults:
