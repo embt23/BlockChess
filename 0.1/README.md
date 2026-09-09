@@ -27,6 +27,8 @@ cd 0.1 && cargo build --release
 **A visual walk through the six layers:**
 [claude.ai/code/artifact/07ce0527](https://claude.ai/code/artifact/07ce0527-6180-4b82-a711-a8056c2c7ef0)
 
+**Showing someone? [`DEMO.md`](DEMO.md)** — six commands, five minutes.
+
 **New here, or lost? Read [`START-HERE.md`](START-HERE.md).** It walks through
 each command, says what each crate is for, and names the one thing that is easy
 to get catastrophically wrong.
