@@ -25,8 +25,13 @@ pub fn decode(bytes: &[u8], ply_count: usize) -> Result<Vec<Move>, CodecError> {
             bytes.len()
         )));
     }
+    // `as_chunks` rather than `chunks_exact`: the slice is exactly `ply_count`
+    // pairs long, so the remainder is empty by construction, and the array form
+    // hands `from_le_bytes` a `[u8; 2]` without re-indexing it.
     Ok(bytes[..ply_count * 2]
-        .chunks_exact(2)
-        .map(|c| Move(u16::from_le_bytes([c[0], c[1]])))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&c| Move(u16::from_le_bytes(c)))
         .collect())
 }
