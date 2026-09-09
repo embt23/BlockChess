@@ -2,6 +2,7 @@
 //!
 //!   style demo [rounds]      fit a lens to synthetic players with known styles
 //!   style pgn <file> [k]     fit a lens to a PGN export
+//!   style export [rounds]    the same, as JSON on stdout, for the visualiser
 
 use bc_hash::hex;
 use bc_style::{synth, Corpus, Lab};
@@ -10,15 +11,18 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let cmd = args.get(1).map(|s| s.as_str()).unwrap_or("demo");
 
+    let json = cmd == "export";
     let corpus = match cmd {
-        "demo" => {
+        "demo" | "export" => {
             let rounds: usize = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(10);
             let games = synth::round_robin(rounds, 0x5EED_1234, 120);
-            println!(
-                "synthetic corpus: {} games between {} constructed personalities\n",
-                games.len(),
-                synth::ARCHETYPES.len()
-            );
+            if !json {
+                println!(
+                    "synthetic corpus: {} games between {} constructed personalities\n",
+                    games.len(),
+                    synth::ARCHETYPES.len()
+                );
+            }
             let mut c = Corpus::new();
             for g in games {
                 c.push(g);
@@ -46,7 +50,7 @@ fn main() {
             c
         }
         _ => {
-            eprintln!("usage: style [demo [rounds] | pgn <file> [k]]");
+            eprintln!("usage: style [demo [rounds] | pgn <file> [k] | export [rounds]]");
             std::process::exit(2);
         }
     };
@@ -61,6 +65,11 @@ fn main() {
         eprintln!("no usable games in corpus");
         std::process::exit(1);
     };
+
+    if json {
+        emit_json(&lab);
+        return;
+    }
 
     println!("corpus root  {}", hex(&lab.basis.corpus_root));
     println!("samples      {} game-sides", lab.basis.samples);
@@ -124,4 +133,113 @@ fn main() {
              any medal minted from this lens is noise."
         }
     );
+}
+
+/// Escape a string for JSON. Player names come from PGN headers, so they are
+/// arbitrary text and cannot be interpolated raw.
+fn esc(s: &str) -> String {
+    let mut out = String::with_capacity(s.len() + 2);
+    for c in s.chars() {
+        match c {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+fn nums(v: &[f64]) -> String {
+    v.iter()
+        .map(|x| format!("{x:.4}"))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// Everything the visualiser needs, and nothing it does not.
+fn emit_json(lab: &Lab) {
+    let b = &lab.basis;
+    let mut out = String::from("{\n");
+    out.push_str(&format!(
+        "  \"corpus_root\": \"{}\",\n",
+        hex(&b.corpus_root)
+    ));
+    out.push_str(&format!("  \"games\": {},\n", lab.corpus.len()));
+    out.push_str(&format!("  \"samples\": {},\n", b.samples));
+    out.push_str(&format!("  \"k\": {},\n", b.k));
+
+    out.push_str("  \"axes\": [\n");
+    for i in 0..b.k {
+        let (pos, neg) = b.poles(i);
+        let loadings: Vec<String> = b
+            .loadings(i, 5)
+            .into_iter()
+            .map(|(n, w)| format!("{{\"feature\":\"{n}\",\"weight\":{w:.4}}}"))
+            .collect();
+        out.push_str(&format!(
+            "    {{\"axis\":{i},\"explained\":{:.4},\"pos\":\"{pos}\",\"neg\":\"{neg}\",\"loadings\":[{}]}}{}\n",
+            b.explained(i),
+            loadings.join(","),
+            if i + 1 < b.k { "," } else { "" }
+        ));
+    }
+    out.push_str("  ],\n");
+
+    out.push_str("  \"points\": [\n");
+    for (i, p) in lab.points.iter().enumerate() {
+        out.push_str(&format!(
+            "    {{\"player\":\"{}\",\"game\":{},\"coords\":[{}]}}{}\n",
+            esc(&p.player),
+            p.game,
+            nums(&p.coords),
+            if i + 1 < lab.points.len() { "," } else { "" }
+        ));
+    }
+    out.push_str("  ],\n");
+
+    let players = lab.corpus.players();
+    out.push_str("  \"players\": [\n");
+    for (i, name) in players.iter().enumerate() {
+        let Some(p) = lab.profile(name) else { continue };
+        let chain = lab.chain_for(name);
+        let links: Vec<String> = chain
+            .links
+            .iter()
+            .map(|l| {
+                format!(
+                    "{{\"index\":{},\"coords\":[{}],\"games\":{},\"moved\":{:.4},\"medal\":\"{}\"}}",
+                    l.index,
+                    nums(&l.coords),
+                    l.games,
+                    l.moved,
+                    hex(&l.medal)
+                )
+            })
+            .collect();
+        out.push_str(&format!(
+            "    {{\"name\":\"{}\",\"coords\":[{}],\"dispersion\":{:.4},\"games\":{},\"medal\":\"{}\",\"head\":\"{}\",\"path_length\":{:.4},\"links\":[{}]}}{}\n",
+            esc(name),
+            nums(&p.coords),
+            p.dispersion,
+            p.games,
+            hex(&p.medal(b)),
+            hex(&chain.head()),
+            chain.path_length(),
+            links.join(","),
+            if i + 1 < players.len() { "," } else { "" }
+        ));
+    }
+    out.push_str("  ],\n");
+
+    let (within, between) = lab.separation();
+    out.push_str(&format!(
+        "  \"separation\": {{\"within\":{within:.4},\"between\":{between:.4},\"accuracy\":{:.4},\"chance\":{:.4}}}\n}}",
+        lab.nearest_neighbour_accuracy(),
+        1.0 / players.len().max(1) as f64
+    ));
+    println!("{out}");
 }
