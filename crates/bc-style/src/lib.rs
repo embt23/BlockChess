@@ -26,6 +26,7 @@ pub mod features;
 pub mod linalg;
 pub mod pgn;
 pub mod profile;
+pub mod report;
 pub mod synth;
 
 pub use basis::Basis;

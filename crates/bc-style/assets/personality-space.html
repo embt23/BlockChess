@@ -1,0 +1,406 @@
+<title>Personality Space</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --ground:#f7f8fa; --surface:#ffffff; --surface-2:#eef0f4;
+  --ink:#15171c; --ink-2:#4a4f5a; --ink-3:#767c8a;
+  --rule:#dcdfe6; --rule-soft:#e8eaef;
+  --context:#b9bec9;
+  --s1:#2a78d6; --s2:#eda100; --s3:#e87ba4; --s4:#008300;
+  --pos:#2a78d6; --neg:#e34948; --mid:#f0efec;
+  --accent:#2a78d6;
+  --shadow:0 1px 2px rgba(20,24,35,.06), 0 8px 24px rgba(20,24,35,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --ground:#111216; --surface:#191b20; --surface-2:#212429;
+    --ink:#f3f4f7; --ink-2:#b6bbc6; --ink-3:#848b99;
+    --rule:#2e323a; --rule-soft:#24272d;
+    --context:#565d6a;
+    --s1:#3987e5; --s2:#c98500; --s3:#d55181; --s4:#008300;
+    --pos:#3987e5; --neg:#e66767; --mid:#383835;
+    --accent:#3987e5;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --ground:#111216; --surface:#191b20; --surface-2:#212429;
+  --ink:#f3f4f7; --ink-2:#b6bbc6; --ink-3:#848b99;
+  --rule:#2e323a; --rule-soft:#24272d;
+  --context:#565d6a;
+  --s1:#3987e5; --s2:#c98500; --s3:#d55181; --s4:#008300;
+  --pos:#3987e5; --neg:#e66767; --mid:#383835;
+  --accent:#3987e5;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.6; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 28px 96px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-numeric:tabular-nums}
+
+/* masthead */
+header{padding:56px 0 40px; border-bottom:1px solid var(--rule)}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 20px;
+  display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+}
+.eyebrow b{color:var(--accent); font-weight:500}
+h1{
+  font-family:Spectral,Georgia,serif; font-weight:600; font-size:clamp(38px,6vw,60px);
+  line-height:1.04; letter-spacing:-.02em; margin:0 0 20px; text-wrap:balance;
+}
+.deck{font-size:18px; line-height:1.62; color:var(--ink-2); max-width:63ch; margin:0}
+.deck em{font-style:italic; color:var(--ink)}
+
+/* stat row */
+.reading{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:1px;
+  background:var(--rule-soft); border:1px solid var(--rule-soft); margin:36px 0 0}
+.stat{background:var(--ground); padding:18px 20px}
+.stat .k{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 8px}
+.stat .v{font-family:Spectral,Georgia,serif; font-size:32px; line-height:1;
+  font-variant-numeric:tabular-nums; margin:0}
+.stat .n{font-size:12.5px; color:var(--ink-3); margin:7px 0 0}
+.stat.hero .v{color:var(--accent); font-size:38px}
+
+/* sections */
+section{margin-top:64px}
+.shead{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+  border-bottom:1px solid var(--rule); padding-bottom:12px; margin-bottom:8px}
+.stage{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3); white-space:nowrap}
+h2{font-family:Spectral,Georgia,serif; font-weight:600; font-size:25px; letter-spacing:-.01em;
+  margin:0; flex:1 1 auto; text-wrap:balance}
+.note{font-size:14.5px; color:var(--ink-2); max-width:66ch; margin:14px 0 22px}
+.note code{font-family:"IBM Plex Mono",monospace; font-size:.92em; color:var(--ink)}
+
+/* legend */
+.legend{display:flex; gap:20px; flex-wrap:wrap; margin:0 0 14px; padding:0; list-style:none}
+.legend li{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--ink-2)}
+.legend .sw{width:16px; height:16px; flex:none}
+
+/* figures */
+figure{margin:0; background:var(--surface); border:1px solid var(--rule);
+  box-shadow:var(--shadow); padding:18px 18px 12px}
+.plotwrap{overflow-x:auto}
+svg{display:block; width:100%; height:auto}
+figcaption{font-size:13px; color:var(--ink-3); margin-top:12px; padding-top:12px;
+  border-top:1px solid var(--rule-soft)}
+
+.facets{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px}
+.facet{background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow); padding:14px 14px 10px}
+.facet h3{font-family:Spectral,Georgia,serif; font-size:18px; font-weight:600; margin:0 0 2px}
+.facet .fmeta{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3);
+  margin:0 0 8px; font-variant-numeric:tabular-nums}
+
+/* axes / loadings */
+.axes{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px}
+.axcard{background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow); padding:16px 18px 12px}
+.axcard .top{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:2px}
+.axcard .name{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-3)}
+.axcard .var{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2);
+  font-variant-numeric:tabular-nums}
+.tension{font-family:Spectral,Georgia,serif; font-size:17px; margin:0 0 12px; line-height:1.35}
+.tension .lo{color:var(--neg)} .tension .hi{color:var(--pos)}
+.tension .arr{color:var(--ink-3); padding:0 6px}
+
+/* table */
+.tablewrap{overflow-x:auto; background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:13.5px}
+th,td{text-align:left; padding:11px 16px; border-bottom:1px solid var(--rule-soft); white-space:nowrap}
+th{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3); font-weight:500;
+  border-bottom:1px solid var(--rule); background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+td.hash{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2)}
+.who{display:flex; align-items:center; gap:9px; font-weight:500}
+.who svg{width:14px; height:14px; flex:none}
+
+/* tooltip */
+#tip{position:fixed; pointer-events:none; z-index:50; opacity:0; transition:opacity .1s;
+  background:var(--surface); color:var(--ink); border:1px solid var(--rule);
+  box-shadow:var(--shadow); padding:9px 12px; font-size:12.5px; max-width:240px}
+#tip .tname{font-weight:600; margin-bottom:3px; display:flex; align-items:center; gap:7px}
+#tip .trow{font-family:"IBM Plex Mono",monospace; color:var(--ink-2); font-size:11.5px;
+  font-variant-numeric:tabular-nums}
+
+footer{margin-top:72px; padding-top:24px; border-top:1px solid var(--rule);
+  font-size:13px; color:var(--ink-3)}
+footer p{margin:0 0 8px; max-width:70ch}
+footer .root{word-break:break-all}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow"><b>BlockChess</b> <span>·</span> <span>bc-style</span> <span>·</span>
+     <span>episodes 05–09</span> <span>·</span> <span id="eb-corpus"></span></p>
+  <h1>Personality Space</h1>
+  <p class="deck">Four players, built to differ, played 120 games against each other. Nobody
+  told the mathematics who they were. It found the axes on its own by factorising the corpus,
+  and the games <em>separated anyway</em> — which is the whole claim this project rests on:
+  that how you play is a thing that can be measured, committed to, and carried as a name.</p>
+  <div class="reading" id="reading"></div>
+</header>
+
+<section>
+  <div class="shead"><span class="stage">Stage 4 · project</span>
+    <h2>Where everyone stands</h2></div>
+  <p class="note">Every point is one game, seen from one player's side — 240 in all. Position is
+  that game's coordinates on the first two discovered axes. Nothing here is a rating: two players
+  can sit far apart at identical strength, because the axes measure <em>how</em>, not <em>how well</em>.</p>
+  <ul class="legend" id="legend"></ul>
+  <figure>
+    <div class="plotwrap"><div id="main"></div></div>
+    <figcaption>Labels sit at each player's centroid — the profile their medal commits to.
+    Marker shape repeats the identity that colour carries, so the chart survives both colour-vision
+    deficiency and a black-and-white print.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="shead"><span class="stage">Stage 7 · chain</span>
+    <h2>How each player moved</h2></div>
+  <p class="note">A link is earned by <em>changing</em>, not by playing. Each panel traces one
+  player's medal chain through the same space: a line is drawn only when they drifted far enough
+  from their last committed position to mint a new one. Grey points are everyone else's games,
+  kept for scale. Petrosian — the only archetype rewarded for restricting his opponent — travels
+  least and sits furthest out.</p>
+  <div class="facets" id="facets"></div>
+</section>
+
+<section>
+  <div class="shead"><span class="stage">Stage 3 · basis</span>
+    <h2>What the axes turned out to mean</h2></div>
+  <p class="note">Each axis is a <em>tension</em>, not a quantity — a signed direction with a
+  meaningful pole at both ends. Being at the negative end is not the absence of a style; it is the
+  other style. Bars show how hard each of the eighteen measured features pulls in each direction.
+  These names were not chosen in advance: they are whichever features loaded hardest once the
+  corpus was factorised.</p>
+  <ul class="legend">
+    <li><span class="sw" style="background:var(--pos)"></span> pulls toward the positive pole</li>
+    <li><span class="sw" style="background:var(--neg)"></span> pulls toward the negative pole</li>
+  </ul>
+  <div class="axes" id="axes"></div>
+</section>
+
+<section>
+  <div class="shead"><span class="stage">Stage 6 · commit</span>
+    <h2>The medals</h2></div>
+  <p class="note">A medal is a commitment to a position under a stated lens. The corpus root is
+  inside the hash, so the same player measured against a different set of games gets a different
+  medal — by construction. A medal quoted without its corpus is half an identity.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th scope="col">Player</th><th scope="col">Axis 0</th><th scope="col">Axis 1</th>
+        <th scope="col">Spread</th><th scope="col">Games</th><th scope="col">Links</th>
+        <th scope="col">Path</th><th scope="col">Medal</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  <p><strong>Method.</strong> Eighteen features per game-side, no engine involved — the compression
+  measures behaviour, not correctness. Columns are z-scored against the corpus, the covariance is
+  diagonalised by Jacobi rotation, and games are projected onto the leading eigenvectors.
+  Eigenvector signs are pinned so a medal is reproducible on any machine.</p>
+  <p>These four players are synthetic, and deliberately so: the pipeline's central claim is only
+  testable against personalities whose answer is known in advance. Real human games are the next
+  measurement, and they are what will answer the question this cannot — how many bits a chess
+  personality actually contains, and therefore how hard a medal is to forge.</p>
+  <p class="mono root" id="foot-root"></p>
+</footer>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+const DATA = __DATA__;
+const SHAPES = ["circle","square","triangle","diamond"];
+const SERIES = ["--s1","--s2","--s3","--s4"];
+const players = DATA.players.map((p,i)=>({...p, shape:SHAPES[i%4], varname:SERIES[i%4]}));
+const byName = Object.fromEntries(players.map(p=>[p.name,p]));
+
+function mark(shape,x,y,r){
+  x=+x; y=+y;   // callers pass toFixed() strings; "12.3"+4 would concatenate
+  if(shape==="square") return `<rect x="${x-r}" y="${y-r}" width="${2*r}" height="${2*r}"/>`;
+  if(shape==="triangle") return `<polygon points="${x},${y-r*1.3} ${x-r*1.18},${y+r*0.86} ${x+r*1.18},${y+r*0.86}"/>`;
+  if(shape==="diamond") return `<polygon points="${x},${y-r*1.32} ${x+r*1.32},${y} ${x},${y+r*1.32} ${x-r*1.32},${y}"/>`;
+  return `<circle cx="${x}" cy="${y}" r="${r}"/>`;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ---- shared scale across every plot, so panels are comparable ---- */
+const xs = DATA.points.map(p=>p.coords[0]), ys = DATA.points.map(p=>p.coords[1]);
+const pad = 0.6;
+const DX=[Math.min(...xs)-pad, Math.max(...xs)+pad];
+const DY=[Math.min(...ys)-pad, Math.max(...ys)+pad];
+
+function ticks(lo,hi,n){
+  const raw=(hi-lo)/n, mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=raw)||mag*10;
+  const out=[]; for(let t=Math.ceil(lo/step)*step; t<=hi+1e-9; t+=step) out.push(+t.toFixed(6));
+  return out;
+}
+const TX=ticks(DX[0],DX[1],6), TY=ticks(DY[0],DY[1],5);
+const axLabel = i => `${DATA.axes[i].neg} ↔ ${DATA.axes[i].pos}`;
+
+function plot(opts){
+  const {w,h,m,showTicks,focus,trail,labels} = opts;
+  const iw=w-m.l-m.r, ih=h-m.t-m.b;
+  const X=v=>m.l+(v-DX[0])/(DX[1]-DX[0])*iw;
+  const Y=v=>m.t+ih-(v-DY[0])/(DY[1]-DY[0])*ih;
+  let s=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(opts.aria)}">`;
+
+  s+=`<g stroke="var(--rule-soft)" stroke-width="1">`;
+  TX.forEach(t=>{s+=`<line x1="${X(t).toFixed(1)}" y1="${m.t}" x2="${X(t).toFixed(1)}" y2="${m.t+ih}"/>`;});
+  TY.forEach(t=>{s+=`<line x1="${m.l}" y1="${Y(t).toFixed(1)}" x2="${m.l+iw}" y2="${Y(t).toFixed(1)}"/>`;});
+  s+=`</g>`;
+  s+=`<g stroke="var(--rule)" stroke-width="1.25">`;
+  if(DX[0]<0&&DX[1]>0) s+=`<line x1="${X(0).toFixed(1)}" y1="${m.t}" x2="${X(0).toFixed(1)}" y2="${m.t+ih}"/>`;
+  if(DY[0]<0&&DY[1]>0) s+=`<line x1="${m.l}" y1="${Y(0).toFixed(1)}" x2="${m.l+iw}" y2="${Y(0).toFixed(1)}"/>`;
+  s+=`</g>`;
+
+  if(showTicks){
+    s+=`<g fill="var(--ink-3)" font-family="IBM Plex Mono, monospace" font-size="10.5">`;
+    TX.forEach(t=>{s+=`<text x="${X(t).toFixed(1)}" y="${m.t+ih+16}" text-anchor="middle">${t}</text>`;});
+    TY.forEach(t=>{s+=`<text x="${m.l-8}" y="${(Y(t)+3.5).toFixed(1)}" text-anchor="end">${t}</text>`;});
+    s+=`</g>`;
+    s+=`<text x="${m.l+iw/2}" y="${h-6}" text-anchor="middle" fill="var(--ink-2)" font-family="IBM Plex Mono, monospace" font-size="11">${esc(axLabel(0))}</text>`;
+    s+=`<text transform="translate(13,${m.t+ih/2}) rotate(-90)" text-anchor="middle" fill="var(--ink-2)" font-family="IBM Plex Mono, monospace" font-size="11">${esc(axLabel(1))}</text>`;
+  }
+
+  // context points first, focused player on top
+  const ctx = focus ? DATA.points.filter(p=>p.player!==focus) : [];
+  const live = focus ? DATA.points.filter(p=>p.player===focus) : DATA.points;
+  s+=`<g fill="var(--context)" opacity="${focus?0.5:1}">`;
+  ctx.forEach(p=>{s+=mark("circle",X(p.coords[0]).toFixed(1),Y(p.coords[1]).toFixed(1),3);});
+  s+=`</g>`;
+  s+=`<g stroke="var(--surface)" stroke-width="1.5">`;
+  live.forEach(p=>{const pl=byName[p.player];
+    s+=`<g fill="var(${pl.varname})">${mark(pl.shape,X(p.coords[0]).toFixed(1),Y(p.coords[1]).toFixed(1),4.5)}</g>`;});
+  s+=`</g>`;
+
+  if(trail){
+    const pl=byName[trail], pts=pl.links.map(l=>[X(l.coords[0]),Y(l.coords[1])]);
+    s+=`<polyline fill="none" stroke="var(${pl.varname})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.95" points="${pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}"/>`;
+    s+=`<g stroke="var(--surface)" stroke-width="1.75" fill="var(${pl.varname})">`;
+    pts.forEach(p=>{s+=mark(pl.shape,p[0].toFixed(1),p[1].toFixed(1),5);});
+    s+=`</g>`;
+    const a=pts[0], z=pts[pts.length-1];
+    s+=`<g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-2)" paint-order="stroke" stroke="var(--surface)" stroke-width="3.5">`;
+    s+=`<text x="${(a[0]+9).toFixed(1)}" y="${(a[1]-8).toFixed(1)}">first</text>`;
+    s+=`<text x="${(z[0]+9).toFixed(1)}" y="${(z[1]+15).toFixed(1)}">now</text></g>`;
+  }
+
+  if(labels){
+    s+=`<g font-family="Spectral, Georgia, serif" font-size="15" font-weight="600" paint-order="stroke" stroke="var(--surface)" stroke-width="4.5" stroke-linejoin="round">`;
+    // Alternate above/below so labels on neighbouring centroids cannot collide.
+    players.forEach((p,i)=>{
+      const dy = (i%2===0) ? -12 : 22;
+      s+=`<text x="${(X(p.coords[0])+11).toFixed(1)}" y="${(Y(p.coords[1])+dy).toFixed(1)}" fill="var(${p.varname})">${esc(p.name)}</text>`;});
+    s+=`</g>`;
+  }
+  return {svg:s+`</svg>`, X, Y};
+}
+
+/* ---- reading ---- */
+const sep=DATA.separation;
+document.getElementById("reading").innerHTML=[
+  ["Games", DATA.games, "120 played, each seen twice"],
+  ["Game-sides", DATA.samples, "one point per player per game"],
+  ["Separation", (sep.between/sep.within).toFixed(2)+"×", "between-player vs within-player"],
+  ["Identified", (sep.accuracy*100).toFixed(1)+"%", "nearest neighbour · chance "+(sep.chance*100).toFixed(0)+"%"]
+].map(([k,v,n],i)=>`<div class="stat${i===3?' hero':''}"><p class="k">${k}</p>
+  <p class="v mono">${v}</p><p class="n">${n}</p></div>`).join("");
+document.getElementById("eb-corpus").textContent="corpus "+DATA.corpus_root.slice(0,12);
+document.getElementById("foot-root").textContent="corpus root  "+DATA.corpus_root;
+
+/* ---- legend ---- */
+document.getElementById("legend").innerHTML=players.map(p=>
+  `<li><svg class="sw" viewBox="0 0 16 16" aria-hidden="true"><g fill="var(${p.varname})">${mark(p.shape,8,8,5.5)}</g></svg>${esc(p.name)}</li>`).join("");
+
+/* ---- main plot ---- */
+const main=plot({w:940,h:560,m:{l:52,r:24,t:18,b:54},showTicks:true,labels:true,
+  aria:"Scatter plot of 240 games in personality space, coloured and shaped by player. Four clusters are visible."});
+document.getElementById("main").innerHTML=main.svg;
+
+/* ---- facets ---- */
+document.getElementById("facets").innerHTML=players.map(p=>{
+  const f=plot({w:440,h:330,m:{l:30,r:18,t:14,b:26},showTicks:false,focus:p.name,trail:p.name,
+    aria:`${p.name}: ${p.links.length} medal links traced through personality space.`});
+  return `<div class="facet"><h3 style="color:var(${p.varname})">${esc(p.name)}</h3>
+    <p class="fmeta">${p.links.length} links · path ${p.path_length.toFixed(2)} · spread ${p.dispersion.toFixed(2)}</p>
+    ${f.svg}</div>`;}).join("");
+
+/* ---- axes ---- */
+document.getElementById("axes").innerHTML=DATA.axes.map(a=>{
+  const max=Math.max(...a.loadings.map(l=>Math.abs(l.weight)));
+  const bars=a.loadings.map(l=>{
+    const pct=Math.abs(l.weight)/max*46, pos=l.weight>=0;
+    return `<div style="display:grid;grid-template-columns:1fr 152px;gap:10px;align-items:center;margin-bottom:5px">
+      <div style="position:relative;height:15px;background:var(--mid)">
+        <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--rule)"></div>
+        <div style="position:absolute;top:1px;bottom:1px;${pos?`left:50%;`:`right:50%;`}width:${pct}%;background:var(${pos?'--pos':'--neg'})"></div>
+      </div>
+      <span class="mono" style="font-size:11px;color:var(--ink-2)">${esc(l.feature)} ${l.weight>=0?'+':''}${l.weight.toFixed(2)}</span>
+    </div>`;}).join("");
+  return `<div class="axcard">
+    <div class="top"><span class="name">Axis ${a.axis}</span>
+      <span class="var">${(a.explained*100).toFixed(1)}% of variance</span></div>
+    <p class="tension"><span class="lo">${esc(a.neg)}</span><span class="arr">↔</span><span class="hi">${esc(a.pos)}</span></p>
+    ${bars}</div>`;}).join("");
+
+/* ---- table ---- */
+document.getElementById("tbody").innerHTML=players.map(p=>`<tr>
+  <td><span class="who" style="color:var(${p.varname})">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><g fill="var(${p.varname})">${mark(p.shape,8,8,5.5)}</g></svg>
+    <span style="color:var(--ink)">${esc(p.name)}</span></span></td>
+  <td class="num">${p.coords[0].toFixed(2)}</td>
+  <td class="num">${p.coords[1].toFixed(2)}</td>
+  <td class="num">${p.dispersion.toFixed(2)}</td>
+  <td class="num">${p.games}</td>
+  <td class="num">${p.links.length}</td>
+  <td class="num">${p.path_length.toFixed(2)}</td>
+  <td class="hash">${p.medal.slice(0,16)}…</td></tr>`).join("");
+
+/* ---- hover ---- */
+const tip=document.getElementById("tip");
+const mainEl=document.getElementById("main");
+mainEl.addEventListener("mousemove",e=>{
+  const svg=mainEl.querySelector("svg"), r=svg.getBoundingClientRect();
+  const sx=940/r.width, sy=560/r.height;
+  const vx=(e.clientX-r.left)*sx, vy=(e.clientY-r.top)*sy;
+  let best=null,bd=1e9;
+  DATA.points.forEach(p=>{
+    const dx=main.X(p.coords[0])-vx, dy=main.Y(p.coords[1])-vy, d=dx*dx+dy*dy;
+    if(d<bd){bd=d;best=p;}});
+  if(best && bd<400){
+    const pl=byName[best.player];
+    tip.innerHTML=`<div class="tname" style="color:var(${pl.varname})">
+      <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><g fill="var(${pl.varname})">${mark(pl.shape,8,8,6)}</g></svg>
+      <span style="color:var(--ink)">${esc(best.player)}</span></div>
+      <div class="trow">game ${best.game}</div>
+      <div class="trow">${DATA.axes[0].pos.slice(0,14)} ${best.coords[0]>=0?'+':''}${best.coords[0].toFixed(2)}</div>
+      <div class="trow">${DATA.axes[1].pos.slice(0,14)} ${best.coords[1]>=0?'+':''}${best.coords[1].toFixed(2)}</div>`;
+    tip.style.opacity="1";
+    tip.style.left=Math.min(e.clientX+16, innerWidth-250)+"px";
+    tip.style.top=Math.max(8, e.clientY-64)+"px";
+  } else tip.style.opacity="0";
+});
+mainEl.addEventListener("mouseleave",()=>{tip.style.opacity="0";});
+</script>

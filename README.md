@@ -42,6 +42,7 @@ verified by tests we wrote ourselves.
 ```sh
 cargo run --release -p bc-style --bin style -- demo    # the lab, on constructed players
 cargo run --release -p bc-style --bin style -- pgn g.pgn
+cargo run --release -p bc-style --bin style -- viz > space.html   # the same, as a page
 
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
