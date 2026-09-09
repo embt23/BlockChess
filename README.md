@@ -8,6 +8,7 @@ journal that asked where the *borders* of a game are.
 
 ```
 index.html               the atlas — open it in a browser, no build step
+workbench.html           tag a photographed page into positions
 NOTES.md                 the journal page: legible vs unread, kept honest
 ROADMAP.md               phases, blockers, and the pattern-web spec
 docs/presentation/       "Reading the Page" — 15 slides

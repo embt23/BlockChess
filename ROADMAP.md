@@ -10,8 +10,10 @@
 | Story mode (11 stages) + Explore mode | Done |
 | Search map with hover-preview | Done |
 | Presentation | Done · `docs/presentation/` |
-| **Running on the author's own games** | **Blocked — needs the moves** |
-| Glyph alphabet decoded | Blocked — needs the key |
+| Glyph alphabet | Done — six marks, one rotation rule (`NOTES.md`) |
+| Page workbench | Done · `workbench.html` |
+| Position packing to 256 bits | Done · `tools/tests/pack.mjs` |
+| **Running on the author's own games** | **Blocked — needs the page tagged** |
 | Felt-border capture | Not started |
 | Pattern web + gap map | Specified below |
 
@@ -21,14 +23,23 @@ eight hand-worked SEE cases.
 
 ---
 
-## Phase 1 · Get the real games in
+## Phase 1 · Tag the page
 
-Everything downstream is better with the author's own play, and the pattern web
-below is meaningless without it. Self-play games are the target: both sides are
-the same mind, which is what makes the asymmetry analysis in Phase 4 possible.
+The moves are on the journal page, written in the author's own glyphs — about
+75% legible, so some squares have more than one reading and the game may fork
+into several candidate interpretations.
 
-**Needed:** PGN, a game link, a move list, or a photo of a scoresheet. Several
-games beat one. The paste box in the tool already accepts PGN and FEN.
+`workbench.html` is the instrument: drop the photo in, box each grid, line the
+overlay up with the hand-ruled lines, and click the squares. Every board is
+checked against the rules of chess as it is filled in, so an illegal reading is
+caught on the spot — the redundancy in chess does the error correction.
+
+Computer vision is deliberately **not** the tool here: with one page it would
+mean training a classifier on a dataset of one.
+
+**Verified end to end:** tagging a board of the author's glyphs produces
+`rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR` — the standard opening position.
+The alphabet reads correctly.
 
 ## Phase 2 · The felt border
 
@@ -83,7 +94,20 @@ The likely finding, worth testing rather than assuming: a player against
 themselves converges on positions they find *legible*, and the gaps in Phase 3
 are exactly the positions they avoid steering both sides into.
 
-## Phase 5 · Close the loop
+## Phase 5 · The territory variant
+
+A chess variant scored by ground rather than material — the frontier as the win
+condition — first playable in the atlas, then settled on-chain. `fields()`
+already returns the score. The risk is whether the game is any good, which is
+answerable off-chain in a day.
+
+A position in the author's alphabet is 13 states a square, 4 bits, 64 squares:
+**256 bits, exactly one EVM storage word.** Verified by `tools/tests/pack.mjs`
+over 80 positions including castling and en passant. On-chain chess is not new
+and nothing here should claim a first; a territory-scored variant may be
+unoccupied, but that is an unverified belief, not a fact.
+
+## Phase 6 · Close the loop
 
 Feed the gap list back into the atlas as a practice mode: load a position from
 an unvisited family, hide the layers, and ask where the border is before showing
