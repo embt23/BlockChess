@@ -4,9 +4,11 @@
 //!   style pgn <file> [k]     fit a lens to a PGN export
 //!   style export [rounds]    the same, as JSON on stdout
 //!   style viz [rounds]       a self-contained HTML page of the same, on stdout
+//!   style identify [rounds]  held-out attribution: is a medal forgeable, and
+//!                            how many games until a fresh account is unmasked
 
 use bc_hash::hex;
-use bc_style::{report, synth, Corpus, Lab};
+use bc_style::{identify, report, synth, Corpus, Lab};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -14,7 +16,7 @@ fn main() {
 
     let quiet = matches!(cmd, "export" | "viz");
     let corpus = match cmd {
-        "demo" | "export" | "viz" => {
+        "demo" | "export" | "viz" | "identify" => {
             let rounds: usize = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(10);
             let games = synth::round_robin(rounds, 0x5EED_1234, 120);
             if !quiet {
@@ -52,7 +54,8 @@ fn main() {
         }
         _ => {
             eprintln!(
-                "usage: style [demo [rounds] | pgn <file> [k] | export [rounds] | viz [rounds]]"
+                "usage: style [demo [rounds] | pgn <file> [k] | export [rounds] \
+                 | viz [rounds] | identify [rounds]]"
             );
             std::process::exit(2);
         }
@@ -64,6 +67,12 @@ fn main() {
     }
 
     let k: usize = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(4);
+
+    if cmd == "identify" {
+        report_identify(&corpus, k);
+        return;
+    }
+
     let Some(lab) = Lab::fit(corpus, k) else {
         eprintln!("no usable games in corpus");
         std::process::exit(1);
@@ -143,4 +152,111 @@ fn main() {
              any medal minted from this lens is noise."
         }
     );
+}
+
+/// Episodes 10 and 12, on the command line.
+fn report_identify(corpus: &Corpus, k: usize) {
+    let Some(sp) = identify::split(corpus, k) else {
+        eprintln!("corpus too small to split");
+        std::process::exit(1);
+    };
+    let held_total: usize = sp.held.iter().map(|h| h.points.len()).sum();
+    let n = sp.centroids.len();
+
+    println!("held-out attribution");
+    println!("  the lens, the statistics and the centroids come from the training");
+    println!("  half only. Test games are scored exactly as new games would be.\n");
+    println!("  training game-sides   {}", sp.lab.points.len());
+    println!("  held-out game-sides   {held_total}");
+    println!("  players               {n}");
+
+    let m = identify::confusion(&sp);
+    let correct: usize = (0..n).map(|i| m[i][i]).sum();
+    let total: usize = m.iter().flatten().sum();
+    let chance = 100.0 / n as f64;
+    println!(
+        "\n  single-game accuracy  {:.1}%   (chance {chance:.1}%)",
+        if total > 0 {
+            correct as f64 / total as f64 * 100.0
+        } else {
+            0.0
+        }
+    );
+
+    println!("\nconfusion — rows are truth, columns are the guess");
+    print!("  {:<14}", "");
+    for c in &sp.centroids {
+        print!("{:>12}", short(&c.player));
+    }
+    println!();
+    for (i, c) in sp.centroids.iter().enumerate() {
+        print!("  {:<14}", short(&c.player));
+        for cell in &m[i] {
+            print!("{cell:>12}");
+        }
+        println!();
+    }
+
+    println!("\n\"I'll just start a fresh account\"");
+    println!("  games observed before the new name is provably the old one:\n");
+    let curve = identify::convergence(&sp, 12, 60, 0xC0FFEE);
+    for c in &curve {
+        let bar = "█".repeat((c.accuracy * 40.0).round() as usize);
+        println!(
+            "   {:>3} games  {:>6.1}%  {bar}",
+            c.games,
+            c.accuracy * 100.0
+        );
+    }
+    if let Some(first) = curve.iter().find(|c| c.accuracy >= 0.95) {
+        println!(
+            "\n  → {} games is enough to identify a player 95% of the time.",
+            first.games
+        );
+    } else {
+        println!("\n  → 95% is not reached within 12 games.");
+    }
+
+    println!("\n\"I'll play like you and steal your medal\"");
+    if let Some((a, b, d, cells)) = identify::closest_pair(&sp.centroids) {
+        println!("  closest pair          {a} ↔ {b}");
+        println!("  distance              {d:.3}");
+        println!(
+            "  in quantisation cells {cells:.0}   (STEP = {})",
+            bc_style::profile::STEP
+        );
+        println!(
+            "\n  {} ",
+            if cells < 2.0 {
+                "COLLISION RISK — these two mint the same or adjacent medals."
+            } else {
+                "No collision: the closest two players are many cells apart."
+            }
+        );
+    }
+
+    let all: Vec<Vec<f64>> = sp.lab.points.iter().map(|p| p.coords.clone()).collect();
+    let cells = identify::occupied_cells(&sp.lab.basis, &all);
+    let bits: f64 = cells.iter().map(|c| c.max(1.0).log2()).sum();
+    println!(
+        "\n  cells spanned per axis {}",
+        cells
+            .iter()
+            .map(|c| format!("{c:.0}"))
+            .collect::<Vec<_>>()
+            .join(" · ")
+    );
+    println!("  upper bound            {bits:.1} bits of personality");
+    println!("\n  That bound is loose and deliberately so: it counts the cells the");
+    println!("  cloud spans, not the cells anyone occupies, and four constructed");
+    println!("  players cannot speak for the human population. It is a method,");
+    println!("  waiting for a real corpus — see METAPLAN O3.");
+}
+
+fn short(s: &str) -> String {
+    if s.chars().count() > 11 {
+        format!("{}…", s.chars().take(10).collect::<String>())
+    } else {
+        s.to_string()
+    }
 }

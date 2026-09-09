@@ -235,9 +235,9 @@ identity instead of money.
 
 | # | The attack | The mathematics |
 |---|---|---|
-| 10 | "I'll play like you and steal your medal" | how many bits is a personality? distinguishability, the birthday bound |
+| 10 | "I'll play like you and steal your medal" | how many bits is a personality? distinguishability, the birthday bound — `bc-style::identify` |
 | 11 | "I'm not sandbagging, I'm just off form" | likelihood ratios, KL divergence, Wald's SPRT |
-| 12 | "I'll just start a fresh account" | convergence — how many games until you are re-identified |
+| 12 | "I'll just start a fresh account" | convergence — how many games until you are re-identified — `bc-style::identify` |
 | 13 | "I'll poison the corpus so the axes move my way" | basis stability, influence, reproducibility |
 | 14 | "That isn't the basis you published" | deterministic factorisation over a pinned corpus |
 
@@ -347,7 +347,7 @@ rather than code.
 |---|---|---|
 | **O1** | Where do written episodes live? Never discussed; now the primary product surface. | Shipping 01–04. **Urgent.** |
 | **O2** | Which hand-picked features actually define a chess personality? A taste question, not a technical one. | The honesty of episode 05. |
-| **O3** | How many bits is a chess personality? Empirical, answerable, and unanswered. | Episode 10, and the medal's whole security argument. |
+| **O3** | How many bits is a chess personality? **Method now built; the number is not trustworthy yet.** `style identify` measures it — held-out attribution, a convergence curve, and the closest pair in quantisation cells. On four constructed players: 7 games to identify, closest pair 39 cells apart, upper bound 30.7 bits. All of that is about *synthetic* players and speaks for nothing human. Point it at a real corpus. | The medal's whole security argument. |
 | **O4** | Does a link in the medal chain need a countersignature, or is a corpus commitment enough? | Episode 09's threat model. |
 | **O5** | Licence contradiction — `README` says TBD, `Cargo.toml` already declares Apache-2.0, D13 recommends Apache-2.0 plus CC BY-SA 4.0 for prose. | Trivial; embarrassing to leave. |
 | **O6** | Real time budget. The atlas assumed ~10–15 h/week and every date in it is fiction until confirmed. | Every schedule. |

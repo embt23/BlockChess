@@ -23,9 +23,10 @@ happens in, and what was cut.
 
 ## Status
 
-Episodes 01–09 implemented and green. `perft(6) = 119,060,324` exact, and the
-lab separates constructed personalities at 77.5% nearest-neighbour accuracy
-against a 25% chance baseline.
+Episodes 01–12 implemented and green. `perft(6) = 119,060,324` exact. On four
+constructed personalities the lab attributes a **single held-out game** to the
+right player 72.5% of the time against a 25% chance baseline, and seven games
+are enough to identify one 95% of the time.
 
 | Crate | Episode | What it is | Oracle |
 |---|---|---|---|
@@ -34,6 +35,7 @@ against a 25% chance baseline.
 | [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft | published perft counts |
 | [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (corpus commitment) and a sparse Merkle tree with proofs of absence | Certificate Transparency vectors |
 | [`bc-style`](crates/bc-style) | 05–09 | The compression: features, a discovered basis, the medal, the chain of medals | analytic eigen-spectra; constructed personalities |
+| [`bc-style::identify`](crates/bc-style/src/identify.rs) | 10, 12 | Held-out attribution, the convergence curve, and the medal's forgery margin | a train/test split the lens never sees |
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been
@@ -43,6 +45,7 @@ verified by tests we wrote ourselves.
 cargo run --release -p bc-style --bin style -- demo    # the lab, on constructed players
 cargo run --release -p bc-style --bin style -- pgn g.pgn
 cargo run --release -p bc-style --bin style -- viz > space.html   # the same, as a page
+cargo run --release -p bc-style --bin style -- identify           # held-out attribution
 
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)

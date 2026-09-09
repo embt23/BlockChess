@@ -1,0 +1,1 @@
+/home/user/BlockChess/0.1/target/debug/examples/scale: /home/user/BlockChess/0.1/crates/bc-grammar/examples/scale.rs /home/user/BlockChess/0.1/crates/bc-grammar/src/lib.rs /home/user/BlockChess/0.1/crates/bc-grammar/src/repair.rs

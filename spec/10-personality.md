@@ -196,3 +196,75 @@ Properties this gives, and they are the whole point:
 - **It does not resist a determined impersonator yet.** Whether you can forge a
   medal by playing like someone is exactly `METAPLAN` O3, and it is unanswered
   until the pipeline is run over real human games at scale.
+
+---
+
+## Stage 8 — Identification and forgery
+
+Two attacks decide whether any of the above is worth building, and both are
+empirical. The design cannot settle them; only a corpus can.
+
+### The protocol
+
+Attribution accuracy is the easiest number in this project to inflate by
+accident, so the split happens **before the lens is fitted**:
+
+```
+   train games ──▶ standardise · basis · player centroids
+   test games  ──▶ projected under the train basis, then attributed
+```
+
+The axes, the column statistics and the centroids are all functions of the
+training half alone, so a held-out game is scored exactly as a genuinely new
+game would be. `Lab::nearest_neighbour_accuracy` does **not** do this — it
+scores every point against every other, including other games by the same
+player, on data the basis already saw. It is a useful smoke test and a bad
+measurement, and the honest estimate must always come out lower. There is a
+test that fails if it ever does not.
+
+### "I'll just start a fresh account"
+
+If identity is derived from play, a new name converges back to the old
+fingerprint after some number of games. That number is the entire content of
+the claim that you cannot hide, and it is measured by drawing `n` held-out
+games, averaging them into a provisional profile, and attributing it.
+
+On the four constructed archetypes:
+
+| Games observed | Identified correctly |
+|---|---|
+| 1 | 71% |
+| 3 | 90% |
+| 5 | 93% |
+| **7** | **97%** |
+| 10 | 99% |
+
+Seven games. The confusion is not uniform, and the shape is the interesting
+part: Petrosian — the only archetype rewarded for *restricting the opponent* —
+is never once mistaken for anybody, while Tal, Morphy and Capablanca trade
+misattributions freely. Three attacking players look alike; the prophylactic
+one is unmistakable. That is a statement about which features carry identity,
+and it is the argument for keeping `opp_mobility` in the set.
+
+### "I'll play like you and steal your medal"
+
+A medal is a commitment to *quantised* coordinates, so forging one means
+landing in the same grid cell. Two players inside one cell mint the same medal
+and **the collision happens before the hash**, where no cryptography helps.
+
+So the security parameter is the distance between players in units of `STEP`.
+On the constructed corpus the closest pair — Morphy and Capablanca — sit **39
+cells** apart, so there is no collision at `STEP = 0.05`. That is a property of
+this corpus, not of chess.
+
+### How many bits is a personality?
+
+The number of distinct medals is bounded by the product of the cells each axis
+spans. On this corpus that is **30.7 bits**.
+
+Treat that as a method rather than a result. It is an *upper* bound and a loose
+one: it counts the cells the cloud spans, not the cells anyone occupies, and it
+says nothing about how a real population distributes inside them. Four
+synthetic players cannot speak for humanity. The number that matters is this
+same measurement over a real corpus, and until it exists every claim about
+medal forgeability is provisional — `METAPLAN` O3.
