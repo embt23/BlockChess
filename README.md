@@ -3,6 +3,19 @@
 An interactive, multilayered search map for chess — built from a page of a chess
 journal that asked where the *borders* of a game are.
 
+**Start here:** [`ROADMAP.md`](ROADMAP.md) for where this is going ·
+[`NOTES.md`](NOTES.md) for what the journal page says and what it withholds.
+
+```
+index.html               the atlas — open it in a browser, no build step
+NOTES.md                 the journal page: legible vs unread, kept honest
+ROADMAP.md               phases, blockers, and the pattern-web spec
+docs/presentation/       "Reading the Page" — 15 slides
+docs/renders/            board images for every layer
+tools/verify.sh          one command: perft, game data, SEE
+tools/                   render harness, deck generator, text-fit checker
+```
+
 `index.html` is a single self-contained page. No build step, no dependencies:
 open it in a browser, or serve the directory.
 

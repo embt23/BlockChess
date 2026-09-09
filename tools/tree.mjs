@@ -1,0 +1,12 @@
+import pkg from '/opt/node22/lib/node_modules/playwright/index.js'; const { chromium } = pkg;
+const b=await chromium.launch();
+const p=await b.newPage({viewport:{width:1400,height:1000},deviceScaleFactor:3,reducedMotion:'no-preference'});
+await p.goto('file:///tmp/preview.html'); await p.waitForTimeout(1500);
+await p.click('#mExplore');
+await p.evaluate(()=>{document.querySelectorAll('.moves button')[25].click();});
+await p.waitForTimeout(3000);
+const el=await p.$('#tree');
+await el.scrollIntoViewIfNeeded(); await p.waitForTimeout(600);
+await el.screenshot({path:'deck/11-tree.png'});
+console.log('tree ok');
+await b.close();
