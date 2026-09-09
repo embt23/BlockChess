@@ -43,6 +43,9 @@ Bugs found along the way, and why they hid, are in
 
 ## Specification
 
+**Start here: [`METAPLAN.md`](METAPLAN.md)** — what this project is, the order
+it happens in, and what is still undecided. It outranks every file below.
+
 | File | Contents |
 |---|---|
 | [`spec/00-overview.md`](spec/00-overview.md) | Layer stack, threat model, glossary |
