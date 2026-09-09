@@ -36,6 +36,37 @@ numbers are on the page, written at different moments. Building the encoder ran
 into the same collision independently: the first version emitted `000` for both
 "no push" and "due east". The page got there first.
 
+## The alphabet
+
+Given by the author, 2026-09-09. Six pieces:
+
+| Piece | Glyph |
+|---|---|
+| Pawn | arrow |
+| Knight | `5`, later simplified to `c` |
+| Bishop | triangle / three circles |
+| Rook | wine glass |
+| Queen | `Y` with two circles |
+| King | cross |
+
+Two things follow that were not stated outright:
+
+**Colour is rotation.** The author gave the arrow's direction as the pawn rule.
+Applied to every piece it becomes one rule: the same glyph turned 180° is the
+other side. White's glass stands, Black's is inverted; White's triangle points
+up, Black's down. This is what the page's `Symmetries` region is doing.
+
+**The king breaks it.** A cross rotated 180° is a cross — the only glyph in the
+set that is rotationally symmetric, and so the one piece whose colour the rule
+cannot carry. Open question.
+
+**A guess at why `5` became `c`.** A hand-drawn 5 is hard to read upside down; a
+`c` inverts cleanly to `ɔ`. If the notation changed to keep the rotation rule
+legible, then which form appears where on the page dates that region.
+
+Rendered in `docs/renders/13-journal-alphabet.png`, and live in the atlas under
+the **Journal set** button.
+
 ## Unread
 
 Open questions. None of these are guessed at in the code:

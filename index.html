@@ -193,6 +193,7 @@ select.sel:focus-visible,input.inp:focus-visible{outline:2px solid var(--focus);
         <button id="mStory" aria-pressed="true">Story</button>
         <button id="mExplore" aria-pressed="false">Explore</button>
       </div>
+      <button class="b ghost" id="setBtn" title="Swap the piece set">Journal set</button>
       <button class="b ghost" id="themeBtn" title="Switch light / dark">Theme</button>
     </div>
   </div>
@@ -860,7 +861,8 @@ const St={
   cvx:new Float32Array(64), cvy:new Float32Array(64),
   sm:null, cont:[], front:[], frontLen:0, dirty:true,
   A:{}, AT:{}, mode:"story", stage:0, playing:true, stageT:0,
-  hover:-1, slide:null, tree:null, autoply:false, autoT:0, tl:[], reduced:false
+  hover:-1, slide:null, tree:null, autoply:false, autoT:0, tl:[], reduced:false,
+  journal:false, knightC:false
 };
 for(const L of LAYERS){St.A[L.k]=0;St.AT[L.k]=0;}
 St.A.pieces=1;St.AT.pieces=1;
@@ -948,6 +950,68 @@ function fit(){
 }
 const GLYPH={K:"♔",Q:"♕",R:"♖",B:"♗",N:"♘",P:"♙",
              k:"♚",q:"♛",r:"♜",b:"♝",n:"♞",p:"♟"};
+
+/* The author's own notation, transcribed from the journal page:
+   pawn = arrow · knight = 5 (later simplified to c) · bishop = triangle
+   queen = Y with two circles · rook = wine glass · king = cross.
+   Black is the same glyph turned 180° — the pawn arrow simply points the
+   other way, which is the rule generalised to every piece. */
+function drawGlyph(g,type,x,y,s,black,knightC){
+  const u=s*0.30;
+  g.save(); g.translate(x,y); if(black)g.rotate(Math.PI);
+  g.lineWidth=Math.max(1.4,s*0.052); g.lineCap="round"; g.lineJoin="round";
+  g.beginPath();
+  switch(type){
+    case "p":                                    // arrow
+      g.moveTo(0,u); g.lineTo(0,-u);
+      g.moveTo(-0.48*u,-0.34*u); g.lineTo(0,-u); g.lineTo(0.48*u,-0.34*u);
+      break;
+    case "k":                                    // cross
+      g.moveTo(-0.72*u,-0.05*u); g.lineTo(0.72*u,-0.05*u);
+      g.moveTo(0,-0.85*u); g.lineTo(0,0.78*u);
+      break;
+    case "r":                                    // wine glass
+      g.moveTo(-0.6*u,-0.85*u); g.lineTo(-0.58*u,-0.15*u);
+      g.quadraticCurveTo(-0.5*u,0.3*u,0,0.32*u);
+      g.quadraticCurveTo(0.5*u,0.3*u,0.58*u,-0.15*u);
+      g.lineTo(0.6*u,-0.85*u);
+      g.moveTo(0,0.32*u); g.lineTo(0,0.72*u);
+      g.moveTo(-0.42*u,0.76*u); g.lineTo(0.42*u,0.76*u);
+      break;
+    case "b":                                    // triangle
+      g.moveTo(0,-0.82*u); g.lineTo(0.72*u,0.6*u); g.lineTo(-0.72*u,0.6*u); g.closePath();
+      break;
+    case "q":                                    // Y, two circles
+      g.moveTo(0,0.8*u); g.lineTo(0,0.02*u);
+      g.moveTo(0,0.02*u); g.lineTo(-0.55*u,-0.62*u);
+      g.moveTo(0,0.02*u); g.lineTo(0.55*u,-0.62*u);
+      break;
+    case "n":
+      if(knightC){                               // the later form: c
+        g.moveTo(0.42*u,-0.5*u);
+        g.quadraticCurveTo(-0.6*u,-0.72*u,-0.6*u,0.02*u);
+        g.quadraticCurveTo(-0.6*u,0.74*u,0.42*u,0.52*u);
+      } else {                                   // the earlier form: 5
+        g.moveTo(0.36*u,-0.78*u); g.lineTo(-0.34*u,-0.78*u); g.lineTo(-0.4*u,-0.12*u);
+        g.quadraticCurveTo(0.12*u,-0.36*u,0.38*u,0.08*u);
+        g.quadraticCurveTo(0.56*u,0.52*u,-0.06*u,0.62*u);
+        g.quadraticCurveTo(-0.3*u,0.6*u,-0.42*u,0.44*u);
+      }
+      break;
+  }
+  g.stroke();
+  if(type==="q"){                                // the two circles
+    for(const sx of [-1,1]){
+      g.beginPath(); g.arc(sx*0.55*u,-0.62*u,0.19*u,0,7); g.stroke();
+    }
+  }
+  if(type==="b"){                                // three circles at the corners
+    for(const pt of [[0,-0.82],[0.72,0.6],[-0.72,0.6]]){
+      g.beginPath(); g.arc(pt[0]*u,pt[1]*u,0.15*u,0,7); g.stroke();
+    }
+  }
+  g.restore();
+}
 let wash=document.createElement("canvas"); wash.width=96; wash.height=96;
 const wcx=wash.getContext("2d");
 
@@ -1103,8 +1167,13 @@ function draw(now){
         cx.fillStyle=rgba(C.panel,disc);
         cx.beginPath(); cx.arc(xp,yp,s*0.335,0,7); cx.fill();
       }
-      cx.fillStyle=rgba(C.ink,1);
-      cx.fillText(GLYPH[pc],xp,yp+s*0.03);
+      if(St.journal){
+        cx.strokeStyle=rgba(C.ink,1);
+        drawGlyph(cx,pc.toLowerCase(),xp,yp,s,pc===pc.toLowerCase(),St.knightC);
+      } else {
+        cx.fillStyle=rgba(C.ink,1);
+        cx.fillText(GLYPH[pc],xp,yp+s*0.03);
+      }
       cx.globalAlpha=1;
     };
     for(let i=0;i<64;i++){
@@ -1479,6 +1548,12 @@ document.addEventListener("keydown",e=>{
   else if(e.key==="ArrowRight"){e.preventDefault();setPly(St.ply+1,true);}
   else if(e.key===" "){e.preventDefault();const b=el("storyBtn");if(b)b.click();}
   else if(e.key==="Escape"){setPreview(null);}
+});
+el("setBtn").addEventListener("click",()=>{
+  if(!St.journal){St.journal=true;St.knightC=false;el("setBtn").textContent="Knight as c";}
+  else if(!St.knightC){St.knightC=true;el("setBtn").textContent="Figurines";}
+  else {St.journal=false;St.knightC=false;el("setBtn").textContent="Journal set";}
+  el("setBtn").setAttribute("aria-pressed",St.journal?"true":"false");
 });
 let themeMode=0;
 el("themeBtn").addEventListener("click",()=>{
