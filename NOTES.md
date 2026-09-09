@@ -56,9 +56,14 @@ Applied to every piece it becomes one rule: the same glyph turned 180° is the
 other side. White's glass stands, Black's is inverted; White's triangle points
 up, Black's down. This is what the page's `Symmetries` region is doing.
 
-**The king breaks it.** A cross rotated 180° is a cross — the only glyph in the
-set that is rotationally symmetric, and so the one piece whose colour the rule
-cannot carry. Open question.
+**The king does not break it.** The cross is a Latin cross, not a `+` — crossbar
+high on the stem, so it is *not* rotationally symmetric and inverts like every
+other mark. Confirmed by the author: the cross is meant to carry orientation,
+direction, team and colour, exactly as the rest of the set does.
+
+**So the alphabet is closed.** All six glyphs are rotationally asymmetric, and
+one rule — *the same mark turned 180° is the other side* — covers the entire
+notation with no exceptions and no second symbol per colour.
 
 **A guess at why `5` became `c`.** A hand-drawn 5 is hard to read upside down; a
 `c` inverts cleanly to `ɔ`. If the notation changed to keep the rotation rule

@@ -966,9 +966,9 @@ function drawGlyph(g,type,x,y,s,black,knightC){
       g.moveTo(0,u); g.lineTo(0,-u);
       g.moveTo(-0.48*u,-0.34*u); g.lineTo(0,-u); g.lineTo(0.48*u,-0.34*u);
       break;
-    case "k":                                    // cross
-      g.moveTo(-0.72*u,-0.05*u); g.lineTo(0.72*u,-0.05*u);
-      g.moveTo(0,-0.85*u); g.lineTo(0,0.78*u);
+    case "k":                                    // Latin cross — crossbar high,
+      g.moveTo(0,-0.92*u); g.lineTo(0,0.88*u);   // so the mark is not symmetric
+      g.moveTo(-0.55*u,-0.38*u); g.lineTo(0.55*u,-0.38*u);
       break;
     case "r":                                    // wine glass
       g.moveTo(-0.6*u,-0.85*u); g.lineTo(-0.58*u,-0.15*u);
