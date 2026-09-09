@@ -4,6 +4,7 @@
 //! and hand-rolling it keeps the dependency list at zero, which is worth more
 //! here than the convenience.
 
+mod annotate;
 mod board;
 mod grammar;
 mod measure;
@@ -21,6 +22,8 @@ USAGE
 
 LOOKING AT CHESS
     play [FEN]              play a game in the terminal, both sides
+                            --save PATH  write the game, and any notes you
+                                         typed, when you quit
     show <FEN>              draw one position and list its legal moves
     perft <depth> [FEN]     count leaf nodes — the correctness oracle
     divide <depth> [FEN]    perft split by first move, for finding bugs
@@ -42,6 +45,11 @@ STUDYING IT
     grammar <file.pgn>            let a compressor that knows no chess find
                                   the repeated patterns, then check them
                                   against human opening theory  (X7)
+
+YOUR OWN PERCEPTION
+    annotate <game.pgn> <notes.txt> [--corpus big.pgn]
+                                  put what you noticed next to what the
+                                  machine saw at the same moment
 
   Every command takes --limit N to stop after N games.
 ";
@@ -66,6 +74,7 @@ fn main() -> ExitCode {
         "book" => study::book(rest),
         "find" => study::find(rest),
         "grammar" => grammar::run(rest),
+        "annotate" => annotate::run(rest),
         "-h" | "--help" | "help" => {
             print!("{USAGE}");
             Ok(())

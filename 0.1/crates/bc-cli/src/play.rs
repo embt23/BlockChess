@@ -18,11 +18,30 @@ const HELP: &str = "\
   fen      print the position
   list     the legal moves in canonical order, with their indices
   bits     what the game costs so far under each encoding
+  note     record what you are perceiving right now
+  save     write the game (and any notes) to disk
   quit
 ";
 
 pub fn run(args: &[String]) -> Result<(), String> {
+    // --save <path> writes game.pgn and, if any were typed, game.notes.txt
+    let mut save_to: Option<String> = None;
+    let mut rest: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--save" => {
+                i += 1;
+                save_to = Some(args.get(i).ok_or("--save needs a path")?.clone());
+            }
+            other => rest.push(other.to_string()),
+        }
+        i += 1;
+    }
+    let args = &rest[..];
     let start = crate::position_from(args)?;
+    // Notes typed during the game, as (ply, text).
+    let mut notes: Vec<(usize, String)> = Vec::new();
     let mut pos = start;
     let mut history: Vec<bc_chess::Move> = Vec::new();
 
@@ -86,6 +105,20 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 }
             }
             "bits" => report_bits(&start, &history),
+            "save" => match &save_to {
+                Some(path) => save(path, &start, &history, &notes)?,
+                None => println!("  start with --save <path> to enable saving"),
+            },
+            _ if cmd.starts_with("note ") || cmd == "note" => {
+                let text = cmd.strip_prefix("note").unwrap_or("").trim();
+                if text.is_empty() {
+                    println!("  usage: note <what you are perceiving>");
+                    println!("         note shape: e4 d5 c6   <what that grouping is>");
+                } else {
+                    notes.push((history.len(), text.to_string()));
+                    println!("  recorded at ply {}", history.len());
+                }
+            }
             _ => match resolve(&pos, cmd) {
                 Some(m) => {
                     history.push(m);
@@ -94,6 +127,41 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 None => println!("  '{cmd}' is not a legal move here — try 'list'"),
             },
         }
+    }
+    if let Some(path) = &save_to {
+        save(path, &start, &history, &notes)?;
+    }
+    Ok(())
+}
+
+/// Write the game as PGN, and any notes alongside it in the format
+/// `blockchess annotate` reads. Saving both together matters: a note is
+/// anchored to a ply, and a ply only means something next to its game.
+fn save(
+    path: &str,
+    start: &Position,
+    moves: &[bc_chess::Move],
+    notes: &[(usize, String)],
+) -> Result<(), String> {
+    let pgn = crate::annotate::to_pgn(
+        start,
+        moves,
+        &[("Event", "Self-play"), ("White", "?"), ("Black", "?")],
+    );
+    std::fs::write(path, pgn).map_err(|e| format!("{path}: {e}"))?;
+    println!("  wrote {} ({} plies)", path, moves.len());
+
+    if !notes.is_empty() {
+        let notes_path = path
+            .strip_suffix(".pgn")
+            .map(|b| format!("{b}.notes.txt"))
+            .unwrap_or_else(|| format!("{path}.notes.txt"));
+        let mut out = String::from("# ply  text — read by `blockchess annotate`\n");
+        for (ply, text) in notes {
+            out.push_str(&format!("{ply}  {text}\n"));
+        }
+        std::fs::write(&notes_path, out).map_err(|e| format!("{notes_path}: {e}"))?;
+        println!("  wrote {} ({} notes)", notes_path, notes.len());
     }
     Ok(())
 }
