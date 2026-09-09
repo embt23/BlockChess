@@ -241,7 +241,8 @@ select.sel:focus-visible,input.inp:focus-visible{outline:2px solid var(--focus);
         <div class="terrkey"><span id="keyW">White —</span><span id="keyN">contested —</span><span id="keyB">— Black</span></div>
         <div class="reads" style="margin-top:10px">
           <div class="rrow"><span class="k">Frontier length</span><span class="v" id="rFront">—</span></div>
-          <div class="rrow"><span class="k">Tension pairs</span><span class="v" id="rTens">—</span></div>
+          <div class="rrow"><span class="k">Tension</span><span class="v" id="rTens">—</span></div>
+          <div class="rrow"><span class="k">Material at risk</span><span class="v" id="rRisk">—</span></div>
           <div class="rrow"><span class="k">Contested squares</span><span class="v" id="rCont">—</span></div>
           <div class="rrow"><span class="k">Mirror symmetry</span><span class="v" id="rSym">—</span></div>
           <div class="rrow"><span class="k">Field entropy</span><span class="v" id="rEnt">—</span></div>
@@ -289,7 +290,7 @@ select.sel:focus-visible,input.inp:focus-visible{outline:2px solid var(--focus);
       <span><i style="background:var(--brass)"></i>White holds</span>
       <span><i style="background:var(--neutral)"></i>Contested</span>
       <span><i style="background:var(--verdigris)"></i>Black holds</span>
-      <span><i style="background:var(--oxide)"></i>Tension — pieces in contact</span>
+      <span><i style="background:var(--oxide)"></i>Tension — ring by stake, filled by loss</span>
       <span><i style="background:transparent;border:1px dashed var(--frontier)"></i>The frontier</span>
     </div>
   </div>
@@ -299,6 +300,7 @@ select.sel:focus-visible,input.inp:focus-visible{outline:2px solid var(--focus);
   Built from a page of a chess journal — <b>first abstraction</b>, <b>vision</b>, <b>cover</b>, <b>geometry</b>,
   <b>information / compression / symbol</b>, <b>borders</b>, <b>symmetries</b> — each turned into a layer you can switch on.
   Control counts every attack, including through the piece it lands on; the frontier is the zero contour of white attacks minus black attacks.
+  Tension is weighted by the material standing in each contact, and material at risk is the full exchange played out cheapest-piece-first, with batteries uncovered as attackers step off — both read in pawns.
 </div>
 
 <script>
@@ -533,6 +535,70 @@ function perft(p,d){
 
 /* ================= FIELDS ================= */
 const VAL={p:100,n:320,b:330,r:500,q:900,k:0};
+// king last in the capture order, and never itself a capturable target
+const SEEV={p:100,n:320,b:330,r:500,q:900,k:10000};
+
+// every piece of either colour bearing on a square, given a board array
+function attackerList(b,sq){
+  const out=[], f=F(sq), r=R(sq);
+  for(const side of ["w","b"]){
+    const pr=r+(side==="w"?1:-1), P=side==="w"?"P":"p";
+    for(const df of [-1,1]){
+      const nf=f+df;
+      if(ON(nf,pr)&&b[SQ(nf,pr)]===P) out.push({i:SQ(nf,pr),v:SEEV.p,c:side,pc:P});
+    }
+  }
+  for(const o of N_OFF){
+    const nf=f+o[0],nr=r+o[1]; if(!ON(nf,nr))continue;
+    const pc=b[SQ(nf,nr)];
+    if(pc==="N"||pc==="n") out.push({i:SQ(nf,nr),v:SEEV.n,c:pc==="N"?"w":"b",pc:pc});
+  }
+  for(const o of K_OFF){
+    const nf=f+o[0],nr=r+o[1]; if(!ON(nf,nr))continue;
+    const pc=b[SQ(nf,nr)];
+    if(pc==="K"||pc==="k") out.push({i:SQ(nf,nr),v:SEEV.k,c:pc==="K"?"w":"b",pc:pc});
+  }
+  const scan=(dirs,types)=>{
+    for(const d of dirs){
+      let nf=f+d[0],nr=r+d[1];
+      while(ON(nf,nr)){
+        const j=SQ(nf,nr), pc=b[j];
+        if(pc){
+          const low=pc.toLowerCase();
+          if(types.indexOf(low)>=0) out.push({i:j,v:SEEV[low],c:WHITE(pc)?"w":"b",pc:pc});
+          break;
+        }
+        nf+=d[0];nr+=d[1];
+      }
+    }
+  };
+  scan(R_DIR,["r","q"]); scan(B_DIR,["b","q"]);
+  return out;
+}
+// Material the opponent wins by starting captures here, after the whole
+// exchange plays out with each side taking cheapest-first and free to stop.
+// Removing each attacker from the board uncovers the slider behind it, so
+// batteries and x-rays count. Returns centipawns, never below zero.
+function riskAt(board,sq){
+  const target=board[sq];
+  if(!target||target==="K"||target==="k")return 0;
+  const b=board.slice(), swap=[SEEV[target.toLowerCase()]];
+  let side=COL(target)==="w"?"b":"w";
+  for(let guard=0;guard<32;guard++){
+    const all=attackerList(b,sq);
+    const mine=all.filter(a=>a.c===side).sort((x,y)=>x.v-y.v);
+    if(!mine.length)break;
+    const a=mine[0];
+    // a king cannot capture into a square the other side still covers
+    if((a.pc==="K"||a.pc==="k")&&all.some(x=>x.c!==side))break;
+    b[a.i]="";
+    swap.push(a.v);
+    side=side==="w"?"b":"w";
+  }
+  let val=0;
+  for(let c=swap.length-1;c>=1;c--) val=Math.max(0,swap[c-1]-val);
+  return val;
+}
 function fields(p){
   const wc=new Float32Array(64), bc=new Float32Array(64);
   const vx=new Float32Array(64), vy=new Float32Array(64);
@@ -569,16 +635,18 @@ function fields(p){
   const ctrl=new Float32Array(64);
   for(let i=0;i<64;i++)ctrl[i]=wc[i]-bc[i];
 
-  const tension=[]; let pairs=0, hanging=0;
+  const tension=[]; let contacts=0, stake=0, riskW=0, riskB=0, hanging=0;
   for(let i=0;i<64;i++){
     const pc=p.b[i]; if(!pc)continue;
     const mine=COL(pc)==="w"?wc[i]:bc[i];
     const opp =COL(pc)==="w"?bc[i]:wc[i];
     if(opp>0){
-      pairs+=opp;
-      const hang = opp>mine || mine===0;
-      if(hang)hanging++;
-      tension.push({i:i,att:opp,def:mine,hang:hang,v:VAL[pc.toLowerCase()]});
+      contacts+=opp;
+      const v=VAL[pc.toLowerCase()], risk=riskAt(p.b,i);
+      stake+=v;
+      if(COL(pc)==="w")riskW+=risk; else riskB+=risk;
+      if(risk>0)hanging++;
+      tension.push({i:i,att:opp,def:mine,v:v,risk:risk,hang:risk>0});
     }
   }
   let tw=0,tb=0,tn=0;
@@ -602,7 +670,8 @@ function fields(p){
   let H=0; for(const k in freq){const q=freq[k]/64; H-=q*Math.log2(q);}
 
   return {wc:wc,bc:bc,ctrl:ctrl,vx:vx,vy:vy,rays:rays,dots:dots,tension:tension,
-          pairs:pairs,hanging:hanging,tw:tw,tb:tb,tn:tn,sym:sym,syms:syms,bits:bits,H:H};
+          contacts:contacts,stake:stake,riskW:riskW,riskB:riskB,hanging:hanging,
+          tw:tw,tb:tb,tn:tn,sym:sym,syms:syms,bits:bits,H:H};
 }
 function smooth(c,times){
   let cur=c;
@@ -752,7 +821,7 @@ const LAYERS=[
  {k:"terr",    n:"Territory",   d:"Attack surplus washed across the board.",         sw:"background:linear-gradient(90deg,var(--brass),var(--bg),var(--verdigris))"},
  {k:"contour", n:"Contours",    d:"Level lines of pressure, as on a survey map.",    sw:"background:repeating-linear-gradient(0deg,var(--ink) 0 1px,transparent 1px 4px)"},
  {k:"frontier",n:"Frontier",    d:"The zero line. Neither side owns it.",            sw:"background:transparent;border:1px dashed var(--frontier)"},
- {k:"tension", n:"Tension",     d:"Pieces in contact — captures available now.",     sw:"background:var(--oxide)"},
+ {k:"tension", n:"Tension",     d:"Pieces in contact, ringed by what is at stake.",   sw:"background:var(--oxide)"},
  {k:"vision",  n:"Vision",      d:"Every line the long pieces see down.",            sw:"background:linear-gradient(135deg,var(--verdigris),transparent 70%)"},
  {k:"arrows",  n:"Abstraction", d:"Each square reduced to one arrow of net push.",   sw:"background:var(--panel-2);color:var(--ink)", g:"↗"},
  {k:"numbers", n:"Pressure",    d:"Raw counts: white attacks minus black.",          sw:"background:var(--panel-2);color:var(--brass)", g:"±"}
@@ -773,7 +842,7 @@ const STORY=[
  {t:"Frontier", dur:10000, on:["pieces","terr","frontier"],
   cap:"One line matters more than the others: the <b>zero contour</b>, where white attacks exactly equal black. This is the border. Its length is a real number you can watch — a short border is a quiet game, a long ragged one is a knife fight."},
  {t:"Tension", dur:9000, on:["pieces","terr","frontier","tension"],
-  cap:"The border is potential; <b>tension</b> is contact. Ringed pieces are attacked right now, and a filled mark means more attackers than defenders. Notice how tension collects where the frontier bends around a piece."},
+  cap:"The border is potential; <b>tension</b> is contact — and not every contact weighs the same. Each ring grows with the piece standing in it, and fills in only when the exchange actually loses material, recaptures counted. A pawn touching a pawn is a scratch; a filled ring is a wound."},
  {t:"Vision", dur:8500, on:["pieces","frontier","vision"],
   cap:"<b>Vision</b>: every line the long pieces see down, drawn to where it stops. The border is not built from where pieces stand but from how far they look — which is why one bishop can move a border four squares."},
  {t:"Symbol", dur:9000, on:["arrows","frontier"],
@@ -854,8 +923,8 @@ function loadGame(i){
   St.tl=[]; let best=0,bi=0;
   for(let n=0;n<=St.plies.length;n++){
     const f=fields(posAt(n));
-    const score=f.pairs*2+(64-f.tn)*0.25;
-    St.tl.push({bal:f.tw-f.tb, tens:f.pairs, hang:f.hanging});
+    const score=f.stake/100+(f.riskW+f.riskB)/100*3;
+    St.tl.push({bal:f.tw-f.tb, tens:f.stake/100, risk:(f.riskW+f.riskB)/100});
     if(score>best){best=score;bi=n;}
   }
   buildMoveList();
@@ -1006,11 +1075,15 @@ function draw(now){
     cx.save(); cx.lineWidth=1.8;
     for(const t of St.fld.tension){
       const xp=(F(t.i)+.5)*s, yp=(R(t.i)+.5)*s;
-      cx.strokeStyle=rgba(C.oxide,A.tension*(t.hang?0.95:0.6)*pulse);
-      cx.beginPath(); cx.arc(xp,yp,s*0.40,0,7); cx.stroke();
-      if(t.hang){
-        cx.fillStyle=rgba(C.oxide,A.tension*0.9);
-        cx.beginPath(); cx.arc(xp+s*0.31,yp-s*0.31,s*0.062,0,7); cx.fill();
+      const stakeN=Math.min(1,t.v/900);            // ring grows with the piece in contact
+      const rad=s*(0.21+0.19*stakeN);
+      cx.lineWidth=1.1+2.0*stakeN;
+      cx.strokeStyle=rgba(C.oxide,A.tension*(0.42+0.48*stakeN)*pulse);
+      cx.beginPath(); cx.arc(xp,yp,rad,0,7); cx.stroke();
+      if(t.risk>0){                                 // filled core = material actually lost
+        const rn=Math.min(1,t.risk/500);
+        cx.fillStyle=rgba(C.oxide,A.tension*(0.16+0.44*rn)*pulse);
+        cx.beginPath(); cx.arc(xp,yp,rad*(0.42+0.34*rn),0,7); cx.fill();
       }
     }
     cx.restore();
@@ -1130,7 +1203,10 @@ function paintUI(){
   el("keyN").textContent="neutral "+f.tn;
   el("keyB").textContent=f.tb+" Black";
   el("rFront").textContent=St.frontLenTarget.toFixed(1)+" sq";
-  el("rTens").textContent=f.pairs+(f.hanging?"  ("+f.hanging+" hanging)":"");
+  el("rTens").textContent=(f.stake/100).toFixed(1)+"  ("+f.contacts+" contacts)";
+  el("rRisk").textContent = (f.riskW||f.riskB)
+    ? "W "+(f.riskW/100).toFixed(1)+" · B "+(f.riskB/100).toFixed(1)
+    : "nothing hanging";
   el("rCont").textContent=contested+" / 64";
   el("rSym").textContent=(f.sym*100).toFixed(0)+"%";
   el("rEnt").textContent=f.H.toFixed(2)+" b/sq";
@@ -1145,7 +1221,10 @@ function paintUI(){
     b.setAttribute("aria-current", (+b.dataset.ply===St.ply&&!St.preview)?"true":"false");
   });
   const tlr=el("tlRead");
-  tlr.textContent = St.plies.length ? ("border "+St.frontLenTarget.toFixed(1)+" sq · tension "+f.pairs) : "single position";
+  tlr.textContent = St.plies.length
+    ? ("border "+St.frontLenTarget.toFixed(1)+" sq · tension "+(f.stake/100).toFixed(1)
+       +(f.riskW+f.riskB ? " · at risk "+((f.riskW+f.riskB)/100).toFixed(1) : ""))
+    : "single position";
   drawTimeline();
 }
 function buildMoveList(){
@@ -1193,12 +1272,17 @@ function drawTimeline(){
   const bw=Math.max(1.2,w/n*0.55);
   for(let i=0;i<n;i++){
     const t=St.tl[i].tens/mt;
-    tcx.fillStyle=rgba(C.oxide,0.28+0.5*t);
+    tcx.fillStyle=rgba(C.oxide,0.3);
     tcx.fillRect(X(i)-bw/2,barTop+(1-t)*16,bw,Math.max(1,t*16));
+    const rk=Math.min(1,(St.tl[i].risk||0)/Math.max(1,mt));
+    if(rk>0){
+      tcx.fillStyle=rgba(C.oxide,0.95);
+      tcx.fillRect(X(i)-bw/2,barTop+(1-rk)*16,bw,Math.max(1,rk*16));
+    }
   }
   tcx.fillStyle=rgba(C.muted,0.9);
   tcx.font="500 9px 'Archivo Narrow',sans-serif";
-  tcx.fillText("territory",2,9); tcx.fillText("tension",2,h-1);
+  tcx.fillText("territory",2,9); tcx.fillText("tension · material at risk",2,h-1);
   // playhead
   const px=X(St.ply);
   tcx.strokeStyle=rgba(C.ink,0.85); tcx.lineWidth=1.4;
@@ -1381,7 +1465,8 @@ el("loadBtn").addEventListener("click",()=>{
       St.plies=parsePGN(t); St.startPos=parseFEN(START); el("gameName").textContent="Pasted game";
     }
     St.tl=[];
-    for(let n=0;n<=St.plies.length;n++){const f=fields(posAt(n));St.tl.push({bal:f.tw-f.tb,tens:f.pairs,hang:f.hanging});}
+    for(let n=0;n<=St.plies.length;n++){const f=fields(posAt(n));
+      St.tl.push({bal:f.tw-f.tb,tens:f.stake/100,risk:(f.riskW+f.riskB)/100});}
     buildMoveList(); setPly(0,false); St.tree=null; drawTree();
     el("fenIn").value="";
   }catch(err){

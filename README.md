@@ -18,14 +18,33 @@ startpos, kiwipete and the en-passant/promotion position, to depth 4).
 | Territory | White attacks minus black attacks, washed across the board |
 | Contours | Level lines of that field, as on a survey map |
 | **Frontier** | The zero contour — the border, where the two claims cancel |
-| Tension | Pieces in contact; filled marks are hanging |
+| Tension | Pieces in contact — ring sized by the stake, filled by real loss |
 | Vision | Every line the long pieces see down |
 | Abstraction | Each square reduced to one arrow of net push |
 | Pressure | The raw signed counts |
 
-Readings alongside: frontier length in squares, tension pairs, contested
-squares, mirror symmetry of the pressure field, field entropy, and the whole
-board compressed to four bits a square as one bit string.
+Readings alongside: frontier length in squares, tension, material at risk,
+contested squares, mirror symmetry of the pressure field, field entropy, and the
+whole board compressed to four bits a square as one bit string.
+
+### Tension is weighted by material
+
+A pawn touching a pawn is not a rook touching a queen, so contacts are not
+counted — they are weighed, in pawns:
+
+- **Tension** — the material standing in contact, summed.
+- **Material at risk** — full static exchange evaluation on each contested
+  square: both sides capture cheapest-piece-first and either may stop when
+  continuing loses, and each attacker stepping off the board uncovers the slider
+  behind it, so batteries and x-rays count. Reported per side.
+
+The board follows the same measure. Each ring grows with the piece standing in
+it and fills in only when the exchange actually loses material — so Morphy's
+16.Qb8+ shows a heavy filled ring around a queen with the frontier bending
+around her, while a defended pawn contact stays a thin empty circle.
+
+SEE is verified against hand-worked positions (undefended and defended pawns,
+a hanging queen, an x-ray battery, and both king-capture legality cases).
 
 **Story mode** animates the construction one abstraction at a time.
 **Explore mode** hands over the layer stack, the game timeline, and search from
