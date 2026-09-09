@@ -6,6 +6,7 @@
 
 mod annotate;
 mod board;
+mod chunk;
 mod grammar;
 mod measure;
 mod pack;
@@ -47,6 +48,10 @@ STUDYING IT
                                   the repeated patterns, then check them
                                   against human opening theory  (X7)
 
+    chunks <file.pgn>             groups of squares that occur together far
+                                  more than chance — the spatial version of
+                                  chunking theory  (X9)
+                            --from-ply N  skip the opening (default 20)
     think <file.pgn> [--corpus big.pgn]
                                   do bits track seconds? experiment X11 —
                                   needs a source with clocks, e.g. lichess
@@ -86,6 +91,7 @@ fn main() -> ExitCode {
         "annotate" => annotate::run(rest),
         "export" => annotate::export(rest),
         "think" => think::run(rest),
+        "chunks" => chunk::run(rest),
         "-h" | "--help" | "help" => {
             print!("{USAGE}");
             Ok(())

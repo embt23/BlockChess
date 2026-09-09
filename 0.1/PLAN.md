@@ -187,7 +187,31 @@ ones.
 
 ---
 
-## Stage 5 — grammar over positions  ·  *say "launch 5"*
+## Stage 5 — chunks  ·  **BUILT 2026-09-09, needs your corpus**
+
+Built as the **spatial** version rather than a grammar over position
+sequences, because that is what `09-lineage.md` §5 says chunking theory is
+actually about. A position is a set of facts — "white king on g1" — and a
+chunk is a set of facts occurring together far more often than independence
+predicts.
+
+```sh
+./target/release/blockchess chunks corpus/lichess.pgn --from-ply 20
+```
+
+Validated before use, same discipline as X11: it recovers a planted castled
+kingside from a background of noise, finds nothing above 4× lift in
+independently placed pieces, and respects the support floor. On the
+degenerate 200-game fixture it already returns `Rf1 Kg1` — Chase & Simon's own
+example — from anonymous facts.
+
+**Read lift carefully on small samples.** The independence baseline collapses
+and the ratio explodes; a six-figure lift means the sample is degenerate, not
+that the finding is strong. The command says so below 5,000 positions.
+
+This is also what your drawn shapes compare against.
+
+<details><summary>original stage 5 brief</summary>
 
 `09-lineage.md` §5: chunking theory is about *positions*, not move sequences.
 Chase & Simon's masters remember configurations. What we currently induce over
@@ -200,6 +224,8 @@ figure of speech.
 
 **Deliverable:** X9. Slower, harder, and the most interesting thing on this
 page.
+
+</details>
 
 ---
 

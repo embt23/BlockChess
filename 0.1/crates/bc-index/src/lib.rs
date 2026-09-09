@@ -24,11 +24,18 @@
 //! Everything `papers/02-encodings.md` and `04-permanence.md` reject for being
 //! unfit for consensus is welcome on this side of the line.
 
+pub mod chunks;
 pub mod eco;
 pub mod positions;
 pub mod trie;
 
+pub use chunks::{Chunk, Counts};
 pub use eco::{Eco, EcoEntry};
+
+/// A square's name, for display.
+pub fn square_name(s: bc_chess::Square) -> String {
+    format!("{}{}", (b'a' + s % 8) as char, (b'1' + s / 8) as char)
+}
 pub use positions::PositionIndex;
 pub use trie::{NodeId, Trie};
 
