@@ -130,6 +130,16 @@ td.hash{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2
 .who{display:flex; align-items:center; gap:9px; font-weight:500}
 .who svg{width:14px; height:14px; flex:none}
 
+/* pull bars */
+.pullwrap{background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow);
+  padding:18px 20px; display:flex; flex-direction:column; gap:10px}
+.pullrow{display:grid; grid-template-columns:130px 1fr 56px; gap:14px; align-items:center}
+.pname{font-family:Spectral,Georgia,serif; font-size:16px; font-weight:600}
+.ptrack{height:18px; background:var(--surface-2); position:relative}
+.pbar{position:absolute; left:0; top:0; bottom:0}
+.pval{font-size:13px; color:var(--ink-2); text-align:right;
+  font-variant-numeric:tabular-nums}
+
 /* not-enough-games banner */
 #adequacy{margin-top:28px; border:1px solid var(--warn-line); background:var(--warn-bg);
   padding:16px 18px}
@@ -206,6 +216,33 @@ footer .root{word-break:break-all}
     <li><span class="sw" style="background:var(--neg)"></span> pulls toward the negative pole</li>
   </ul>
   <div class="axes" id="axes"></div>
+</section>
+
+<section id="sec-converge" hidden>
+  <div class="shead"><span class="stage">Stage 8 · identify</span>
+    <h2>Can you start over?</h2></div>
+  <p class="note">If your name is computed from your play, a fresh account
+  converges back to the same fingerprint. This is the honest version of that
+  question: the lens, the statistics and the centroids all come from a training
+  half, and the games below were never seen by any of them. Draw <em>n</em> of
+  someone's held-out games, average them, and ask who it is.</p>
+  <figure>
+    <div class="plotwrap"><div id="converge"></div></div>
+    <figcaption id="converge-cap"></figcaption>
+  </figure>
+</section>
+
+<section id="sec-pull" hidden>
+  <div class="shead"><span class="stage">Stage 9 · interact</span>
+    <h2>Whose presence pulls hardest</h2></div>
+  <p class="note">These players have <em>fixed</em> policies — a constant weight
+  vector that never learns or tires — so ground truth is that personality does
+  not change, and any shift by opponent is the interaction term and nothing
+  else. Bars show the mean shift each opponent induces in everyone else's
+  profile. The effect is real (no shuffle in 200 reproduced it) and smaller
+  than a player's own game-to-game variance, which is why it is invisible in
+  any single game.</p>
+  <div id="pulls"></div>
 </section>
 
 <section>
@@ -332,11 +369,15 @@ function plot(opts){
 
 /* ---- reading ---- */
 const sep=DATA.separation;
+const ident = DATA.identification;
+const held = ident ? ident.held_out_accuracy : null;
+const reach95 = ident ? (ident.curve.find(c=>c.accuracy>=0.95)||{}).games : null;
 document.getElementById("reading").innerHTML=[
-  ["Games", DATA.games, "120 played, each seen twice"],
-  ["Game-sides", DATA.samples, "one point per player per game"],
-  ["Separation", (sep.between/sep.within).toFixed(2)+"×", "between-player vs within-player"],
-  ["Identified", (sep.accuracy*100).toFixed(1)+"%", "nearest neighbour · chance "+(sep.chance*100).toFixed(0)+"%"]
+  ["Games", DATA.games, "each seen from both sides"],
+  ["Separation", (sep.between/sep.within).toFixed(2)+"\u00d7", "between-player vs within-player"],
+  ["Unmasked in", reach95 ? reach95+" games" : "\u2014", "to identify someone 95% of the time"],
+  ["Identified", held!=null ? (held*100).toFixed(1)+"%" : "\u2014",
+   "one held-out game \u00b7 chance "+(sep.chance*100).toFixed(0)+"%"]
 ].map(([k,v,n],i)=>`<div class="stat${i===3?' hero':''}"><p class="k">${k}</p>
   <p class="v mono">${v}</p><p class="n">${n}</p></div>`).join("");
 /* The caveat goes above everything it qualifies. A page that looks this
@@ -399,6 +440,51 @@ document.getElementById("tbody").innerHTML=players.map(p=>`<tr>
   <td class="num">${p.links.length}</td>
   <td class="num">${p.path_length.toFixed(2)}</td>
   <td class="hash">${p.medal.slice(0,16)}…</td></tr>`).join("");
+
+/* ---- convergence curve ---- */
+if (ident && ident.curve && ident.curve.length) {
+  const c = ident.curve, W=940, H=330, m={l:56,r:24,t:18,b:46};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const xmax = c[c.length-1].games;
+  const X = g => m.l + (g-1)/(xmax-1)*iw;
+  const Y = a => m.t + ih - a*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Identification accuracy against number of games observed.">`;
+  s+=`<g stroke="var(--rule-soft)" stroke-width="1">`;
+  for(let a=0;a<=1.0001;a+=0.25) s+=`<line x1="${m.l}" y1="${Y(a).toFixed(1)}" x2="${m.l+iw}" y2="${Y(a).toFixed(1)}"/>`;
+  s+=`</g>`;
+  // the 95% target, named because the caption quotes it
+  s+=`<line x1="${m.l}" y1="${Y(0.95).toFixed(1)}" x2="${m.l+iw}" y2="${Y(0.95).toFixed(1)}" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="4 4"/>`;
+  s+=`<text x="${m.l+iw}" y="${(Y(0.95)-8).toFixed(1)}" text-anchor="end" fill="var(--ink-3)" font-family="IBM Plex Mono, monospace" font-size="10.5">95%</text>`;
+  s+=`<g fill="var(--ink-3)" font-family="IBM Plex Mono, monospace" font-size="10.5">`;
+  for(let a=0;a<=1.0001;a+=0.25) s+=`<text x="${m.l-8}" y="${(Y(a)+3.5).toFixed(1)}" text-anchor="end">${(a*100).toFixed(0)}%</text>`;
+  c.forEach(p=>{s+=`<text x="${X(p.games).toFixed(1)}" y="${m.t+ih+16}" text-anchor="middle">${p.games}</text>`;});
+  s+=`</g>`;
+  s+=`<text x="${m.l+iw/2}" y="${H-6}" text-anchor="middle" fill="var(--ink-2)" font-family="IBM Plex Mono, monospace" font-size="11">games of yours an observer has seen</text>`;
+  const pts = c.map(p=>[X(p.games),Y(p.accuracy)]);
+  s+=`<polyline fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' ')}"/>`;
+  s+=`<g fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5">`;
+  pts.forEach(p=>{s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.5"/>`;});
+  s+=`</g></svg>`;
+  document.getElementById("converge").innerHTML=s;
+  document.getElementById("converge-cap").textContent =
+    reach95 ? `One game already beats chance by a wide margin; ${reach95} are enough to be right 95% of the time.`
+            : "95% is not reached within the range measured.";
+  document.getElementById("sec-converge").hidden=false;
+}
+
+/* ---- who pulls hardest ---- */
+if (DATA.interaction && DATA.interaction.pulls && DATA.interaction.pulls.length) {
+  const ps = DATA.interaction.pulls, max = Math.max(...ps.map(p=>p.magnitude));
+  document.getElementById("pulls").innerHTML = `<div class="pullwrap">` + ps.map(p=>{
+    const who = byName[p.opponent];
+    const col = who ? `var(${who.varname})` : "var(--accent)";
+    return `<div class="pullrow">
+      <span class="pname" style="color:${col}">${esc(p.opponent)}</span>
+      <span class="ptrack"><span class="pbar" style="width:${(p.magnitude/max*100).toFixed(1)}%;background:${col}"></span></span>
+      <span class="pval mono">${p.magnitude.toFixed(2)}</span>
+    </div>`;}).join("") + `</div>`;
+  document.getElementById("sec-pull").hidden=false;
+}
 
 /* ---- hover ---- */
 const tip=document.getElementById("tip");

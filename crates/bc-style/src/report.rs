@@ -5,7 +5,7 @@
 //! drift the moment the feature set or the basis changed, and would then be
 //! quietly displaying medals that nothing mints.
 
-use crate::Lab;
+use crate::{identify, interaction, Lab};
 use bc_hash::hex;
 
 /// The page template. A real HTML file rather than a string literal, so it can
@@ -144,9 +144,68 @@ pub fn build_json(lab: &Lab) -> String {
 
     let (within, between) = lab.separation();
     out.push_str(&format!(
-        "  \"separation\": {{\"within\":{within:.4},\"between\":{between:.4},\"accuracy\":{:.4},\"chance\":{:.4}}}\n}}",
+        "  \"separation\": {{\"within\":{within:.4},\"between\":{between:.4},\"accuracy\":{:.4},\"chance\":{:.4}}},\n",
         lab.nearest_neighbour_accuracy(),
         1.0 / players.len().max(1) as f64
+    ));
+
+    // Episode 12, on a held-out split — the honest counterpart to the
+    // in-sample `separation.accuracy` above.
+    out.push_str("  \"identification\": ");
+    match identify::split(&lab.corpus, b.k) {
+        Some(sp) => {
+            let m = identify::confusion(&sp);
+            let n = sp.centroids.len();
+            let correct: usize = (0..n).map(|i| m[i][i]).sum();
+            let total: usize = m.iter().flatten().sum::<usize>().max(1);
+            let curve: Vec<String> = identify::convergence(&sp, 12, 40, 0xC0FFEE)
+                .iter()
+                .map(|c| format!("{{\"games\":{},\"accuracy\":{:.4}}}", c.games, c.accuracy))
+                .collect();
+            let margin = identify::closest_pair(&sp.centroids)
+                .map(|(x, y, d, cells)| {
+                    format!(
+                        "{{\"a\":\"{}\",\"b\":\"{}\",\"distance\":{d:.4},\"cells\":{cells:.1}}}",
+                        esc(&x),
+                        esc(&y)
+                    )
+                })
+                .unwrap_or_else(|| "null".into());
+            out.push_str(&format!(
+                "{{\"held_out_accuracy\":{:.4},\"curve\":[{}],\"margin\":{margin}}},\n",
+                correct as f64 / total as f64,
+                curve.join(",")
+            ));
+        }
+        None => out.push_str("null,\n"),
+    }
+
+    // Episode 18 — does the opponent move you?
+    let rows: Vec<String> = interaction::analyse(lab, 200, 0x1_9AC7_2E51)
+        .iter()
+        .map(|r| {
+            format!(
+                "{{\"player\":\"{}\",\"ratio\":{:.4},\"p\":{:.4}}}",
+                esc(&r.player),
+                r.ratio,
+                r.p_value
+            )
+        })
+        .collect();
+    let pulls: Vec<String> = interaction::pulls(lab)
+        .iter()
+        .map(|p| {
+            format!(
+                "{{\"opponent\":\"{}\",\"magnitude\":{:.4}}}",
+                esc(&p.opponent),
+                p.magnitude
+            )
+        })
+        .collect();
+    out.push_str(&format!(
+        "  \"interaction\": {{\"players\":[{}],\"pulls\":[{}]}}\n}}",
+        rows.join(","),
+        pulls.join(",")
     ));
     out
 }
