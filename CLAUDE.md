@@ -33,7 +33,11 @@ know about each other.
 | `claude/youthful-lamport-snidcm` | **Chess Frontier Atlas.** Eight visual layers over a board — territory, contours, frontier, tension, vision — a whole engine in one self-contained HTML page, a glyph alphabet, a workbench for tagging a photographed journal page | independent of everything else |
 | `claude/laughing-pascal-s3wov0` | The MetaPlan and `bc-style` — personality compression, medals, identification, the interaction term | independent of cori |
 
-**The four overlap and nobody has reconciled them.** cori compresses a corpus to
+**The four overlap and nobody has reconciled them.** `docs/reconciliation.md`
+maps them against each other, names the four genuine conflicts, and lists the
+seven decisions reconciliation needs. It decides none of them.
+
+In short: cori compresses a corpus to
 find chess theory; lamport renders what a position *feels* like; laughing-pascal
 compresses a player into an identity. All three are compression over chess, and
 each was designed as if it were the only one.
