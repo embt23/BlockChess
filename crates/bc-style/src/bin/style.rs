@@ -10,54 +10,41 @@
 use bc_hash::hex;
 use bc_style::{identify, report, synth, Corpus, Lab};
 
+const USAGE: &str = "\
+usage: style <command> [source] [k]
+
+  commands   demo · identify · export · viz
+  source     a .pgn file, or a number of synthetic round-robin rounds
+  k          axes to keep (default 4)
+
+  style demo                     the constructed players, as a report
+  style identify                 held-out attribution and the forgery margin
+  style viz games.pgn > out.html a page from your own games";
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let cmd = args.get(1).map(|s| s.as_str()).unwrap_or("demo");
 
     let quiet = matches!(cmd, "export" | "viz");
-    let corpus = match cmd {
-        "demo" | "export" | "viz" | "identify" => {
-            let rounds: usize = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(10);
-            let games = synth::round_robin(rounds, 0x5EED_1234, 120);
-            if !quiet {
-                println!(
-                    "synthetic corpus: {} games between {} constructed personalities\n",
-                    games.len(),
-                    synth::ARCHETYPES.len()
-                );
-            }
-            let mut c = Corpus::new();
-            for g in games {
-                c.push(g);
-            }
-            c
-        }
-        "pgn" => {
-            let Some(path) = args.get(2) else {
+
+    if !matches!(cmd, "demo" | "pgn" | "export" | "viz" | "identify") {
+        eprintln!("{USAGE}");
+        std::process::exit(2);
+    }
+
+    // Every command takes the same source: a PGN path, or a synthetic round
+    // count. They are told apart by whether the argument parses as a number, so
+    // `style viz 10` and `style viz games.pgn` both do the obvious thing.
+    let source = args.get(2).map(|s| s.as_str());
+    let corpus = match source {
+        Some(arg) if arg.parse::<usize>().is_err() => load_pgn(arg, quiet),
+        _ => {
+            if cmd == "pgn" {
                 eprintln!("usage: style pgn <file> [k]");
                 std::process::exit(2);
-            };
-            let text = match std::fs::read_to_string(path) {
-                Ok(t) => t,
-                Err(e) => {
-                    eprintln!("cannot read {path}: {e}");
-                    std::process::exit(1);
-                }
-            };
-            let (games, skipped) = bc_style::pgn::parse(&text);
-            println!("ingested {} games ({skipped} rejected)\n", games.len());
-            let mut c = Corpus::new();
-            for g in games {
-                c.push(g);
             }
-            c
-        }
-        _ => {
-            eprintln!(
-                "usage: style [demo [rounds] | pgn <file> [k] | export [rounds] \
-                 | viz [rounds] | identify [rounds]]"
-            );
-            std::process::exit(2);
+            let rounds: usize = source.and_then(|s| s.parse().ok()).unwrap_or(10);
+            synthetic(rounds, quiet)
         }
     };
 
@@ -92,6 +79,17 @@ fn main() {
 
     println!("corpus root  {}", hex(&lab.basis.corpus_root));
     println!("samples      {} game-sides", lab.basis.samples);
+
+    if let Some(w) = lab.basis.adequacy().warning() {
+        println!("\n  ┌─────────────────────────────────────────────────────────────");
+        println!("  │  NOT ENOUGH GAMES");
+        for line in wrap(&w, 58) {
+            println!("  │  {line}");
+        }
+        println!("  │  Everything below is printed so you can see the shape of it.");
+        println!("  │  None of it is evidence about anybody.");
+        println!("  └─────────────────────────────────────────────────────────────");
+    }
 
     println!("\nthe axes, as this corpus expresses them");
     println!("(discovered, then named by the features loading hardest at each pole)");
@@ -259,4 +257,64 @@ fn short(s: &str) -> String {
     } else {
         s.to_string()
     }
+}
+
+/// Wrap a warning to a column, on spaces.
+fn wrap(text: &str, width: usize) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut line = String::new();
+    for word in text.split_whitespace() {
+        if !line.is_empty() && line.chars().count() + 1 + word.chars().count() > width {
+            out.push(std::mem::take(&mut line));
+        }
+        if !line.is_empty() {
+            line.push(' ');
+        }
+        line.push_str(word);
+    }
+    if !line.is_empty() {
+        out.push(line);
+    }
+    out
+}
+
+/// A synthetic round robin between the constructed archetypes.
+fn synthetic(rounds: usize, quiet: bool) -> Corpus {
+    let games = synth::round_robin(rounds, 0x5EED_1234, 120);
+    if !quiet {
+        println!(
+            "synthetic corpus: {} games between {} constructed personalities\n",
+            games.len(),
+            synth::ARCHETYPES.len()
+        );
+    }
+    let mut c = Corpus::new();
+    for g in games {
+        c.push(g);
+    }
+    c
+}
+
+/// Games from a PGN file. Rejected games are counted, never silently dropped:
+/// a corpus that quietly loses games produces a lens fitted to a subset nobody
+/// chose.
+fn load_pgn(path: &str, quiet: bool) -> Corpus {
+    let text = match std::fs::read_to_string(path) {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("cannot read {path}: {e}");
+            std::process::exit(1);
+        }
+    };
+    let (games, skipped) = bc_style::pgn::parse(&text);
+    if !quiet {
+        println!("ingested {} games ({skipped} rejected)\n", games.len());
+    } else if skipped > 0 {
+        eprintln!("{skipped} games rejected from {path}");
+    }
+    let mut c = Corpus::new();
+    for g in games {
+        c.push(g);
+    }
+    c
 }

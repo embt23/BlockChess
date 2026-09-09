@@ -146,3 +146,64 @@ ways can this be spelled?** If the answer is more than one, pick one in code and
 write the test that pins it.
 
 **Regression test:** `eigenvector_signs_are_canonical`, `medals_are_deterministic`.
+
+---
+
+## 06 — The medal minted from one game
+
+**Symptom.** The lab was pointed at real games for the first time — four famous
+master games, the Opera Game and the Immortal among them. The parser handled
+them perfectly: four games, zero rejected, castling and mate markers and all.
+
+Then it printed this, in exactly the same typeface as everything else:
+
+```
+  axis 0    71.4% of variance      take_rate  ←→  mean_material
+  dispersion   0.00  over 1 games
+  medal        5308f402e33e4f5b2b525349459e88460a09aa510acf536f43ffdea696c7ebca
+```
+
+Eight game-sides. Eighteen features. A confident 71.4%, a personality
+commitment, and a dispersion of exactly zero — which reads as *this player is
+perfectly consistent* and actually means *we have one sample*.
+
+**Cause.** A covariance matrix estimated from `n` observations has rank at most
+`n − 1`. With eight samples in eighteen dimensions, at most seven directions
+carry any information at all; the rest have eigenvalues that are zero to within
+rounding, and `symmetric_eigen` dutifully sorts them by whatever the floating
+point noise happened to be. Those axes have poles. They have loadings. They
+have a share of variance. They will mint you a medal.
+
+**Why it hid.** Every test in the crate used the synthetic corpus, which has
+240 game-sides and comfortably clears the bar. The failure needs a *small*
+corpus, and small corpora had only ever appeared in unit tests that checked
+mechanics — does the hash change, is the JSON balanced — never in a test that
+asked *should this have produced an answer at all*.
+
+And nothing about the output looks wrong. That is the whole problem. A
+rank-deficient basis is not an error state; it is a well-formed object
+containing nothing. The same shape as bug 02, where a miscomputed point was
+still a valid curve point, and bug 05, where a flipped eigenvector was still a
+correct eigenvector.
+
+**The fix.** `Basis::adequacy()` computes two bounds and the crate refuses to
+be quiet about either: the hard one, `rank = min(samples − 1, D)`, and the soft
+one, ten samples per dimension, which is the usual rule of thumb for factor
+analysis. The warning goes to the terminal, into the exported JSON, and onto
+the published page — the page especially, because it is the most
+authoritative-looking artifact here and therefore the most dangerous.
+
+**Lesson.** This project's standard has been *check against an oracle you did
+not write*. That is necessary and it is not sufficient, because an oracle tells
+you whether an answer is right and says nothing about whether you were entitled
+to an answer. Sample size is not a statistical nicety; it is a precondition for
+the question being meaningful, and code that computes an estimate should
+compute the bound alongside it and carry the two together.
+
+The generalisation, and it is the one worth keeping: **an estimator that cannot
+say how much it should be believed will be believed exactly as much as
+everything printed next to it.**
+
+**Regression tests:** `asking_for_more_axes_than_the_data_supports_is_caught`,
+`a_thin_corpus_is_caught_separately`, `the_warning_travels_into_the_json_and_the_page`,
+`the_synthetic_demo_corpus_is_adequate`.

@@ -63,6 +63,22 @@ pub fn build_json(lab: &Lab) -> String {
     out.push_str(&format!("  \"samples\": {},\n", b.samples));
     out.push_str(&format!("  \"k\": {},\n", b.k));
 
+    // Whether any of the rest means anything. First, so a consumer that reads
+    // only the head of the document still gets the caveat.
+    let a = b.adequacy();
+    out.push_str(&format!(
+        "  \"adequacy\": {{\"samples\":{},\"rank\":{},\"requested\":{},\"wanted_samples\":{},\"trustworthy\":{},\"warning\":{}}},\n",
+        a.samples,
+        a.rank,
+        a.requested,
+        a.wanted_samples,
+        a.trustworthy(),
+        match a.warning() {
+            Some(w) => format!("\"{}\"", esc(&w)),
+            None => "null".to_string(),
+        }
+    ));
+
     out.push_str("  \"axes\": [\n");
     for i in 0..b.k {
         let (pos, neg) = b.poles(i);

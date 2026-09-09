@@ -10,6 +10,7 @@
   --s1:#2a78d6; --s2:#eda100; --s3:#e87ba4; --s4:#008300;
   --pos:#2a78d6; --neg:#e34948; --mid:#f0efec;
   --accent:#2a78d6;
+  --warn-bg:#fdf6e6; --warn-line:#e3c88a; --warn-ink:#7a5a12;
   --shadow:0 1px 2px rgba(20,24,35,.06), 0 8px 24px rgba(20,24,35,.05);
 }
 @media (prefers-color-scheme: dark){
@@ -22,6 +23,7 @@
     --s1:#3987e5; --s2:#c98500; --s3:#d55181; --s4:#008300;
     --pos:#3987e5; --neg:#e66767; --mid:#383835;
     --accent:#3987e5;
+    --warn-bg:#2a2313; --warn-line:#5c4a1c; --warn-ink:#e0bd63;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
   }
 }
@@ -34,6 +36,7 @@
   --s1:#3987e5; --s2:#c98500; --s3:#d55181; --s4:#008300;
   --pos:#3987e5; --neg:#e66767; --mid:#383835;
   --accent:#3987e5;
+  --warn-bg:#2a2313; --warn-line:#5c4a1c; --warn-ink:#e0bd63;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
@@ -127,6 +130,14 @@ td.hash{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2
 .who{display:flex; align-items:center; gap:9px; font-weight:500}
 .who svg{width:14px; height:14px; flex:none}
 
+/* not-enough-games banner */
+#adequacy{margin-top:28px; border:1px solid var(--warn-line); background:var(--warn-bg);
+  padding:16px 18px}
+#adequacy .t{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--warn-ink); margin:0 0 8px; font-weight:500}
+#adequacy p{margin:0; font-size:14.5px; color:var(--ink-2); max-width:68ch}
+#adequacy p + p{margin-top:8px}
+
 /* tooltip */
 #tip{position:fixed; pointer-events:none; z-index:50; opacity:0; transition:opacity .1s;
   background:var(--surface); color:var(--ink); border:1px solid var(--rule);
@@ -153,6 +164,7 @@ footer .root{word-break:break-all}
   and the games <em>separated anyway</em> — which is the whole claim this project rests on:
   that how you play is a thing that can be measured, committed to, and carried as a name.</p>
   <div class="reading" id="reading"></div>
+  <div id="adequacy" hidden></div>
 </header>
 
 <section>
@@ -327,6 +339,16 @@ document.getElementById("reading").innerHTML=[
   ["Identified", (sep.accuracy*100).toFixed(1)+"%", "nearest neighbour · chance "+(sep.chance*100).toFixed(0)+"%"]
 ].map(([k,v,n],i)=>`<div class="stat${i===3?' hero':''}"><p class="k">${k}</p>
   <p class="v mono">${v}</p><p class="n">${n}</p></div>`).join("");
+/* The caveat goes above everything it qualifies. A page that looks this
+   authoritative on eight games would be the most misleading artifact here. */
+const adq = DATA.adequacy;
+if (adq && !adq.trustworthy) {
+  const el = document.getElementById("adequacy");
+  el.innerHTML = `<p class="t">Not enough games</p><p>${esc(adq.warning)}.</p>
+    <p>The charts below are drawn so the shape of the method is visible.
+    They are not evidence about anybody.</p>`;
+  el.hidden = false;
+}
 document.getElementById("eb-corpus").textContent="corpus "+DATA.corpus_root.slice(0,12);
 document.getElementById("foot-root").textContent="corpus root  "+DATA.corpus_root;
 

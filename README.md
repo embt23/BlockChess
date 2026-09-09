@@ -42,10 +42,12 @@ standard for this project: no layer is built on top of rules that have only been
 verified by tests we wrote ourselves.
 
 ```sh
-cargo run --release -p bc-style --bin style -- demo    # the lab, on constructed players
-cargo run --release -p bc-style --bin style -- pgn g.pgn
-cargo run --release -p bc-style --bin style -- viz > space.html   # the same, as a page
-cargo run --release -p bc-style --bin style -- identify           # held-out attribution
+# Every command takes the same source: a .pgn file, or a number of
+# synthetic round-robin rounds. Default is the constructed players.
+cargo run --release -p bc-style --bin style -- demo              # a report
+cargo run --release -p bc-style --bin style -- identify          # held-out attribution
+cargo run --release -p bc-style --bin style -- viz > space.html  # a page
+cargo run --release -p bc-style --bin style -- viz my.pgn > mine.html
 
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
@@ -56,6 +58,10 @@ cargo run --release --bin perft -- divide 3     # per-move breakdown
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
 time; it exists to be read. The node will link `ed25519-dalek`.
+
+The crate refuses to be quoted on a corpus too small to support it — a basis
+fitted to fewer games than features is a well-formed object containing nothing,
+and it says so in the terminal, the JSON and the page.
 
 Bugs found along the way, why they hid, and one caught before it bit, are in
 [`docs/build-log.md`](docs/build-log.md).

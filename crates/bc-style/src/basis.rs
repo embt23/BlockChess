@@ -11,6 +11,71 @@ use crate::features::{D, FEATURE_NAMES};
 use crate::linalg::{column_stats, covariance, standardise, symmetric_eigen, Matrix};
 use bc_hash::Hash;
 
+/// Samples per dimension below which loadings are unstable.
+///
+/// Rank is the hard limit (see [`Adequacy`]); this is the practical one. Ten
+/// observations per estimated parameter is the usual rule of thumb for factor
+/// analysis, and below it the axes move noticeably when you add a game.
+pub const SAMPLES_PER_DIM: usize = 10;
+
+/// Whether a corpus can actually support the lens fitted to it.
+///
+/// A covariance estimated from `n` points has rank at most `n − 1`, so a basis
+/// asked for more axes than that returns eigenvectors whose eigenvalues are
+/// zero to within rounding — directions the data never spoke about, ordered by
+/// floating-point noise. They look exactly like real axes. They have poles,
+/// loadings, a share of variance, and they will happily mint a medal.
+///
+/// This is the same failure as `docs/build-log.md` 02 and 05: a value that is
+/// authoritative in form and empty in content. The only defence is to compute
+/// the bound and say so.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Adequacy {
+    pub samples: usize,
+    /// Axes the data can support at all: `min(samples − 1, D)`.
+    pub rank: usize,
+    /// Axes actually kept.
+    pub requested: usize,
+    /// Samples needed for [`SAMPLES_PER_DIM`] per dimension.
+    pub wanted_samples: usize,
+}
+
+impl Adequacy {
+    /// Some kept axes are beyond the rank of the data and mean nothing.
+    pub fn over_rank(&self) -> bool {
+        self.requested > self.rank
+    }
+    /// Enough axes, but not enough games to place them stably.
+    pub fn thin(&self) -> bool {
+        self.samples < self.wanted_samples
+    }
+    pub fn trustworthy(&self) -> bool {
+        !self.over_rank() && !self.thin()
+    }
+    /// One line, or `None` when the corpus is adequate.
+    pub fn warning(&self) -> Option<String> {
+        if self.over_rank() {
+            Some(format!(
+                "{} game-sides support at most {} axes, but {} were kept — \
+                 axes {}..{} are numerical noise and every medal minted here is meaningless",
+                self.samples,
+                self.rank,
+                self.requested,
+                self.rank,
+                self.requested - 1
+            ))
+        } else if self.thin() {
+            Some(format!(
+                "{} game-sides for {} features — the loadings are unstable below \
+                 about {} and will move as games are added",
+                self.samples, D, self.wanted_samples
+            ))
+        } else {
+            None
+        }
+    }
+}
+
 /// A fitted lens. Everything needed to place a game in personality space, and
 /// nothing that depends on any particular player.
 #[derive(Clone, Debug)]
@@ -72,6 +137,19 @@ impl Basis {
                     .sum()
             })
             .collect()
+    }
+
+    /// Whether this lens rests on enough games to mean anything.
+    ///
+    /// Always check before quoting a loading, a pole or a medal. The struct is
+    /// cheap and the failure it catches is silent.
+    pub fn adequacy(&self) -> Adequacy {
+        Adequacy {
+            samples: self.samples,
+            rank: self.samples.saturating_sub(1).min(D),
+            requested: self.k,
+            wanted_samples: D * SAMPLES_PER_DIM,
+        }
     }
 
     /// Fraction of total variance carried by axis `i`.
