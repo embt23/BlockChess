@@ -16,9 +16,13 @@ useful on its own and none of them needs the next one to justify it.*
 | **Index** | `bc-index`, opening trie + canonical position map | done |
 | **Grammar** | `bc-grammar`, Re-Pair, knows nothing about chess | done |
 | **Ground truth** | 3,810 named openings, vendored, CC0 | done |
+| **Corpus** | 121,332 lichess games | **got it** |
+| **X1, X7** | run, and written up in `papers/11-results.md` | **done** |
 | **The chain** | nothing | not started, deliberately |
 
-40 tests. `blockchess` has ten commands. What it does not have is **games**.
+40 tests. `blockchess` has ten commands. **Stages 0, 1 (partly) and 3 are
+done** — see `papers/11-results.md`: one prediction confirmed, one wrong, one
+refined.
 
 ---
 
@@ -97,7 +101,21 @@ argument of `08-layers.md` made watchable.
 
 ---
 
-## Stage 3 — X7, the experiment the project is for  ·  *say "launch 3"*
+## Stage 3 — X7  ·  **DONE 2026-09-09** — `papers/11-results.md`
+
+Compression half false, discovery half true. Re-Pair costs 10.17 bits/ply
+against E7's 4.625, so it is a bad compressor — but past four plies the
+sequences it names are named by humans 3–6× more often than the ones it did
+not name, against a control of real game prefixes. The control mattered: below
+four plies the apparent agreement was *worse* than chance and would have been
+reported as a success without it.
+
+**What is left here:** the mid-game symbols (`…+2` in the output) cannot be
+displayed and their matches are probably noise. They may also be the most
+interesting thing in the output — repeated middlegame motifs with no names.
+Say **"launch 3b"** to make them readable.
+
+<details><summary>original stage 3 brief</summary>
 
 Run grammar induction on the real corpus and cross-check every discovered
 symbol against the 3,810 named openings.
@@ -116,6 +134,8 @@ Two predictions are already on file so the result can contradict them:
 
 **Deliverable:** the result, written up honestly including the ways the number
 could be flattering itself — which the command already reports separately.
+
+</details>
 
 ---
 

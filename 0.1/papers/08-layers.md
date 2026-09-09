@@ -184,8 +184,23 @@ written down now, before measuring, so the measurement can contradict it:
 
 > **Prediction, on file: grammar-based coding lands near the model-prior
 > figure, ~1.5–2 bits/ply, and does not beat it.**
+>
+> **WRONG — right in direction, badly wrong in magnitude.** Measured on
+> 121,332 games: **10.17 bits/ply**, against E7's 4.625 on the same corpus.
+> Re-Pair is more than twice as bad as the codec already in the repo, not
+> "near a learned model". It is not near anything. `papers/11-results.md` §3a.
+>
+> The reason is one the paper missed entirely: induction **grows the
+> alphabet**, so every surviving symbol costs more bits than the ones it
+> replaced. 1,117 new symbols widened it from 1,962 to 3,079, and the savings
+> do not pay for the width.
 
-**And it does not matter, because bits were never the reason to build it.**
+**And it does not matter, because bits were never the reason to build it —
+which is fortunate, because the discovery half survived and the compression
+half did not.** On the same run, the sequences it chose to name are, past four
+plies, named by humans 3–6× more often than the sequences it did not choose.
+`papers/11-results.md` §3b, with the control that makes that statement mean
+something.
 A policy network and a discovered grammar might spend the same bits, but only
 one of them hands you a *list*. The grammar's symbols are inspectable, nameable,
 countable, and arguable-about; the network's weights are not. What L3 produces

@@ -186,6 +186,13 @@ where much of the real expertise lives. If X7 comes back with high agreement
 on long forced lines and poor agreement elsewhere, that is not a failure, it is
 this prediction confirmed.
 
+> **CONFIRMED, and quantified.** Against a control of real game prefixes, the
+> lift is 0.41× at two plies, crosses 1.0 at four, and reaches 3.05× at five
+> and 5.83× at seven. It wins exactly where lines are forced and loses where
+> they are not. What it recovers at 5–7 plies is the Scotch, the Sicilian Open,
+> the Giuoco Piano, the Ruy Lopez Steinitz — sequences where each move is close
+> to compelled by the last. `papers/11-results.md` §3c.
+
 **"Conscious representation" is a bigger word than anything here earns.**
 Hierarchical predictive models are a live theory of what brains do `[lit]`, and
 the resemblance is real and worth noticing. But a Re-Pair grammar over chess

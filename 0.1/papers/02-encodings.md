@@ -87,16 +87,21 @@ The same choice priced exactly: `log2 b` bits, with no rounding waste.
 | 40 | 6 | 5.322 | 53.2 |
 | 218 | 8 | 7.768 | 77.7 |
 
-The number that matters is `E[log2 b]` over a real corpus, which is strictly
-below `log2 E[b]` by Jensen. **`blockchess measure` now computes it**, and on
-the four games in `corpus/` it reports `E[log2 b] = 4.686` against
-`log2 E[b] = 4.974` — a Jensen gap of 0.29 bits, confirming the direction. Four
-games is not a corpus and that figure should not be quoted as one; **X1** is
-still open and is now one command away from being answered.
+**MEASURED.** On 121,332 real games (`papers/11-results.md`):
 
-Taking `b ≈ 30` as the working figure gives **≈49 bytes/game**, and a 3.3× win
-over E3 for the price of running a move generator. The measured 3.41× on the
-four games is consistent with it.
+| | |
+|---|---|
+| `E[b]` | 29.2102 |
+| `log2 E[b]` | 4.8684 |
+| **`E[log2 b]`** | **4.6246** |
+| Jensen gap | 0.2438 |
+
+The `b ≈ 30` placeholder gave 4.907 and was 6% pessimistic. **E7 costs 4.625
+bits/ply and 37.7 bytes for a mean 65.2-ply game, beating E3 by 3.46×.**
+
+The rounding E6 throws away is **9.42%**, which is what justifies the
+mixed-radix construction rather than whole-bit indices. Had it come in at 1%,
+the arithmetic would not have been worth writing.
 
 **E7 is implemented**, in `crates/bc-codec`, and it hits the floor exactly: the
 payload is `⌈log2 ∏ bᵢ⌉` bits, verified per game by a test. It is not an
