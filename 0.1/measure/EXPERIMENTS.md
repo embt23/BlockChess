@@ -208,3 +208,84 @@ symbols at level three and four *mean* is a research programme rather than an
 engineering task.
 
 **No prediction on file.** Nobody knows, which is the reason to run it.
+
+---
+
+## X11 — Do bits track seconds? — *the cheapest way to find out if any of this is real*
+
+**Question.** Our encoder prices each move in bits. The player spent some number
+of seconds on it. Are the two correlated?
+
+**Why it matters.** `papers/10-players.md` §1. If a statistical model built from
+strangers and one person's hesitation get confused in the same places, that is a
+real result about both. If they do not correlate at all, a large part of why
+this project believes compression has anything to do with understanding is
+wrong — and that is worth knowing in a week rather than a year.
+
+**Data.** Lichess PGN carries `[%clk H:MM:SS]` in a comment after each move.
+Per-move think time is the difference between consecutive clock readings for the
+same player, plus the increment. `bc-pgn` currently discards comments, so step
+one is to keep the clock tags.
+
+**Protocol.**
+1. Extend the PGN reader to retain `%clk`, and derive per-move seconds.
+2. For every ply, record `(bits under the corpus model, seconds spent)`.
+3. Report the correlation, and the scatter, **split by**: ply number, remaining
+   clock, player rating band, and time control.
+
+**Controls, because the confounds here are severe and each would manufacture a
+correlation on its own:**
+- **Time pressure.** Under thirty seconds left, everything is fast regardless
+  of recognition. Exclude, or model separately.
+- **Memorised theory.** A move can be instant because the player *learned* it,
+  not because they understood it. Opening moves are cheap in bits *and* fast in
+  seconds for a reason that is not the hypothesis. Test the middlegame
+  separately — that is where the claim lives.
+- **Fast means bad.** Blunders are quick. Some correlation will exist through
+  move quality alone; an engine evaluation as a covariate would separate them.
+- **Increment.** Bullet and classical are different regimes. Do not pool them.
+
+**Prediction on file:** positive correlation in the middlegame, strongest at
+intermediate ratings — beginners have no chunks to recognise, and the very
+strongest have so many that little surprises them.
+
+---
+
+## X12 — A compressor per player — *style, with a number*
+
+**Question.** Build the grammar from one player's games. Does the gap between
+their model and the general model identify their moves?
+
+**Protocol.** Per-player grammars for players with enough games (PGN Mentor
+publishes complete single-player collections; Lichess has per-account
+archives). Price held-out moves under both models. Report bits saved by the
+personal model, and rank moves by the gap.
+
+**The test that makes it a result rather than a description:** hold out games,
+and see whether the personal model identifies *who played them* better than
+chance. If style is real and this captures it, that should work.
+
+---
+
+## X13 — The modes of the player graph — *what the dimensions turn out to be*
+
+**Question.** Encode player A's games with player B's model; the extra bits are
+a distance. Over every pair, what is the shape?
+
+**Protocol.** Build the pairwise cross-entropy matrix, symmetrise it, and take
+the eigendecomposition of the graph Laplacian. Report the spectrum, and the
+players at each extreme of the lowest few non-trivial eigenvectors.
+
+**Why the low modes specifically.** `papers/10-players.md` §3: for a connected
+body the Laplacian's eigenvectors *are* its modes of vibration, low frequency
+first, and the lowest move the whole body together. Those are the axes along
+which every player varies. High modes are individual quirks that connect to
+nobody.
+
+**The point is that nothing is named in advance.** Compute the modes, look at
+who sits at either end, and find out afterwards what the dimension was. If mode
+one separates attacking players from positional ones, that is a century-old
+distinction falling out of arithmetic. If it separates something nobody has a
+word for, better.
+
+Needs X12 first.

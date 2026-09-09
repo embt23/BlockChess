@@ -167,6 +167,28 @@ timestamps a real corpus carries.
 
 ---
 
+## Stage 6b — players  ·  *say "launch players"*
+
+The thread from 2026-09-09, written up in `papers/10-players.md`. Pure data —
+moves and clock times, no interviews. Three experiments, cheapest first.
+
+- **X11 — do bits track seconds?** Lichess records the clock at every move.
+  Think time is where a player's own compression failed, so this asks whether
+  our encoder's surprise and a human's hesitation land in the same places. One
+  week, and the most informative thing on this page if it comes back negative.
+- **X12 — a compressor per player.** Build the grammar from one person's games
+  and it encodes them rather than chess. Style is the gap between their model
+  and everyone's. Testable: can it identify who played a held-out game?
+- **X13 — the modes.** Cross-entropy between every pair of players is a
+  distance matrix; the low eigenvectors of its Laplacian are, literally, that
+  body's lowest modes of vibration — the axes along which everybody varies.
+  The temperaments fall out instead of being named in advance.
+
+**Deliverable:** X11 first, because it is a join between two columns the corpus
+already has, and because it is the one that could kill the framing cheaply.
+
+---
+
 ## Stage 7 — the chain  ·  *say "launch 7"*
 
 Only now, and this ordering is the point: stages 1–6 give a complete, useful,

@@ -113,6 +113,7 @@ the project is for.
 | [`06-decisions.md`](papers/06-decisions.md) | Every fork, with recommendations |
 | [`08-layers.md`](papers/08-layers.md) | Why compressing the corpus **is** deriving chess theory |
 | [`09-lineage.md`](papers/09-lineage.md) | Where these ideas already live — MDL, Kolmogorov, and sixty years of experiments on chess players |
+| [`10-players.md`](papers/10-players.md) | Think time as a measurement of recognition; style as a number; the modes of the player graph |
 | [`07-sources.md`](papers/07-sources.md) | Every literature value, attributed, including the two weak ones |
 
 ## The arithmetic
