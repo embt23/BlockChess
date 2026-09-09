@@ -37,6 +37,18 @@ caught on the spot — the redundancy in chess does the error correction.
 Computer vision is deliberately **not** the tool here: with one page it would
 mean training a classifier on a dataset of one.
 
+### Handling the author's files
+
+Never glob for them. A pattern like `find ~ -iname '2026-06-13-*.jpg'` matches
+everything taken that day, not the one file intended, and a personal machine has
+things on it that must not end up in a repository. The rule: locate candidates,
+show the list, have the author confirm which one is wanted, then copy that single
+path **by name**. Nothing is copied or committed on a pattern match.
+
+Git history is effectively permanent, so this is not a tidy-up-later problem —
+removing a pushed file needs a history rewrite, and orphaned objects stay
+reachable by SHA until the host garbage-collects them.
+
 **Verified end to end:** tagging a board of the author's glyphs produces
 `rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR` — the standard opening position.
 The alphabet reads correctly.

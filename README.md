@@ -11,6 +11,7 @@ index.html               the atlas — open it in a browser, no build step
 workbench.html           tag a photographed page into positions
 NOTES.md                 the journal page: legible vs unread, kept honest
 ROADMAP.md               phases, blockers, and the pattern-web spec
+docs/PLAN.md             the working plan: read the page, then the territory game
 docs/presentation/       "Reading the Page" — 15 slides
 docs/renders/            board images for every layer
 tools/verify.sh          one command: perft, game data, SEE
