@@ -72,7 +72,7 @@ stage removes all three.
 
 **Deliverable:** every `[lit]` and every placeholder in `papers/` either
 replaced by our own figure or explicitly retained with a reason. A short
-`papers/10-results.md` with the numbers and the corpus they came from.
+`papers/11-results.md` with the numbers and the corpus they came from.
 
 ---
 
