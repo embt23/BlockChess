@@ -419,3 +419,95 @@ pub fn to_pgn(start: &Position, moves: &[Move], tags: &[(&str, &str)]) -> String
     out.push_str("*\n");
     out
 }
+
+/// `blockchess export` — the game as JSON, one record per ply.
+///
+/// A graphics layer needs positions, and there must be exactly one thing that
+/// decides what a position is. `papers/04-permanence.md` §5 is about a move
+/// generator being consensus-critical; the same argument applies here for a
+/// smaller reason — a board drawn by a second, JavaScript implementation of
+/// chess would eventually disagree with this one, and the disagreement would
+/// be silent. So the engine emits the positions and the page only draws them.
+pub fn export(args: &[String]) -> Result<(), String> {
+    let mut game_path = None;
+    let mut notes_path = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--notes" => {
+                i += 1;
+                notes_path = Some(args.get(i).ok_or("--notes needs a path")?.clone());
+            }
+            other => game_path = Some(other.to_string()),
+        }
+        i += 1;
+    }
+    let game_path = game_path.ok_or("usage: blockchess export <game.pgn> [--notes notes.txt]")?;
+    let games = load(&game_path, usize::MAX)?;
+    let game = games.first().ok_or("no game in that file")?;
+
+    let notes = match &notes_path {
+        Some(p) => {
+            let t = std::fs::read_to_string(p).map_err(|e| format!("{p}: {e}"))?;
+            parse_notes(&t).0
+        }
+        None => Vec::new(),
+    };
+
+    let mut out = String::from("{\n  \"plies\": [\n");
+    let mut pos = game.start;
+    for ply in 0..=game.moves.len() {
+        let legal = bc_codec::order::canonical_moves(&pos);
+        let san = if ply == 0 {
+            String::new()
+        } else {
+            // Rendered from the position *before* the move, which is the only
+            // place SAN is well defined.
+            String::new()
+        };
+        let _ = san;
+        let mine: Vec<&Note> = notes.iter().filter(|n| n.ply == ply).collect();
+        out.push_str("    {");
+        out.push_str(&format!("\"ply\": {ply}, "));
+        out.push_str(&format!("\"fen\": {:?}, ", pos.to_fen()));
+        out.push_str(&format!("\"legal\": {}, ", legal.len()));
+        out.push_str(&format!(
+            "\"bits\": {:.4}, ",
+            (legal.len().max(1) as f64).log2()
+        ));
+        if ply < game.moves.len() {
+            let m = game.moves[ply];
+            out.push_str(&format!("\"san\": {:?}, ", to_san(&pos, m)));
+            out.push_str(&format!("\"from\": {}, ", m.from()));
+            out.push_str(&format!("\"to\": {}, ", m.to()));
+        }
+        out.push_str("\"notes\": [");
+        for (k, n) in mine.iter().enumerate() {
+            if k > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(&format!(
+                "{{\"side\": {:?}, \"text\": {:?}, \"shape\": [{}]}}",
+                n.side.to_string(),
+                n.text,
+                n.shape
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ));
+        }
+        out.push(']');
+        out.push('}');
+        if ply < game.moves.len() {
+            out.push(',');
+        }
+        out.push('\n');
+        if ply < game.moves.len() {
+            pos = pos.make_move(game.moves[ply]);
+        }
+    }
+    out.push_str("  ]\n}\n");
+    print!("{out}");
+    Ok(())
+}

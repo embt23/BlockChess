@@ -50,6 +50,9 @@ YOUR OWN PERCEPTION
     annotate <game.pgn> <notes.txt> [--corpus big.pgn]
                                   put what you noticed next to what the
                                   machine saw at the same moment
+    export <game.pgn> [--notes notes.txt] > game.json
+                                  the game as JSON, one record per ply, for
+                                  a graphics layer to draw
 
   Every command takes --limit N to stop after N games.
 ";
@@ -75,6 +78,7 @@ fn main() -> ExitCode {
         "find" => study::find(rest),
         "grammar" => grammar::run(rest),
         "annotate" => annotate::run(rest),
+        "export" => annotate::export(rest),
         "-h" | "--help" | "help" => {
             print!("{USAGE}");
             Ok(())

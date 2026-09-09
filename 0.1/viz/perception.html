@@ -1,0 +1,292 @@
+<title>The Perception Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F1F3F0;--paper-2:#E7EAE6;--ink:#121A1B;--ink-2:#3A4746;--muted:#6D7A78;
+  --rule:#CBD3CF;--rule-soft:#DDE3DF;
+  --verdigris:#2E6B62;--verdigris-w:#DCEAE5;--brass:#8A6D18;--brass-w:#F0E7C9;
+  --light:#DFE3DA;--dark:#B4BDAE;--hi:#8FBFA8;--note:#D9C271;
+  --f-d:"Fraunces",Georgia,serif;--f-b:"IBM Plex Sans",system-ui,sans-serif;--f-m:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#101617;--paper-2:#182122;--ink:#E8EDEB;--ink-2:#B7C2BF;--muted:#869592;
+  --rule:#2B3838;--rule-soft:#212C2D;--verdigris:#6FBFAE;--verdigris-w:#16302C;
+  --brass:#D3B65E;--brass-w:#2C2611;--light:#33403C;--dark:#222D2B;--hi:#2F6E56;--note:#5A4C17;
+}}
+:root[data-theme="dark"]{
+  --paper:#101617;--paper-2:#182122;--ink:#E8EDEB;--ink-2:#B7C2BF;--muted:#869592;
+  --rule:#2B3838;--rule-soft:#212C2D;--verdigris:#6FBFAE;--verdigris-w:#16302C;
+  --brass:#D3B65E;--brass-w:#2C2611;--light:#33403C;--dark:#222D2B;--hi:#2F6E56;--note:#5A4C17;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-b);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:clamp(1.5rem,4vw,3rem) clamp(1rem,3vw,2.5rem) 4rem}
+h1{font-family:var(--f-d);font-variation-settings:"SOFT" 20,"WONK" 1,"opsz" 100;font-weight:600;font-size:clamp(2rem,5vw,3.2rem);line-height:1.05;letter-spacing:-.02em;margin:0 0 .8rem;text-wrap:balance}
+.kicker{font-family:var(--f-m);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;color:var(--verdigris);margin:0 0 .9rem}
+.lede{color:var(--ink-2);max-width:58ch;margin:0 0 2rem;font-size:1.03rem}
+.stage{display:grid;grid-template-columns:minmax(300px,420px) minmax(0,1fr);gap:2rem;align-items:start}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+.boardwrap{position:relative}
+svg.board{display:block;width:100%;height:auto;border:1px solid var(--rule)}
+.controls{display:flex;gap:.4rem;align-items:center;margin-top:.8rem;flex-wrap:wrap}
+button{font-family:var(--f-m);font-size:.8rem;padding:.42rem .8rem;border:1px solid var(--rule);background:var(--paper-2);color:var(--ink);border-radius:2px;cursor:pointer}
+button:hover{border-color:var(--verdigris);color:var(--verdigris)}
+button:focus-visible{outline:2px solid var(--verdigris);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--verdigris);color:var(--paper);border-color:var(--verdigris)}
+input[type=range]{flex:1;min-width:120px;accent-color:var(--verdigris)}
+.meta{font-family:var(--f-m);font-size:.76rem;color:var(--muted);margin-top:.5rem}
+.panel{display:flex;flex-direction:column;gap:1.4rem}
+.card{border:1px solid var(--rule-soft);background:var(--paper-2);border-radius:3px;padding:1rem 1.1rem}
+.card h2{font-family:var(--f-m);font-size:.7rem;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin:0 0 .7rem;font-weight:500}
+.big{font-family:var(--f-d);font-variation-settings:"opsz" 60;font-size:1.9rem;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.35rem 0;border-bottom:1px solid var(--rule-soft);font-size:.9rem}
+.row:last-child{border-bottom:none}
+.row b{font-family:var(--f-m);font-weight:500;font-variant-numeric:tabular-nums}
+.note{border-left:2px solid var(--note);padding:.15rem 0 .15rem .8rem;margin:.55rem 0;font-size:.93rem}
+.note .who{font-family:var(--f-m);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);display:block}
+.sym{font-family:var(--f-m);font-size:.83rem;padding:.4rem 0;border-bottom:1px solid var(--rule-soft);display:flex;gap:.7rem;align-items:baseline}
+.sym:last-child{border-bottom:none}
+.sym .n{color:var(--muted);min-width:3.6rem;text-align:right;font-variant-numeric:tabular-nums}
+.sym.on{color:var(--verdigris);font-weight:600}
+.sym .nm{color:var(--muted);font-family:var(--f-b);font-size:.8rem}
+.sym.on .nm{color:var(--verdigris)}
+.spark{display:flex;align-items:flex-end;gap:1px;height:52px;margin-top:.3rem}
+.spark i{flex:1;background:var(--rule);min-height:1px;display:block;transition:background .15s}
+.spark i.on{background:var(--verdigris)}
+.spark i.noted{background:var(--note)}
+.dim{color:var(--muted);font-size:.82rem;margin-top:.5rem}
+footer{margin-top:3rem;padding-top:1.4rem;border-top:1px solid var(--rule);font-family:var(--f-m);font-size:.73rem;color:var(--muted);line-height:1.8}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <p class="kicker">BlockChess 0.1 · perception vs. compression</p>
+  <h1>The Perception Engine</h1>
+  <p class="lede">
+    Step through a game and watch three things at once: what the board is doing,
+    how much information each move carries, and which of the patterns a
+    compressor found in 121,332 real games you are currently standing inside.
+    <strong>The positions come from the Rust engine</strong> — this page only draws them,
+    so there is no second implementation of chess to disagree with the first.
+  </p>
+
+  <div class="stage">
+    <div>
+      <div class="boardwrap">
+        <svg class="board" viewBox="0 0 360 360" id="bd" role="img" aria-label="Chess board"></svg>
+      </div>
+      <div class="controls">
+        <button id="prev" aria-label="Previous ply">◀</button>
+        <button id="playbtn" aria-pressed="false">play</button>
+        <button id="next" aria-label="Next ply">▶</button>
+        <input type="range" id="scrub" min="0" max="33" value="0" aria-label="Ply">
+      </div>
+      <div class="meta" id="meta">ply 0 · start</div>
+      <div class="card" style="margin-top:1rem">
+        <h2>information per ply</h2>
+        <div class="spark" id="spark"></div>
+        <p class="dim">
+          Height is <code>log₂(legal moves)</code> — how branchy the position is.
+          Amber marks a ply somebody wrote a note on. Note the collapse at the
+          end: a forced mate has almost no branching and enormous insight, so
+          <strong>this bar measures choice, not difficulty.</strong>
+        </p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="card">
+        <h2>this move</h2>
+        <div class="big" id="bits">4.32</div>
+        <p class="dim" style="margin-top:.2rem">bits to name it</p>
+        <div style="margin-top:.8rem">
+          <div class="row"><span>legal moves</span><b id="legal">20</b></div>
+          <div class="row"><span>vs game mean</span><b id="delta">+0.00</b></div>
+          <div class="row"><span>played</span><b id="san">e4</b></div>
+        </div>
+      </div>
+
+      <div class="card" id="notecard">
+        <h2>what the human saw</h2>
+        <div id="notes"><p class="dim">No note at this ply.</p></div>
+      </div>
+
+      <div class="card">
+        <h2>patterns the compressor found · lit when you are inside one</h2>
+        <div id="syms"></div>
+        <p class="dim">
+          Counts are how many times each was substituted across 121,332 lichess
+          games. The compressor was never told what chess is — it saw anonymous
+          integers and was told only to find what repeats.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>is that discovery, or coincidence?</h2>
+        <div id="lift"></div>
+        <p class="dim">
+          Share of discovered patterns that humans had already named, against a
+          control of real openings people actually play. <strong>Below four
+          plies the agreement is worse than chance.</strong> Above it, the
+          compressor picks named sequences 3–6× more often than the pool it
+          drew from — and coincidence gets weaker with length, not stronger.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Game: Morphy vs Duke Karl &amp; Count Isouard, Paris 1858. Notes are a
+    worked example of the <code>blockchess annotate</code> format, not Evan's.<br>
+    Patterns and lift from <code>blockchess grammar</code> over
+    lichess_db_standard_rated_2013-01. Full write-up in <code>papers/11-results.md</code>.
+  </footer>
+</div>
+
+<script>
+const DATA = {"game":{"plies":[{"ply":0,"fen":"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1","legal":20,"bits":4.3219,"san":"e4","from":12,"to":28,"notes":[{"side":"w","text":"opening the centre, standard","shape":[]}]},{"ply":1,"fen":"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1","legal":20,"bits":4.3219,"san":"e5","from":52,"to":36,"notes":[]},{"ply":2,"fen":"rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2","legal":29,"bits":4.858,"san":"Nf3","from":6,"to":21,"notes":[]},{"ply":3,"fen":"rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2","legal":29,"bits":4.858,"san":"d6","from":51,"to":43,"notes":[]},{"ply":4,"fen":"rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3","legal":27,"bits":4.7549,"san":"d4","from":11,"to":27,"notes":[]},{"ply":5,"fen":"rnbqkbnr/ppp2ppp/3p4/4p3/3PP3/5N2/PPP2PPP/RNBQKB1R b KQkq d3 0 3","legal":33,"bits":5.0444,"san":"Bg4","from":58,"to":30,"notes":[]},{"ply":6,"fen":"rn1qkbnr/ppp2ppp/3p4/4p3/3PP1b1/5N2/PPP2PPP/RNBQKB1R w KQkq - 1 4","legal":35,"bits":5.1293,"san":"dxe5","from":27,"to":36,"notes":[{"side":"w","text":"the exchange felt forced to me","shape":[]}]},{"ply":7,"fen":"rn1qkbnr/ppp2ppp/3p4/4P3/4P1b1/5N2/PPP2PPP/RNBQKB1R b KQkq - 0 4","legal":36,"bits":5.1699,"san":"Bxf3","from":30,"to":21,"notes":[{"side":"b","text":"I hated giving up the bishop here","shape":[]}]},{"ply":8,"fen":"rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5b2/PPP2PPP/RNBQKB1R w KQkq - 0 5","legal":35,"bits":5.1293,"san":"Qxf3","from":3,"to":21,"notes":[]},{"ply":9,"fen":"rn1qkbnr/ppp2ppp/3p4/4P3/4P3/5Q2/PPP2PPP/RNB1KB1R b KQkq - 0 5","legal":29,"bits":4.858,"san":"dxe5","from":43,"to":36,"notes":[]},{"ply":10,"fen":"rn1qkbnr/ppp2ppp/8/4p3/4P3/5Q2/PPP2PPP/RNB1KB1R w KQkq - 0 6","legal":40,"bits":5.3219,"san":"Bc4","from":5,"to":26,"notes":[]},{"ply":11,"fen":"rn1qkbnr/ppp2ppp/8/4p3/2B1P3/5Q2/PPP2PPP/RNB1K2R b KQkq - 1 6","legal":37,"bits":5.2095,"san":"Nf6","from":62,"to":45,"notes":[]},{"ply":12,"fen":"rn1qkb1r/ppp2ppp/5n2/4p3/2B1P3/5Q2/PPP2PPP/RNB1K2R w KQkq - 2 7","legal":45,"bits":5.4919,"san":"Qb3","from":21,"to":17,"notes":[]},{"ply":13,"fen":"rn1qkb1r/ppp2ppp/5n2/4p3/2B1P3/1Q6/PPP2PPP/RNB1K2R b KQkq - 3 7","legal":36,"bits":5.1699,"san":"Qe7","from":59,"to":52,"notes":[]},{"ply":14,"fen":"rn2kb1r/ppp1qppp/5n2/4p3/2B1P3/1Q6/PPP2PPP/RNB1K2R w KQkq - 4 8","legal":44,"bits":5.4594,"san":"Nc3","from":1,"to":18,"notes":[]},{"ply":15,"fen":"rn2kb1r/ppp1qppp/5n2/4p3/2B1P3/1QN5/PPP2PPP/R1B1K2R b KQkq - 5 8","legal":29,"bits":4.858,"san":"c6","from":50,"to":42,"notes":[]},{"ply":16,"fen":"rn2kb1r/pp2qppp/2p2n2/4p3/2B1P3/1QN5/PPP2PPP/R1B1K2R w KQkq - 0 9","legal":41,"bits":5.3576,"san":"Bg5","from":2,"to":38,"notes":[{"side":"w","text":"the pin is the whole game","shape":[38,45,59]}]},{"ply":17,"fen":"rn2kb1r/pp2qppp/2p2n2/4p1B1/2B1P3/1QN5/PPP2PPP/R3K2R b KQkq - 1 9","legal":27,"bits":4.7549,"san":"b5","from":49,"to":33,"notes":[]},{"ply":18,"fen":"rn2kb1r/p3qppp/2p2n2/1p2p1B1/2B1P3/1QN5/PPP2PPP/R3K2R w KQkq b6 0 10","legal":43,"bits":5.4263,"san":"Nxb5","from":18,"to":33,"notes":[{"side":"w","text":"this is where I stopped calculating and started seeing","shape":[]}]},{"ply":19,"fen":"rn2kb1r/p3qppp/2p2n2/1N2p1B1/2B1P3/1Q6/PPP2PPP/R3K2R b KQkq - 0 10","legal":27,"bits":4.7549,"san":"cxb5","from":42,"to":33,"notes":[]},{"ply":20,"fen":"rn2kb1r/p3qppp/5n2/1p2p1B1/2B1P3/1Q6/PPP2PPP/R3K2R w KQkq - 0 11","legal":44,"bits":5.4594,"san":"Bxb5+","from":26,"to":33,"notes":[]},{"ply":21,"fen":"rn2kb1r/p3qppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/R3K2R b KQkq - 0 11","legal":5,"bits":2.3219,"san":"Nbd7","from":57,"to":51,"notes":[]},{"ply":22,"fen":"r3kb1r/p2nqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/R3K2R w KQkq - 1 12","legal":49,"bits":5.6147,"san":"O-O-O","from":4,"to":2,"notes":[{"side":"w","text":"the file is the idea","shape":[3,51,59]}]},{"ply":23,"fen":"r3kb1r/p2nqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR3R b kq - 2 12","legal":22,"bits":4.4594,"san":"Rd8","from":56,"to":59,"notes":[]},{"ply":24,"fen":"3rkb1r/p2nqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR3R w k - 3 13","legal":51,"bits":5.6724,"san":"Rxd7","from":3,"to":51,"notes":[]},{"ply":25,"fen":"3rkb1r/p2Rqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2K4R b k - 0 13","legal":22,"bits":4.4594,"san":"Rxd7","from":59,"to":51,"notes":[]},{"ply":26,"fen":"4kb1r/p2rqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2K4R w k - 0 14","legal":42,"bits":5.3923,"san":"Rd1","from":7,"to":3,"notes":[]},{"ply":27,"fen":"4kb1r/p2rqppp/5n2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 b k - 1 14","legal":18,"bits":4.1699,"san":"Qe6","from":52,"to":44,"notes":[]},{"ply":28,"fen":"4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15","legal":47,"bits":5.5546,"san":"Bxd7+","from":33,"to":51,"notes":[]},{"ply":29,"fen":"4kb1r/p2B1ppp/4qn2/4p1B1/4P3/1Q6/PPP2PPP/2KR4 b k - 0 15","legal":4,"bits":2.0,"san":"Nxd7","from":45,"to":51,"notes":[]},{"ply":30,"fen":"4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16","legal":46,"bits":5.5236,"san":"Qb8+","from":17,"to":57,"notes":[{"side":"w","text":"I saw the mate two moves before it happened","shape":[]}]},{"ply":31,"fen":"1Q2kb1r/p2n1ppp/4q3/4p1B1/4P3/8/PPP2PPP/2KR4 b k - 1 16","legal":1,"bits":0.0,"san":"Nxb8","from":51,"to":57,"notes":[]},{"ply":32,"fen":"1n2kb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2KR4 w k - 0 17","legal":33,"bits":5.0444,"san":"Rd8#","from":3,"to":59,"notes":[]},{"ply":33,"fen":"1n1Rkb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2K5 b k - 1 17","legal":0,"bits":0.0,"notes":[]}]},"symbols":[[33265,["e4","e5"],"C20 King's Pawn Game"],[19563,["Nf3","Nc6"],"A04 Zukertort: Black Mustang Defense"],[18352,["d4","d5"],"D00 Queen's Pawn Game"],[11761,["e4","c5"],"B20 Sicilian Defense"],[11011,["e4","e5","Nf3","Nc6"],"C44 King's Knight Opening"],[8540,["e4","e6"],"C00 French Defense"],[6825,["e4","d5"],"B01 Scandinavian Defense"],[5868,["d4","d5","c4"],"D06 Queen's Gambit"],[4324,["e4","e5","Nf3","d6"],"C41 Philidor Defense"],[3958,["e4","e5","Bc4"],"C23 Bishop's Opening"],[3761,["e4","e5","Nf3","Nc6","Bc4"],"C50 Italian Game"],[3414,["e4","e5","Nf3","Nc6","Bb5"],"C60 Ruy Lopez"],[1624,["d4","d5","c4","dxc4"],"D20 Queen's Gambit Accepted"],[1530,["d4","d5","c4","e6"],"D30 Queen's Gambit Declined"],[1056,["e4","e5","Nf3","Nc6","Bc4","Bc5"],"C50 Giuoco Piano"],[962,["e4","e5","Nf3","Nc6","d4","exd4","Nxd4"],"C45 Scotch Game"],[938,["e4","c5","Nf3","Nc6","d4","cxd4","Nxd4"],"B32 Sicilian Open"],[910,["e4","e5","Nf3","Nc6","Bb5","d6"],"C62 Ruy Lopez Steinitz"]],"lift":[[2,41,99,0.41],[3,59,86,0.68],[4,68,46,1.5],[5,79,26,3.05],[6,62,20,3.12],[7,70,12,5.83]]};
+const P = DATA.game.plies, SYMS = DATA.symbols, LIFT = DATA.lift;
+const GLYPH = {p:"♟",n:"♞",b:"♝",r:"♜",q:"♛",k:"♚"};
+const SQ = 45, PAD = 0;
+
+// FEN -> array[64] of {c,t} or null. a1 = 0.
+function board(fen){
+  const rows = fen.split(" ")[0].split("/"), out = new Array(64).fill(null);
+  rows.forEach((row, i) => {
+    const rank = 7 - i; let file = 0;
+    for (const ch of row){
+      if (ch >= "1" && ch <= "8"){ file += +ch; continue; }
+      out[rank*8 + file] = { c: ch === ch.toUpperCase() ? "w" : "b", t: ch.toLowerCase() };
+      file++;
+    }
+  });
+  return out;
+}
+const name = s => "abcdefgh"[s%8] + (1 + (s>>3));
+
+let ply = 0, timer = null;
+const mean = P.reduce((a,p)=>a+p.bits,0)/P.length;
+const maxBits = Math.max(...P.map(p=>p.bits));
+
+// --- sparkline: static once, so the page is complete at rest -------------
+const spark = document.getElementById("spark");
+P.forEach((p,i)=>{
+  const b = document.createElement("i");
+  b.style.height = Math.max(2, 100*p.bits/maxBits) + "%";
+  if (p.notes.length) b.classList.add("noted");
+  b.title = "ply " + i + " · " + p.bits.toFixed(2) + " bits";
+  spark.appendChild(b);
+});
+
+// --- the symbol list ------------------------------------------------------
+const symsEl = document.getElementById("syms");
+SYMS.forEach((s,i)=>{
+  const d = document.createElement("div");
+  d.className = "sym"; d.id = "sym"+i;
+  d.innerHTML = '<span class="n">'+s[0].toLocaleString()+'×</span>'+
+                '<span class="mv">'+s[1].join(" ")+'</span>'+
+                '<span class="nm">'+s[2]+'</span>';
+  symsEl.appendChild(d);
+});
+
+// --- the lift table -------------------------------------------------------
+const liftEl = document.getElementById("lift");
+LIFT.forEach(r=>{
+  const good = r[3] >= 1;
+  const d = document.createElement("div");
+  d.className = "row";
+  d.innerHTML = '<span>'+r[0]+' plies &middot; <span style="color:var(--muted)">'+
+    r[1]+'% named vs '+r[2]+'% control</span></span>'+
+    '<b style="color:'+(good?"var(--verdigris)":"var(--brass)")+'">'+
+    r[3].toFixed(2)+'×</b>';
+  liftEl.appendChild(d);
+});
+
+// --- the SAN played so far, for symbol matching ---------------------------
+const SANS = P.filter(p=>p.san).map(p=>p.san.replace(/[+#]/g,""));
+
+function render(){
+  const p = P[ply], sq = board(p.fen);
+  const prev = ply > 0 ? P[ply-1] : null;
+  const from = prev && prev.from !== undefined ? prev.from : -1;
+  const to   = prev && prev.to   !== undefined ? prev.to   : -1;
+  const shape = new Set();
+  p.notes.forEach(n => (n.shape||[]).forEach(s => shape.add(s)));
+
+  let svg = "";
+  for (let r = 7; r >= 0; r--){
+    for (let f = 0; f < 8; f++){
+      const s = r*8+f, x = PAD+f*SQ, y = PAD+(7-r)*SQ;
+      let fill = ((r+f)%2) ? "var(--light)" : "var(--dark)";
+      if (s === from || s === to) fill = "var(--hi)";
+      if (shape.has(s)) fill = "var(--note)";
+      svg += '<rect x="'+x+'" y="'+y+'" width="'+SQ+'" height="'+SQ+'" fill="'+fill+'"/>';
+      const pc = sq[s];
+      if (pc){
+        svg += '<text x="'+(x+SQ/2)+'" y="'+(y+SQ*0.72)+'" text-anchor="middle" font-size="'+
+               (SQ*0.74)+'" fill="'+(pc.c==="w"?"#FFFFFF":"#101617")+
+               '" stroke="'+(pc.c==="w"?"#101617":"#00000000")+'" stroke-width="0.6">'+
+               GLYPH[pc.t]+'</text>';
+      }
+    }
+  }
+  // coordinates, inside the viewBox so nothing is clipped
+  for (let f = 0; f < 8; f++)
+    svg += '<text x="'+(PAD+f*SQ+3)+'" y="357" font-size="8" font-family="IBM Plex Mono, monospace" fill="var(--muted)">'+"abcdefgh"[f]+'</text>';
+  document.getElementById("bd").innerHTML = svg;
+
+  document.getElementById("bits").textContent  = p.bits.toFixed(2);
+  document.getElementById("legal").textContent = p.legal;
+  const d = p.bits - mean;
+  document.getElementById("delta").textContent = (d>=0?"+":"") + d.toFixed(2);
+  document.getElementById("san").textContent   = p.san || "—";
+  document.getElementById("meta").textContent =
+    "ply " + ply + (prev && prev.san ? " · after " + prev.san : " · start");
+
+  const nEl = document.getElementById("notes");
+  nEl.innerHTML = p.notes.length
+    ? p.notes.map(n =>
+        '<div class="note"><span class="who">'+
+        (n.side==="w"?"as white":n.side==="b"?"as black":"note")+
+        (n.shape && n.shape.length ? " · shape " + n.shape.map(name).join(" ") : "")+
+        '</span>'+n.text+'</div>').join("")
+    : '<p class="dim">No note at this ply.</p>';
+
+  // Which discovered patterns is this game currently inside?
+  const played = SANS.slice(0, ply);
+  SYMS.forEach((s,i)=>{
+    const on = s[1].length <= played.length &&
+               s[1].every((mv,k) => played[k] === mv);
+    document.getElementById("sym"+i).classList.toggle("on", on);
+  });
+
+  [...spark.children].forEach((b,i)=>b.classList.toggle("on", i === ply));
+  document.getElementById("scrub").value = ply;
+}
+
+function go(n){ ply = Math.max(0, Math.min(P.length-1, n)); render(); }
+document.getElementById("prev").onclick = () => { stop(); go(ply-1); };
+document.getElementById("next").onclick = () => { stop(); go(ply+1); };
+document.getElementById("scrub").oninput = e => { stop(); go(+e.target.value); };
+document.getElementById("scrub").max = P.length - 1;
+
+function stop(){
+  if (timer){ clearInterval(timer); timer = null; }
+  document.getElementById("playbtn").setAttribute("aria-pressed","false");
+  document.getElementById("playbtn").textContent = "play";
+}
+document.getElementById("playbtn").onclick = function(){
+  if (timer){ stop(); return; }
+  if (ply >= P.length - 1) ply = 0;
+  this.setAttribute("aria-pressed","true"); this.textContent = "pause";
+  timer = setInterval(()=>{ if (ply >= P.length-1) { stop(); return; } go(ply+1); }, 900);
+};
+addEventListener("keydown", e => {
+  if (e.key === "ArrowRight"){ stop(); go(ply+1); }
+  if (e.key === "ArrowLeft"){ stop(); go(ply-1); }
+});
+
+render();
+</script>
