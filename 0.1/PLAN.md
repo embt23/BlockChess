@@ -110,10 +110,20 @@ not name, against a control of real game prefixes. The control mattered: below
 four plies the apparent agreement was *worse* than chance and would have been
 reported as a success without it.
 
-**What is left here:** the mid-game symbols (`…+2` in the output) cannot be
-displayed and their matches are probably noise. They may also be the most
-interesting thing in the output — repeated middlegame motifs with no names.
-Say **"launch 3b"** to make them readable.
+### 3b — **DONE 2026-09-09**
+
+Mid-game symbols are readable now. Each is located in the corpus, rendered from
+the position it actually starts in, with real scoresheet numbering (`2... Nc6
+3. Bb5 a6`) and a board. A `PATTERNS NOBODY NAMED` section prints the top
+middlegame motifs.
+
+It also fixed a stated result. Symbols that begin mid-game were being scored
+against a table of **openings**, which is the wrong answer key and inflated
+"inside a named line". The output now marks which symbols an opening table can
+judge and which it cannot.
+
+**Left open:** whether any middlegame pattern is a real idea or an artefact of
+how club players trade pieces. The machine can only say they repeat.
 
 <details><summary>original stage 3 brief</summary>
 

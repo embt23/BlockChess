@@ -204,12 +204,22 @@ evidence that it is finding structure rather than noise.
 
 Recorded because the result is only worth what its caveats allow.
 
-**Mid-game symbols are unreadable.** Symbols shown as `…+2` are patterns found
-away from the opening, so they are not legal from the starting position and the
-display cannot render them. They pollute the 2-ply row and their ECO matches are
-probably coincidence. They are also, potentially, the most interesting thing in
-the output — repeated *middlegame* motifs nobody has a name for — and right now
-they cannot be inspected at all. **Fix this next.**
+**~~Mid-game symbols are unreadable.~~ Fixed 2026-09-09.** Symbols shown as
+`…+2` were patterns found away from the opening: not legal from the starting
+position, so the display could not render them. Each is now located in the
+corpus, rendered from the position it actually begins in, with real scoresheet
+numbering and a board.
+
+The fix also corrected a result rather than only a display. **Those symbols
+were being scored against a table of openings**, which is the wrong answer key
+— chess named its openings systematically and left the middlegame to prose, so
+a middlegame motif has no entry to match and any hit was coincidence. That
+inflated the "inside a named line" figure, and the 2-ply row worst of all. The
+output now separates symbols an opening table can judge from those it cannot,
+and the `PATTERNS NOBODY NAMED` section prints the latter.
+
+Whether any of them is a real idea or an artefact of how club players trade
+pieces is a question for a person. The machine can only say that they repeat.
 
 **The threshold is doing a lot of work.** `min occurrences` scaled to 243, so
 only patterns in ≥0.2% of games got named. That the deepest symbols found (8,

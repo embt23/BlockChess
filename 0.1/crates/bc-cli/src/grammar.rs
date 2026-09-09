@@ -209,6 +209,11 @@ pub fn run(args: &[String]) -> Result<(), String> {
     println!();
     println!("  AGREEMENT WITH HUMAN OPENING THEORY");
     println!("  {:<30}{:>10}", "opening names loaded", eco.len());
+    println!();
+    println!("  Caveat that the first run of this command did not state: a symbol");
+    println!("  starting mid-game is being scored against a table of *openings*,");
+    println!("  which is the wrong answer key and inflates 'inside a named line'.");
+    println!("  The list below marks which is which.");
     println!(
         "  {:<30}{:>10}   {:.1}% of symbols",
         "exactly a named line",
@@ -303,23 +308,112 @@ pub fn run(args: &[String]) -> Result<(), String> {
     println!("  sequences that are named more often than the openings people");
     println!("  actually play. At 1.0 it found frequency, not theory.");
 
+    // ---------------------------------------------------------------------
+    // Where does each symbol actually occur?
+    //
+    // Re-Pair finds repetition wherever it lives, so a symbol need not start
+    // at move one. Until now those were printed as "…+2" — unreadable, and
+    // silently scored against a table of *openings*, which is the wrong answer
+    // key for a middlegame motif and inflated the agreement figures.
+    //
+    // So find a real occurrence: which game, at which ply. That gives a
+    // position to render the moves from, and it separates the two kinds of
+    // symbol, which need to be judged differently.
+    // ---------------------------------------------------------------------
+    let located: Vec<Option<Located>> = ranked
+        .iter()
+        .take(show.max(60))
+        .map(|(_, _, moves)| locate(&seqs, moves))
+        .collect();
+
     println!();
     println!("  WHAT IT NAMED   (top {show} by symbols saved)");
     println!();
     let start = Position::startpos();
-    for (occ, len, moves) in ranked.iter().take(show) {
-        let san = line_of(&start, moves);
-        let label = match eco.name_of(moves) {
-            Some(e) => format!("= {} {}", e.code, e.name),
-            None => match eco.contains_run(moves) {
-                Some(e) => format!("~ in {} {}", e.code, e.name),
-                None => String::new(),
-            },
+    for (i, (occ, len, moves)) in ranked.iter().take(show).enumerate() {
+        let here = located.get(i).and_then(|o| o.as_ref());
+        let from_start = here.map(|l| l.ply == 0).unwrap_or(false);
+        let san = match here {
+            Some(l) if l.ply > 0 => {
+                // Render from the position the pattern actually starts in.
+                let mut pos = Position::startpos();
+                for &m in &seqs[l.game][..l.ply] {
+                    pos = pos.make_move(Move(m as u16));
+                }
+                line_of_at(&pos, moves, l.ply)
+            }
+            _ => line_of(&start, moves),
+        };
+        // An opening table cannot judge a middlegame motif. Only ask it about
+        // patterns that begin at move one.
+        let label = if !from_start {
+            match here {
+                Some(l) => format!("· middlegame, typically ply {}", l.median_ply),
+                None => "· not located".to_string(),
+            }
+        } else {
+            match eco.name_of(moves) {
+                Some(e) => format!("= {} {}", e.code, e.name),
+                None => match eco.contains_run(moves) {
+                    Some(e) => format!("~ in {} {}", e.code, e.name),
+                    None => String::new(),
+                },
+            }
         };
         println!("  {:>6}x  {:>2}ply  {}", occ, len, san);
         if !label.is_empty() {
             println!("               {label}");
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // The middlegame patterns. This is the part with no answer key.
+    // ---------------------------------------------------------------------
+    let mid: Vec<MidPattern> = ranked
+        .iter()
+        .enumerate()
+        .filter_map(|(i, r)| {
+            located
+                .get(i)
+                .and_then(|o| o.as_ref())
+                .filter(|l| l.ply > 0 && r.1 >= 3)
+                .map(|l| (i, r, l))
+        })
+        .take(6)
+        .collect();
+
+    if !mid.is_empty() {
+        println!();
+        println!("  PATTERNS NOBODY NAMED");
+        println!();
+        println!("  These do not start at move one, so no opening table can judge");
+        println!("  them — chess systematically named its openings and left the");
+        println!("  middlegame to prose. They recur anyway. Boards are the position");
+        println!("  the pattern begins in.");
+
+        for (_, (occ, len, moves), l) in &mid {
+            let mut pos = Position::startpos();
+            for &m in &seqs[l.game][..l.ply] {
+                pos = pos.make_move(Move(m as u16));
+            }
+            let last = if l.ply > 0 {
+                Some(Move(seqs[l.game][l.ply - 1] as u16))
+            } else {
+                None
+            };
+            println!();
+            println!(
+                "  {occ}x   {len} plies   starts around ply {}   seen in {}+ games",
+                l.median_ply, l.seen
+            );
+            println!("  {}", line_of_at(&pos, moves, l.ply));
+            println!();
+            print!("{}", crate::board::draw(&pos, last));
+        }
+        println!();
+        println!("  Whether any of these is a real idea or an artefact of how club");
+        println!("  players trade pieces is exactly what a person has to look at.");
+        println!("  The machine can only say that they repeat.");
     }
 
     println!();
@@ -331,10 +425,71 @@ pub fn run(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// A discovered symbol that does not start at move one: its rank, the symbol
+/// itself, and where it was found.
+type MidPattern<'a> = (usize, &'a (u32, usize, Vec<Move>), &'a Located);
+
+/// Where a symbol really lives in the corpus.
+pub struct Located {
+    pub game: usize,
+    pub ply: usize,
+    /// Median starting ply across the occurrences sampled — one occurrence
+    /// could be a fluke, so the typical depth is the number worth printing.
+    pub median_ply: usize,
+    pub seen: usize,
+}
+
+/// Find where a run of moves occurs, and how deep into games it usually is.
+///
+/// Bounded on purpose: it stops after `CAP` sightings. The median over a
+/// hundred occurrences is as good as the median over ten thousand, and the
+/// unbounded version turns an interactive command into a batch job.
+fn locate(seqs: &[Vec<Sym>], run: &[Move]) -> Option<Located> {
+    const CAP: usize = 200;
+    let needle: Vec<Sym> = run.iter().map(|m| m.0 as Sym).collect();
+    if needle.is_empty() {
+        return None;
+    }
+    let mut first: Option<(usize, usize)> = None;
+    let mut plies: Vec<usize> = Vec::new();
+
+    for (gi, s) in seqs.iter().enumerate() {
+        if s.len() < needle.len() {
+            continue;
+        }
+        for start in 0..=(s.len() - needle.len()) {
+            if s[start..start + needle.len()] == needle[..] {
+                if first.is_none() {
+                    first = Some((gi, start));
+                }
+                plies.push(start);
+                break; // one sighting per game is plenty for a median
+            }
+        }
+        if plies.len() >= CAP {
+            break;
+        }
+    }
+
+    let (game, ply) = first?;
+    plies.sort_unstable();
+    let median_ply = plies[plies.len() / 2];
+    Some(Located {
+        game,
+        ply,
+        median_ply,
+        seen: plies.len(),
+    })
+}
+
 /// Render a run of moves as SAN. A grammar symbol found mid-game will not be
 /// legal from the starting position, so this stops and marks the point rather
 /// than inventing notation — an honest `…` beats a plausible lie.
-fn line_of(start: &Position, moves: &[Move]) -> String {
+/// `at_ply` is where the run starts in a real game, so the move numbers are the
+/// ones a person would see on a scoresheet. A run beginning on Black's move
+/// opens with `12...` rather than pretending to be move one — getting this
+/// wrong makes a middlegame motif unreadable, which was the whole complaint.
+fn line_of_at(start: &Position, moves: &[Move], at_ply: usize) -> String {
     let mut pos = *start;
     let mut out = Vec::new();
     for (i, &m) in moves.iter().enumerate() {
@@ -342,13 +497,20 @@ fn line_of(start: &Position, moves: &[Move]) -> String {
             out.push(format!("…+{}", moves.len() - i));
             break;
         }
-        if i % 2 == 0 {
-            out.push(format!("{}.", i / 2 + 1));
+        let ply = at_ply + i;
+        if ply.is_multiple_of(2) {
+            out.push(format!("{}.", ply / 2 + 1));
+        } else if i == 0 {
+            out.push(format!("{}...", ply / 2 + 1));
         }
         out.push(to_san(&pos, m));
         pos = pos.make_move(m);
     }
     out.join(" ")
+}
+
+fn line_of(start: &Position, moves: &[Move]) -> String {
+    line_of_at(start, moves, 0)
 }
 
 fn num(s: Option<&String>, flag: &str) -> Result<usize, String> {
