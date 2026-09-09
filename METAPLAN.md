@@ -4,6 +4,18 @@
 was cut, and what is still undecided. Where any other file disagrees with this
 one, that file is stale.*
 
+> **Scope, stated honestly.** This was written from `main` and PR #1 alone. The
+> repository actually holds **four distinct projects** on six branches, three of
+> which this document never saw — the corpus/compression trunk on
+> `claude/youthful-cori-l69v75` (six crates, twelve papers, 121k games) and the
+> Chess Frontier Atlas on `claude/youthful-lamport-snidcm` (eight visual layers
+> over a board, a whole engine in one HTML page). See `CLAUDE.md` for the map.
+>
+> So this is the plan for **one** of the four, not the reconciliation of all of
+> them. That reconciliation has not been done and is the largest open item in
+> the project. Everything below stands on its own terms; it just does not yet
+> know what it is standing beside.
+
 ---
 
 ## The central idea
