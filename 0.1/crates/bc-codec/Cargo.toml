@@ -7,3 +7,6 @@ repository.workspace = true
 
 [dependencies]
 bc-chess = { workspace = true }
+
+[dev-dependencies]
+bc-pgn = { workspace = true }

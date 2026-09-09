@@ -149,7 +149,26 @@ could be flattering itself — which the command already reports separately.
 
 ---
 
-## Stage 4 — E8, the last encoding that could beat what we have  ·  *say "launch 4"*
+## Stage 4 — E8  ·  **BUILT 2026-09-09, needs your corpus to judge**
+
+Implemented in `bc-codec/src/rank.rs`, specification written in prose first,
+eight tests written from that prose rather than from the code. `blockchess
+measure` now reports it.
+
+On the four games in the repo it beats E7 by 0.4 bits/ply and ranks the played
+move first 25.9% of the time — but 112 plies is far too few, entropy fitted to
+a small sample is biased downward, and **that bias looks exactly like a win**.
+The command refuses to be quoted below 100,000 plies.
+
+```sh
+./target/release/blockchess measure corpus/lichess.pgn
+```
+
+That decides D3. If E8 wins on 8 million plies, the encoding decision should be
+re-argued — E8 costs only a heuristic that fits on one page and still passes
+the reconstruct-from-prose test that rules a neural model out.
+
+<details><summary>original stage 4 brief</summary>
 
 Rank the legal moves by a static heuristic and code the rank instead of the
 index. `02-encodings.md` puts this at ~4 bits/ply against E7's ~4.9, and it is
@@ -163,6 +182,8 @@ from prose, which is `04-permanence.md` §2's criterion for anything permanent.
 **Deliverable:** E8 implemented, measured against E7 on the same corpus, and
 D3/D4 either confirmed or reopened with our own numbers instead of borrowed
 ones.
+
+</details>
 
 ---
 

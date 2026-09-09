@@ -80,11 +80,45 @@ struct Stats {
     max_b_fen: String,
     /// Branching factor histogram, indexed by b.
     hist: Vec<u64>,
+    /// E8: how often the played move landed at each rank under the heuristic
+    /// ordering in `bc_codec::rank`. The entropy of this is what an optimal
+    /// static code over ranks would cost, and is the honest E8 figure.
+    rank_hist: Vec<u64>,
     /// Σ log2 b bucketed by ply/10, so the phase dependence is visible.
     phase: Vec<(f64, usize)>,
 }
 
 impl Stats {
+    fn observe_rank(&mut self, r: usize) {
+        if self.rank_hist.len() <= r {
+            self.rank_hist.resize(r + 1, 0);
+        }
+        self.rank_hist[r] += 1;
+    }
+
+    /// Shannon entropy of the rank distribution, in bits.
+    ///
+    /// This is a *post hoc* optimum: the code is fitted to the same data it is
+    /// measured on, so it is a lower bound on what a real fixed table would
+    /// achieve, not a prediction of one. With a few hundred distinct ranks and
+    /// millions of plies the overfit is small, but it is a bound and is
+    /// labelled as one.
+    fn rank_entropy(&self) -> f64 {
+        let n: u64 = self.rank_hist.iter().sum();
+        if n == 0 {
+            return f64::NAN;
+        }
+        -self
+            .rank_hist
+            .iter()
+            .filter(|&&c| c > 0)
+            .map(|&c| {
+                let p = c as f64 / n as f64;
+                p * p.log2()
+            })
+            .sum::<f64>()
+    }
+
     fn observe(&mut self, b: usize, ply: usize, pos: &Position) {
         self.plies += 1;
         self.sum_b += b as f64;
@@ -146,6 +180,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
         for (ply, &m) in game.moves.iter().enumerate() {
             let b = bc_codec::order::canonical_moves(&pos).len();
             st.observe(b, ply, &pos);
+            if let Some(r) = bc_codec::rank::rank_of_move(&pos, m) {
+                st.observe_rank(r);
+            }
             if csv.is_some() {
                 let _ = writeln!(rows, "{gi},{ply},{b},{:.6}", (b as f64).log2());
             }
@@ -222,11 +259,13 @@ fn report(
 
     println!();
     println!("  BITS PER PLY, AND WHAT A GAME COSTS");
-    let schemes: [(&str, f64); 4] = [
+    let e8 = st.rank_entropy();
+    let schemes: [(&str, f64); 5] = [
         ("E1  PGN/SAN text", 40.0),
         ("E3  16-bit move", 16.0),
         ("E6  index, whole bits", st.sum_ceil_log2_b / plies),
         ("E7  index, mixed radix", e_log2_b),
+        ("E8  heuristic rank", e8),
     ];
     println!("  {:<24}{:>10}{:>14}", "", "bits/ply", "bytes/game");
     for (name, bits) in schemes {
@@ -236,6 +275,47 @@ fn report(
             bits,
             bits * mean_plies / 8.0
         );
+    }
+
+    println!();
+    println!("  E8 — THE LAST ENCODING THAT COULD BEAT E7");
+    let top: u64 = st.rank_hist.first().copied().unwrap_or(0);
+    let top3: u64 = st.rank_hist.iter().take(3).sum();
+    let n: u64 = st.rank_hist.iter().sum();
+    println!(
+        "  {:<28}{:>10.1}%",
+        "played move ranked 1st",
+        100.0 * top as f64 / n.max(1) as f64
+    );
+    println!(
+        "  {:<28}{:>10.1}%",
+        "in the top 3",
+        100.0 * top3 as f64 / n.max(1) as f64
+    );
+    println!("  {:<28}{:>10.3}   bits/ply", "rank entropy (E8)", e8);
+    println!(
+        "  {:<28}{:>+10.3}   bits/ply vs E7",
+        "E8 - E7",
+        e8 - e_log2_b
+    );
+    println!();
+    if e8 < e_log2_b {
+        println!("  E8 wins. papers/06-decisions.md D3 chose E7; with this margin the");
+        println!("  decision should be re-argued, because E8 costs only a heuristic");
+        println!("  that fits on one page and still passes the reconstruct-from-prose");
+        println!("  test that rules a neural model out.");
+    } else {
+        println!("  E8 does not beat E7 on this corpus, so D3 stands and the last");
+        println!("  model-free alternative is closed.");
+    }
+    println!("  The entropy is fitted to the same data it is measured on, so it is a");
+    println!("  lower bound on a real fixed table rather than a prediction of one.");
+    if n < 100_000 {
+        println!();
+        println!("  *** {n} plies is far too few to trust this. Entropy fitted to a");
+        println!("  *** small sample is biased downward, badly, and the bias looks");
+        println!("  *** exactly like a win. Do not quote the number above until this");
+        println!("  *** says 100,000 or more.");
     }
 
     println!();
