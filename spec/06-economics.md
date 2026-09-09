@@ -1,5 +1,12 @@
 # 06 — The economics and the mathematics of the wager
 
+> **PARTLY DEFERRED — see `METAPLAN.md`.** §2–4 and §7–8 (handicap odds, rake,
+> Kelly, where the money is) are finance and are deferred with `METAPLAN` N17.
+> §1 survives and is now load-bearing for a different reason: Elo as a Boltzmann
+> distribution is the observation that **a rating is already a lossy compression
+> of a player**, which is what `spec/10-personality.md` generalises. §5 (cheat
+> detection as a hypothesis test) survives as attribution failure.
+
 This file contains the parts you will want on one page in your notes.
 
 ---

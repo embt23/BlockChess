@@ -1,5 +1,11 @@
 # 04 — The game channel
 
+> **REPURPOSED — see `METAPLAN.md`.** The channel no longer exists to avoid
+> per-move settlement cost. It exists to produce a **signed game record both
+> players attest to** — the unit the corpus is built from. Higher-ply-wins and
+> the hash-chained state survive; the stake and payout fields wait on
+> `METAPLAN` N17.
+
 This is the heart of the protocol. Everything else is scaffolding around it.
 
 ## The state object

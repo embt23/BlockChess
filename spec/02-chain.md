@@ -1,5 +1,12 @@
 # 02 — The chain
 
+> **REPURPOSED — see `METAPLAN.md`.** The chain no longer settles stakes; it
+> commits the **corpus** that a personality basis is fitted to (`METAPLAN` N9).
+> The state model, Merkle construction and block structure survive; the
+> consensus requirements do not — at friends-scale (`METAPLAN` N14) there are no
+> anonymous validators to defend against, and analysis is the reward for running
+> a node rather than the consensus rule (`METAPLAN` N15).
+
 ## What actually needs consensus
 
 Almost nothing. The chain stores:

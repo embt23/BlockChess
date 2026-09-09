@@ -106,3 +106,43 @@ algorithm was correct.
 
 51 Mnps in release, which is ample: the on-chain adjudicator evaluates *one*
 move per dispute.
+
+---
+
+## 05 — The sign that was arbitrary, caught before it bit
+
+**Not a bug found. A bug prevented, by a lesson already in this file.**
+
+An eigenvector has no canonical sign. If `v` is an eigenvector then so is `−v`,
+with the same eigenvalue, and every numerical routine is free to return either.
+Both are correct. Both satisfy every test you would think to write: the
+reconstruction `VΛVᵀ = A` holds, orthonormality holds, the trace matches.
+
+But a medal is `H(quantised coordinates)`, and coordinates are projections onto
+those eigenvectors. A flipped axis negates a coordinate, which changes the
+hash. The same player, the same corpus, the same code — a different identity,
+depending on the order Jacobi happened to visit the rotations in on that
+machine.
+
+That is exactly bug 02's lesson, arriving in different clothing:
+
+> When a representation admits many spellings of the same value, test the
+> boundary spellings explicitly.
+
+There the many spellings were lazily-reduced field elements, and `0`, `37`,
+`38`, `2^256−38` were the ones that hurt. Here the many spellings are `±v`, and
+the value that hurts is the one your platform's floating-point rounding happens
+to produce today and not tomorrow.
+
+**The fix** is one rule, in `linalg::symmetric_eigen`: flip each eigenvector so
+its largest-magnitude entry is positive, ties broken by lowest index. Three
+lines, and `eigenvector_signs_are_canonical` is the regression test.
+
+**Lesson.** *Correct* and *canonical* are different properties, and only the
+first one has an oracle. Any value that gets hashed needs the second, and
+nothing in the mathematics will tell you it is missing — the mathematics is
+perfectly happy with both answers. Ask of every committed value: **how many
+ways can this be spelled?** If the answer is more than one, pick one in code and
+write the test that pins it.
+
+**Regression test:** `eigenvector_signs_are_canonical`, `medals_are_deterministic`.

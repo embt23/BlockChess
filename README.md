@@ -1,33 +1,48 @@
 # BlockChess
 
-A from-scratch blockchain for wagered peer-to-peer chess.
+**Your play is your name, and you don't get to hide it.**
 
-Games are played **off-chain**, directly between two players, over an encrypted
-link. Every position is signed by both players. The chain only ever sees two
-things: the moment money is locked, and the moment money is paid out. The full
-rules of chess exist on-chain as a **referee of last resort** — invoked only
-when someone lies or disappears.
+You are a function from positions to moves. BlockChess compresses that function,
+makes the compression your public name, and chains it over time so the record of
+who you were becomes the record of who you became.
 
-Above that base layer, anyone can run a **server**: a matchmaker, a tournament
-organiser, a rating authority, a bot arena, a teaching ladder. Servers never
-hold your keys and, in the default configuration, never hold your money.
+Your identity is not 32 random bytes you were handed. It is **derived** — a
+position in a personality space discovered by factorising a corpus of real
+games, which anyone holding that corpus can recompute for themselves. A single
+hash is where you stand today. The chain of them is the narrative of how you got
+there, and a link is earned by **changing**, not by playing: a thousand games
+without changing how you play earns exactly one link.
+
+It needs a chain because a lens is only fair if everyone can verify the corpus
+it was fitted to. A mutable database would let an operator quietly add or drop
+games, shift the axes, and silently re-judge every player who ever earned a
+medal.
+
+Read [`METAPLAN.md`](METAPLAN.md) first — it says what this is, what order it
+happens in, and what was cut.
 
 ## Status
 
-Episodes 01–04 implemented and green. `perft(6) = 119,060,324` exact.
+Episodes 01–09 implemented and green. `perft(6) = 119,060,324` exact, and the
+lab separates constructed personalities at 77.5% nearest-neighbour accuracy
+against a 25% chance baseline.
 
 | Crate | Episode | What it is | Oracle |
 |---|---|---|---|
 | [`bc-hash`](crates/bc-hash) | 01 | SHA-256 & SHA-512 from FIPS 180-4, domain separation, hash chains | FIPS test vectors |
 | [`bc-sig`](crates/bc-sig) | 02 | Ed25519 from scratch — field arithmetic mod 2^255−19, twisted Edwards group law, point compression | RFC 8032 vectors |
 | [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft | published perft counts |
-| [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (`tx_root`) and a sparse Merkle tree (`state_root`) with proofs of absence | Certificate Transparency vectors |
+| [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (corpus commitment) and a sparse Merkle tree with proofs of absence | Certificate Transparency vectors |
+| [`bc-style`](crates/bc-style) | 05–09 | The compression: features, a discovered basis, the medal, the chain of medals | analytic eigen-spectra; constructed personalities |
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been
 verified by tests we wrote ourselves.
 
 ```sh
+cargo run --release -p bc-style --bin style -- demo    # the lab, on constructed players
+cargo run --release -p bc-style --bin style -- pgn g.pgn
+
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
 
@@ -38,7 +53,7 @@ cargo run --release --bin perft -- divide 3     # per-move breakdown
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
 time; it exists to be read. The node will link `ed25519-dalek`.
 
-Bugs found along the way, and why they hid, are in
+Bugs found along the way, why they hid, and one caught before it bit, are in
 [`docs/build-log.md`](docs/build-log.md).
 
 ## Specification
@@ -58,6 +73,7 @@ it happens in, and what is still undecided. It outranks every file below.
 | [`spec/07-servers.md`](spec/07-servers.md) | The server layer and its trust ladder |
 | [`spec/08-privacy.md`](spec/08-privacy.md) | The privacy ladder |
 | [`spec/09-open-questions.md`](spec/09-open-questions.md) | Decisions not yet made |
+| [`spec/10-personality.md`](spec/10-personality.md) | **The compression — the current centre of the project** |
 | [`docs/atlas.md`](docs/atlas.md) | The knowledge map — every primitive, and the attack that motivates it |
 | [`docs/build-log.md`](docs/build-log.md) | Bugs found while building, and what each one teaches |
 

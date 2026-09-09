@@ -1,5 +1,11 @@
 # 07 — The server layer
 
+> **REPURPOSED — see `METAPLAN.md`.** A server is a **corpus**, therefore a
+> **lens**: it fits its own basis and so legitimately judges the same player
+> differently from any other server (`METAPLAN` N10, N16). The trust ladder's
+> custody tiers (T3/T4), bonds and slashing are cut with finance
+> (`METAPLAN` N14, N17); registration and the VRF work survive.
+
 Servers are the part of the system that most resembles a normal product. They
 are permissionless: anyone can run one, and none of them are privileged by
 consensus.

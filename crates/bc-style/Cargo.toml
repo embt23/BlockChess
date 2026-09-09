@@ -1,0 +1,11 @@
+[package]
+name = "bc-style"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bc-chess = { path = "../bc-chess" }
+bc-hash = { path = "../bc-hash" }
+bc-merkle = { path = "../bc-merkle" }

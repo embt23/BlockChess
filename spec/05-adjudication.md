@@ -1,5 +1,11 @@
 # 05 — Adjudication: what happens when someone lies or vanishes
 
+> **DEFERRED — see `METAPLAN.md`.** This layer exists to protect money held
+> under a deadline, and finance is deferred (`METAPLAN` N17). The clock-dilation
+> construction and the ∀/∃ refutation asymmetry are the parts worth keeping in
+> reserve; the dispute budgets, forced inclusion and gas reserve defend against
+> anonymous adversaries this project no longer has (`METAPLAN` N14).
+
 ## The single rule
 
 > **On-chain, the game continues under the same rules, slowly.**

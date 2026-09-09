@@ -1,5 +1,12 @@
 # 08 — The privacy ladder
 
+> **CUT — see `METAPLAN.md`.** This ladder exists to make a player *unlinkable*
+> from their play. The project's thesis is now the opposite: your play is your
+> name and you do not get to hide it. L0 (transport encryption) survives; the
+> rest is cut on principle rather than for scope. Kept in the repository because
+> the argument for total visibility is stronger when the alternative it rejects
+> is written down honestly.
+
 ## First, what privacy means here
 
 Chess is a **perfect-information** game. Your opponent already sees everything
