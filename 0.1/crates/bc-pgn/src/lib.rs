@@ -31,6 +31,17 @@ pub struct Game {
     pub start: Position,
     /// `1-0`, `0-1`, `1/2-1/2`, or `*` for unfinished.
     pub result: String,
+    /// The clock reading after each move, in seconds, where the file carried
+    /// one. Parallel to `moves`.
+    ///
+    /// Lichess writes `{ [%clk 0:02:58] }` after every move: the mover's
+    /// remaining time *after* making it. That makes per-move think time
+    /// derivable, which is the whole input to `papers/10-players.md` §1 —
+    /// time spent is where a player's own compression failed. Discarding
+    /// comments threw this away, so it is kept now.
+    pub clocks: Vec<Option<u32>>,
+    /// Base seconds and increment, from the `TimeControl` tag (`"300+3"`).
+    pub time_control: Option<(u32, u32)>,
     /// Set when the movetext held a token that is not a chess move and the
     /// game was cut short there: the ply reached, and the offending token.
     ///
@@ -49,6 +60,8 @@ impl Default for Game {
             moves: Vec::new(),
             start: Position::startpos(),
             result: String::new(),
+            clocks: Vec::new(),
+            time_control: None,
             truncated: None,
         }
     }
@@ -60,6 +73,47 @@ impl Game {
             .iter()
             .find(|(k, _)| k.eq_ignore_ascii_case(key))
             .map(|(_, v)| v.as_str())
+    }
+
+    /// Seconds spent on each move, where the clocks allow it.
+    ///
+    /// A player's think time is what came off their own clock, plus the
+    /// increment they were given back for moving:
+    ///
+    /// ```text
+    /// think(n) = clock_before(n) - clock_after(n) + increment
+    /// ```
+    ///
+    /// `clock_before` is that same player's previous reading, two plies
+    /// earlier, or the base time for their first move. `None` where the file
+    /// gave no clock, and also where the arithmetic comes out negative —
+    /// which happens with clock adjustments and berserk, and is better dropped
+    /// than believed.
+    pub fn think_times(&self) -> Vec<Option<f64>> {
+        let (base, inc) = self.time_control.unwrap_or((0, 0));
+        let mut out = Vec::with_capacity(self.moves.len());
+        for ply in 0..self.moves.len() {
+            let after = self.clocks.get(ply).copied().flatten();
+            let before = if ply >= 2 {
+                self.clocks.get(ply - 2).copied().flatten()
+            } else if base > 0 {
+                Some(base)
+            } else {
+                None
+            };
+            out.push(match (before, after) {
+                (Some(b), Some(a)) => {
+                    let t = b as f64 - a as f64 + inc as f64;
+                    if t >= 0.0 {
+                        Some(t)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            });
+        }
+        out
     }
 
     /// Every position the game passed through, starting position included.
@@ -181,10 +235,25 @@ fn parse_game(chunk: &str) -> Result<Game, String> {
         ..Default::default()
     };
 
+    game.time_control = game.tag("TimeControl").and_then(|tc| {
+        let (b, i) = tc.split_once('+').unwrap_or((tc, "0"));
+        Some((b.trim().parse().ok()?, i.trim().parse().unwrap_or(0)))
+    });
+
     let mut pos = start;
     for token in tokenise(&movetext) {
         match token {
             Token::Result(r) => game.result = r,
+            Token::Clock(secs) => {
+                // The reading belongs to the move just played. Pad if a
+                // producer omitted clocks on some moves but not others.
+                while game.clocks.len() + 1 < game.moves.len() {
+                    game.clocks.push(None);
+                }
+                if game.clocks.len() < game.moves.len() {
+                    game.clocks.push(Some(secs));
+                }
+            }
             Token::Null(t) => {
                 // Stop here and say why. See `Game::truncated`.
                 game.truncated = Some((game.moves.len(), t));
@@ -219,6 +288,8 @@ enum Token {
     Result(String),
     /// A null-move placeholder: `--`, or ChessBase's `Z0`. Not a chess move.
     Null(String),
+    /// A `[%clk H:MM:SS]` reading, in seconds, from inside a comment.
+    Clock(u32),
 }
 
 /// Strip everything that is not a move: comments, variations, move numbers,
@@ -233,8 +304,15 @@ fn tokenise(movetext: &str) -> Vec<Token> {
         let c = bytes[i];
         match c {
             '{' => {
+                let start = i;
                 while i < bytes.len() && bytes[i] != '}' {
                     i += 1;
+                }
+                let comment: String = bytes[start..i.min(bytes.len())].iter().collect();
+                if depth == 0 {
+                    if let Some(secs) = parse_clk(&comment) {
+                        out.push(Token::Clock(secs));
+                    }
                 }
                 i += 1;
             }
@@ -273,6 +351,28 @@ fn tokenise(movetext: &str) -> Vec<Token> {
         }
     }
     out
+}
+
+/// Pull `H:MM:SS` out of a `[%clk ...]` tag. Returns seconds.
+fn parse_clk(comment: &str) -> Option<u32> {
+    let at = comment.find("%clk")?;
+    let rest = comment[at + 4..].trim_start();
+    let end = rest.find(']').unwrap_or(rest.len());
+    let mut total: u32 = 0;
+    let mut parts = 0;
+    for field in rest[..end].trim().split(':') {
+        // Seconds may be fractional in some producers; take the whole part.
+        let whole = field.split('.').next()?;
+        total = total
+            .checked_mul(60)?
+            .checked_add(whole.trim().parse().ok()?)?;
+        parts += 1;
+    }
+    if parts == 0 {
+        None
+    } else {
+        Some(total)
+    }
 }
 
 fn classify(word: &str, out: &mut Vec<Token>) {

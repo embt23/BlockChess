@@ -227,11 +227,27 @@ Per-move think time is the difference between consecutive clock readings for the
 same player, plus the increment. `bc-pgn` currently discards comments, so step
 one is to keep the clock tags.
 
+**Status: built.** `blockchess think <file.pgn> --corpus <big.pgn>`.
+
+```sh
+./target/release/blockchess think corpus/lichess.pgn --corpus corpus/lichess.pgn
+```
+
 **Protocol.**
-1. Extend the PGN reader to retain `%clk`, and derive per-move seconds.
-2. For every ply, record `(bits under the corpus model, seconds spent)`.
-3. Report the correlation, and the scatter, **split by**: ply number, remaining
-   clock, player rating band, and time control.
+1. ~~Extend the PGN reader to retain `%clk`.~~ Done, with the increment term —
+   `think = clock_before − clock_after + increment` — which is the trap that
+   would otherwise bias every measurement in this experiment by the increment.
+2. ~~Record `(bits, seconds)` per ply.~~ Done, under both notions of surprise:
+   branchiness, and `−log2 P(move | position)` from the corpus. Only the second
+   is the hypothesis.
+3. ~~Report the correlation split by phase and time control.~~ Done. Rating
+   band is not split on yet.
+
+**Instrument validated before use** (`fixtures/README.md`): against a corpus
+with random think times it reports **+0.009**, and against one where think
+time is long exactly where players leave the main line it reports **+0.617**.
+It sees the effect when the effect is there and reports nothing when it is
+not, so a null on real data would be a null rather than a broken tool.
 
 **Controls, because the confounds here are severe and each would manufacture a
 correlation on its own:**

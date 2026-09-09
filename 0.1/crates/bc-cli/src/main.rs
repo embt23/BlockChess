@@ -11,6 +11,7 @@ mod measure;
 mod pack;
 mod play;
 mod study;
+mod think;
 
 use std::process::ExitCode;
 
@@ -46,6 +47,11 @@ STUDYING IT
                                   the repeated patterns, then check them
                                   against human opening theory  (X7)
 
+    think <file.pgn> [--corpus big.pgn]
+                                  do bits track seconds? experiment X11 —
+                                  needs a source with clocks, e.g. lichess
+                                  --min-clock N  drop plies under N sec left
+
 YOUR OWN PERCEPTION
     annotate <game.pgn> <notes.txt> [--corpus big.pgn]
                                   put what you noticed next to what the
@@ -79,6 +85,7 @@ fn main() -> ExitCode {
         "grammar" => grammar::run(rest),
         "annotate" => annotate::run(rest),
         "export" => annotate::export(rest),
+        "think" => think::run(rest),
         "-h" | "--help" | "help" => {
             print!("{USAGE}");
             Ok(())

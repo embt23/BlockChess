@@ -267,3 +267,78 @@ fn uci_promotions_survive_the_round_trip() {
     let m = games[0].moves[0];
     assert_eq!(m.to_uci(), "a7a8q");
 }
+
+// ---------------------------------------------------------------------------
+// Clocks. Lichess writes `{ [%clk 0:02:58] }` after every move — the mover's
+// remaining time after making it. That is the only per-move measurement of
+// human thinking that exists at scale, and `papers/10-players.md` §1 is built
+// on it, so the parsing gets tests of its own.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn clock_annotations_are_kept_and_converted_to_seconds() {
+    let text = "[Event \"?\"]\n[TimeControl \"300+3\"]\n\n\
+        1. e4 { [%clk 0:05:00] } 1... e5 { [%clk 0:05:00] } \
+        2. Nf3 { [%clk 0:04:55] } 2... Nc6 { [%clk 0:04:48] } *\n";
+    let (games, errors) = bc_pgn::parse_all(text);
+    assert!(errors.is_empty(), "{}", errors[0]);
+    let g = &games[0];
+    assert_eq!(g.moves.len(), 4);
+    assert_eq!(g.clocks, [Some(300), Some(300), Some(295), Some(288)]);
+    assert_eq!(g.time_control, Some((300, 3)));
+}
+
+#[test]
+fn think_time_counts_the_increment() {
+    // White starts at 300, is at 295 after move 2 — but was given 3 seconds
+    // back for moving, so the move took 300 - 295 + 3 = 8 seconds, not 5.
+    // Getting this wrong biases every think time by the increment.
+    let text = "[Event \"?\"]\n[TimeControl \"300+3\"]\n\n\
+        1. e4 { [%clk 0:05:00] } 1... e5 { [%clk 0:05:00] } \
+        2. Nf3 { [%clk 0:04:55] } 2... Nc6 { [%clk 0:04:48] } *\n";
+    let (games, _) = bc_pgn::parse_all(text);
+    let t = games[0].think_times();
+    assert_eq!(t[0], Some(3.0), "300 -> 300 with +3 means 3s spent");
+    assert_eq!(t[1], Some(3.0));
+    assert_eq!(t[2], Some(8.0), "300 -> 295 with +3");
+    assert_eq!(t[3], Some(15.0), "300 -> 288 with +3");
+}
+
+#[test]
+fn a_game_without_clocks_yields_no_think_times() {
+    let (games, _) = bc_pgn::parse_all("[Event \"?\"]\n\n1. e4 e5 *\n");
+    assert!(games[0].think_times().iter().all(|t| t.is_none()));
+}
+
+#[test]
+fn clocks_inside_variations_are_ignored() {
+    // A variation was never played, so its clock readings are not this game's.
+    let text = "[Event \"?\"]\n[TimeControl \"60+0\"]\n\n\
+        1. e4 { [%clk 0:01:00] } (1. d4 { [%clk 0:00:30] }) 1... e5 { [%clk 0:00:58] } *\n";
+    let (games, _) = bc_pgn::parse_all(text);
+    assert_eq!(games[0].clocks, [Some(60), Some(58)]);
+}
+
+#[test]
+fn other_comment_annotations_do_not_break_the_clock() {
+    // Lichess also emits %eval, and other tools emit prose. Only %clk matters.
+    let text = "[Event \"?\"]\n[TimeControl \"180+0\"]\n\n\
+        1. e4 { [%eval 0.17] [%clk 0:03:00] } 1... c5 { a fine reply } \
+        2. Nf3 { [%clk 0:02:51] } *\n";
+    let (games, _) = bc_pgn::parse_all(text);
+    let g = &games[0];
+    assert_eq!(g.moves.len(), 3);
+    assert_eq!(g.clocks[0], Some(180));
+    assert_eq!(g.clocks[2], Some(171), "the second white clock");
+}
+
+#[test]
+fn negative_think_times_are_dropped_rather_than_believed() {
+    // Clock adjustments and berserk can make the reading go up. That is not a
+    // negative think time, it is a measurement we cannot use.
+    let text = "[Event \"?\"]\n[TimeControl \"60+0\"]\n\n\
+        1. e4 { [%clk 0:01:00] } 1... e5 { [%clk 0:01:00] } \
+        2. Nf3 { [%clk 0:02:00] } *\n";
+    let (games, _) = bc_pgn::parse_all(text);
+    assert_eq!(games[0].think_times()[2], None);
+}
