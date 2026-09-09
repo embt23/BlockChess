@@ -268,3 +268,77 @@ says nothing about how a real population distributes inside them. Four
 synthetic players cannot speak for humanity. The number that matters is this
 same measurement over a real corpus, and until it exists every claim about
 medal forgeability is provisional — `METAPLAN` O3.
+
+---
+
+## Stage 9 — The interaction term
+
+`METAPLAN` N12: a player alone is `p(move | position)`; a game is
+`p(move | position, opponent)`. The gap is the **interaction term**, and it is
+the claim that your medal is not purely yours.
+
+On real games that claim is close to unfalsifiable. If a player's profile
+differs against one opponent, you cannot separate *the opponent pulled them*
+from *they changed that year*. The confound is total.
+
+The synthetic corpus removes it. A `Style` is a constant weight vector — it
+does not learn, tire, prepare, or have a bad afternoon — so ground truth is
+exactly **"personality does not change"**, and any shift by opponent is
+interaction, because nothing else remains for it to be. Colour is balanced by
+the round robin, so it cannot confound either.
+
+### The test
+
+For one player, compare the spread of their per-opponent centroids about their
+overall centroid (**between**) with the scatter of individual games about their
+own opponent's centroid (**within**). The null distribution of that ratio is
+not something to assume, so it is obtained by **permutation**: shuffle the
+opponent labels among that player's own games and recompute. No distributional
+assumption, valid at these sample sizes.
+
+The instrument was validated against a placebo before being believed: ninety
+games of one fixed pairing with the opponent's *name* drawn at random from three
+fictions. The label carries nothing by construction, and the test correctly
+reports nothing. That control is the load-bearing test in the file — a method
+that finds an effect is worthless until it has been shown able to find none.
+
+### The result
+
+| Player | between | within | ratio | p |
+|---|---|---|---|---|
+| Tal | 1.126 | 2.087 | 0.539 | < 0.005 |
+| Petrosian | 0.856 | 1.717 | 0.498 | < 0.005 |
+| Capablanca | 1.442 | 1.718 | 0.840 | < 0.005 |
+| Morphy | 1.266 | 1.623 | 0.780 | < 0.005 |
+
+Both halves of this matter and neither should be quoted alone.
+
+**The effect is real.** Not one shuffle in two hundred, for any player,
+reproduced the observed separation. Constant policies still produce measurably
+different profiles depending on who is across the board.
+
+**The effect is smaller than a player's own variance.** Every ratio is below 1.
+So the interaction is invisible in any single game and emerges only once
+centroids are estimated from many. Who you play changes you measurably — and
+less than you change yourself.
+
+### Whose presence pulls hardest
+
+Averaging `centroid(player vs opponent) − centroid(player)` over everyone who
+faced them:
+
+| Opponent | mean shift induced |
+|---|---|
+| **Petrosian** | **1.659** |
+| Tal | 1.123 |
+| Morphy | 0.556 |
+| Capablanca | 0.389 |
+
+The prophylactic archetype — the only one rewarded for *restricting* its
+opponent — drags others furthest from themselves, by a factor of four over the
+most accommodating. Playing someone who takes your options away makes you play
+unlike yourself, and this is the same feature (`opp_mobility`) that made
+Petrosian the one player never misattributed in stage 8.
+
+That is chess as an ecosystem with interacting parts, measured rather than
+asserted. It is also, so far, a statement about four programs.

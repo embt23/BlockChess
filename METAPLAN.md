@@ -248,7 +248,7 @@ identity instead of money.
 | 15 | "I'll play you, but you can't have my games" | the signed game record; P2P play (`spec/04`, repurposed) |
 | 16 | "My node says the corpus is different" | small-group agreement among known identities |
 | 17 | "Match me with someone I'll enjoy playing" | personality-aware matchmaking; servers as lenses |
-| 18 | "A player alone is a fiction" | the interaction term; coupled trajectories (N12) |
+| 18 | "A player alone is a fiction" | the interaction term; coupled trajectories (N12) — `bc-style::interaction`, measured with a permutation test and a placebo control |
 
 **Deferred spine** (returns with N17): wagering channels, adjudication under
 money, the privacy ladder, SNARK settlement.

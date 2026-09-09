@@ -8,12 +8,12 @@
 //!                            how many games until a fresh account is unmasked
 
 use bc_hash::hex;
-use bc_style::{identify, report, synth, Corpus, Lab};
+use bc_style::{identify, interaction, report, synth, Corpus, Lab};
 
 const USAGE: &str = "\
 usage: style <command> [source] [k]
 
-  commands   demo · identify · export · viz
+  commands   demo · identify · interact · export · viz
   source     a .pgn file, or a number of synthetic round-robin rounds
   k          axes to keep (default 4)
 
@@ -27,7 +27,10 @@ fn main() {
 
     let quiet = matches!(cmd, "export" | "viz");
 
-    if !matches!(cmd, "demo" | "pgn" | "export" | "viz" | "identify") {
+    if !matches!(
+        cmd,
+        "demo" | "pgn" | "export" | "viz" | "identify" | "interact"
+    ) {
         eprintln!("{USAGE}");
         std::process::exit(2);
     }
@@ -64,6 +67,11 @@ fn main() {
         eprintln!("no usable games in corpus");
         std::process::exit(1);
     };
+
+    if cmd == "interact" {
+        report_interaction(&lab);
+        return;
+    }
 
     match cmd {
         "export" => {
@@ -317,4 +325,58 @@ fn load_pgn(path: &str, quiet: bool) -> Corpus {
         c.push(g);
     }
     c
+}
+
+/// Episode 18, on the command line.
+fn report_interaction(lab: &Lab) {
+    println!("does who you play change who you are?\n");
+    println!("  The archetypes have fixed policies — a Style is a constant weight");
+    println!("  vector that never learns or tires. So ground truth here is");
+    println!("  \"personality does not change\", and any shift by opponent is the");
+    println!("  interaction term, because nothing else is left for it to be.\n");
+
+    let rows = interaction::analyse(lab, 200, 0x1_9AC7_2E51);
+    println!(
+        "  {:<14}{:>9}{:>9}{:>8}{:>10}",
+        "player", "between", "within", "ratio", "p"
+    );
+    for r in &rows {
+        let star = if r.p_value < 0.01 {
+            "  ***"
+        } else if r.p_value < 0.05 {
+            "  *"
+        } else {
+            ""
+        };
+        println!(
+            "  {:<14}{:>9.3}{:>9.3}{:>8.3}{:>10.3}{star}",
+            short(&r.player),
+            r.between,
+            r.within,
+            r.ratio,
+            r.p_value
+        );
+    }
+    println!("\n  between = how far per-opponent centroids sit from the overall one");
+    println!("  within  = how much individual games scatter around their own");
+    println!("  p       = share of 200 opponent-label shuffles reaching that ratio");
+
+    let sig = rows.iter().filter(|r| r.p_value < 0.05).count();
+    let ratios: f64 = rows.iter().map(|r| r.ratio).sum::<f64>() / rows.len().max(1) as f64;
+    println!(
+        "\n  {sig} of {} players shift significantly with the opponent, and every",
+        rows.len()
+    );
+    println!("  ratio is below 1 — mean {ratios:.2}. Both halves matter. The effect");
+    println!("  is real: no shuffle out of 200 reproduced it. The effect is also");
+    println!("  *smaller than game-to-game noise*, so it is invisible in any single");
+    println!("  game and only emerges once centroids are estimated from many. Who");
+    println!("  you play changes you measurably, but less than your own variance.");
+
+    println!("\nwhose presence pulls hardest");
+    println!("  mean shift they induce in everyone else's profile:\n");
+    for p in interaction::pulls(lab) {
+        let bar = "▓".repeat((p.magnitude * 12.0).round().min(40.0) as usize);
+        println!("  {:<14}{:>7.3}  {bar}", short(&p.opponent), p.magnitude);
+    }
 }

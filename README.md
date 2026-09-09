@@ -46,6 +46,7 @@ verified by tests we wrote ourselves.
 # synthetic round-robin rounds. Default is the constructed players.
 cargo run --release -p bc-style --bin style -- demo              # a report
 cargo run --release -p bc-style --bin style -- identify          # held-out attribution
+cargo run --release -p bc-style --bin style -- interact          # the interaction term
 cargo run --release -p bc-style --bin style -- viz > space.html  # a page
 cargo run --release -p bc-style --bin style -- viz my.pgn > mine.html
 

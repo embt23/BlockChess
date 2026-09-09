@@ -24,6 +24,7 @@ pub mod chain;
 pub mod corpus;
 pub mod features;
 pub mod identify;
+pub mod interaction;
 pub mod linalg;
 pub mod pgn;
 pub mod profile;
