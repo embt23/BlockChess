@@ -102,9 +102,14 @@ select.sel:focus-visible,input.inp:focus-visible{outline:2px solid var(--brass);
 <header>
   <div class="mark">Journal Workbench</div>
   <label class="b" for="file" tabindex="0">Open photo</label>
-  <input type="file" id="file" accept="image/*">
+  <input type="file" id="file" accept="application/pdf,image/*">
   <button class="b" id="modeRegion" aria-pressed="false" title="Drag on the photo to mark out a region">＋ Region</button>
   <button class="b" id="fitBtn" disabled>Fit</button>
+  <span id="pdfNav" hidden style="display:inline-flex;gap:6px;align-items:center">
+    <button class="b" id="pgPrev">◂</button>
+    <span class="lbl" id="pgLabel">page 1</span>
+    <button class="b" id="pgNext">▸</button>
+  </span>
   <div class="sp"></div>
   <button class="b" id="importBtn">Import</button>
   <input type="file" id="importFile" accept="application/json">
@@ -120,7 +125,8 @@ select.sel:focus-visible,input.inp:focus-visible{outline:2px solid var(--brass);
       <div class="inner">
         <h2>Drop the journal page here</h2>
         <p>Or <label class="b" for="file" style="vertical-align:baseline">choose a file</label>.
-           The image is read in your browser and never uploaded anywhere.</p>
+           A PDF or an image both work, and the file is read in your browser —
+           it is never uploaded anywhere, including to Claude.</p>
         <p style="margin:0;font-size:13px;color:var(--muted)">Then draw a box around a board,
            line the grid up with what you drew, and click the squares.</p>
       </div>
@@ -230,7 +236,7 @@ function drawGlyph(g,type,x,y,s,black,knightC){
 
 /* ---------------- state ---------------- */
 const S={ img:null, scale:1, tx:0, ty:0, regions:[], sel:-1, mode:"pan",
-          drag:null, brush:{t:"p",black:false}, nextId:1 };
+          drag:null, brush:{t:"p",black:false}, nextId:1, pdf:null, pdfPage:1 };
 const TYPES=["board","sequence","key","prose","diagram"];
 const TYCOL={board:"--brass",sequence:"--verd",key:"--oxide",prose:"--muted",diagram:"--muted"};
 const sel=()=>S.sel>=0?S.regions[S.sel]:null;
@@ -571,8 +577,97 @@ function renderTypeRow(){
 }
 
 /* ---------------- files, persistence, controls ---------------- */
+const PDFJS_SRC="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+let pdfLoading=null;
+function ensurePdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(pdfLoading)return pdfLoading;
+  pdfLoading=new Promise((res,rej)=>{
+    const t=document.createElement("script");
+    t.src=PDFJS_SRC;
+    t.onload=()=>{
+      if(!window.pdfjsLib)return rej(new Error("pdf.js did not load"));
+      try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+        PDFJS_SRC.replace("pdf.min.js","pdf.worker.min.js"); }catch(e){}
+      res(window.pdfjsLib);
+    };
+    t.onerror=()=>rej(new Error("could not fetch pdf.js"));
+    document.head.appendChild(t);
+  });
+  return pdfLoading;
+}
+// A page photographed to PDF is almost always one JPEG in a thin wrapper, and
+// pulling that out needs no library at all — so try it before reaching for one.
+function embeddedJPEG(buf){
+  const b=new Uint8Array(buf);
+  let best=null;
+  for(let i=0;i+3<b.length;i++){
+    if(b[i]!==0xFF||b[i+1]!==0xD8||b[i+2]!==0xFF)continue;
+    for(let j=i+2;j+1<b.length;j++){
+      if(b[j]===0xFF&&b[j+1]===0xD9){
+        const len=j+2-i;
+        if(!best||len>best.len)best={start:i,len:len};
+        i=j+1; break;
+      }
+    }
+  }
+  return (best&&best.len>4096) ? buf.slice(best.start,best.start+best.len) : null;
+}
+function showBitmap(im){
+  S.img=im; S.pdf=null;
+  el("drop").classList.add("hide");
+  el("fitBtn").disabled=false; el("exportBtn").disabled=false; el("copyJson").disabled=false;
+  fitImage();
+  hint("Press ＋ Region and drag a box around a board.");
+}
+async function loadPDF(file){
+  hint("Opening PDF…");
+  const buf=await file.arrayBuffer();
+  const jpg=embeddedJPEG(buf);
+  if(jpg){
+    const url=URL.createObjectURL(new Blob([jpg],{type:"image/jpeg"}));
+    const im=new Image();
+    im.onload=()=>{ el("pdfNav").hidden=true; showBitmap(im); URL.revokeObjectURL(url); };
+    im.onerror=()=>{ URL.revokeObjectURL(url); loadPDFviaLib(file); };
+    im.src=url;
+    return;
+  }
+  loadPDFviaLib(file);
+}
+async function loadPDFviaLib(file){
+  let lib;
+  try{ lib=await ensurePdfJs(); }
+  catch(e){ hint("Could not open the PDF here — save the page as a PNG or JPG and drop that in."); return; }
+  try{
+    const buf=await file.arrayBuffer();
+    S.pdf=await lib.getDocument({data:buf}).promise;
+    S.pdfPage=1;
+    el("pdfNav").hidden=S.pdf.numPages<2;
+    await renderPdfPage(1);
+  }catch(e){
+    hint("That PDF would not render — save the page as a PNG or JPG instead.");
+  }
+}
+async function renderPdfPage(n){
+  const page=await S.pdf.getPage(n);
+  const v0=page.getViewport({scale:1});
+  // render big: handwriting has to survive zooming in on a single square
+  const scale=Math.min(6,2600/Math.max(v0.width,v0.height));
+  const v=page.getViewport({scale:scale});
+  const c=document.createElement("canvas");
+  c.width=Math.round(v.width); c.height=Math.round(v.height);
+  await page.render({canvasContext:c.getContext("2d"),viewport:v}).promise;
+  S.img=c; S.pdfPage=n;
+  el("pgLabel").textContent="page "+n+" of "+S.pdf.numPages;
+  el("drop").classList.add("hide");
+  el("fitBtn").disabled=false; el("exportBtn").disabled=false; el("copyJson").disabled=false;
+  fitImage();
+  hint("Press ＋ Region and drag a box around a board.");
+}
 function loadImage(file){
-  if(!file||!/^image\//.test(file.type))return;
+  if(!file)return;
+  if(file.type==="application/pdf"||/\.pdf$/i.test(file.name||"")){ loadPDF(file); return; }
+  if(!/^image\//.test(file.type))return;
   const fr=new FileReader();
   fr.onload=()=>{
     const im=new Image();
@@ -655,6 +750,8 @@ function setMode(m){
 }
 el("modeRegion").addEventListener("click",()=>setMode(S.mode==="region"?"pan":"region"));
 el("fitBtn").addEventListener("click",fitImage);
+el("pgPrev").addEventListener("click",()=>{ if(S.pdf&&S.pdfPage>1)renderPdfPage(S.pdfPage-1); });
+el("pgNext").addEventListener("click",()=>{ if(S.pdf&&S.pdfPage<S.pdf.numPages)renderPdfPage(S.pdfPage+1); });
 el("cols").addEventListener("change",()=>{sel().cols=Math.max(1,Math.min(16,+el("cols").value));renderList();refresh();draw();save();});
 el("rows").addEventListener("change",()=>{sel().rows=Math.max(1,Math.min(16,+el("rows").value));renderList();refresh();draw();save();});
 el("eraser").addEventListener("click",()=>{ S.brush={t:"",black:false}; syncPalette(); });
