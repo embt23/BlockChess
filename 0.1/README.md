@@ -21,6 +21,12 @@ cd 0.1 && cargo build --release
 ./target/release/blockchess pack corpus/classics.pgn out.bcg
 ```
 
+**The plan is [`PLAN.md`](PLAN.md)** — nine stages, each useful on its own. Say
+"launch N".
+
+**A visual walk through the six layers:**
+[claude.ai/code/artifact/07ce0527](https://claude.ai/code/artifact/07ce0527-6180-4b82-a711-a8056c2c7ef0)
+
 **New here, or lost? Read [`START-HERE.md`](START-HERE.md).** It walks through
 each command, says what each crate is for, and names the one thing that is easy
 to get catastrophically wrong.
@@ -104,6 +110,7 @@ the project is for.
 | [`05-index.md`](papers/05-index.md) | Transpositions, mirrors, proofs of absence, and where annotations go |
 | [`06-decisions.md`](papers/06-decisions.md) | Every fork, with recommendations |
 | [`08-layers.md`](papers/08-layers.md) | Why compressing the corpus **is** deriving chess theory |
+| [`09-lineage.md`](papers/09-lineage.md) | Where these ideas already live — MDL, Kolmogorov, and sixty years of experiments on chess players |
 | [`07-sources.md`](papers/07-sources.md) | Every literature value, attributed, including the two weak ones |
 
 ## The arithmetic
