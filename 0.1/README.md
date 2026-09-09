@@ -36,9 +36,24 @@ to get catastrophically wrong.
 | crate | what it is |
 |---|---|
 | `bc-chess` | the rules — lifted from 0.0, passes `perft(6) = 119,060,324` |
-| `bc-pgn` | reading real games, so a corpus can get in |
-| `bc-codec` | E3 and E7: games to bytes and back, losslessly |
+| `bc-pgn` | reading real games, with clocks, so a corpus can get in |
+| `bc-codec` | E3, E7, E8, the canonical position key and its symmetry group |
+| `bc-index` | opening trie, position map, opening names, chunk finding |
+| `bc-grammar` | Re-Pair — finds what repeats, knows nothing about chess |
 | `bc-cli` | the `blockchess` command |
+
+### The commands
+
+| | |
+|---|---|
+| `perft` `show` `play` | look at chess; `play --save` records a game and your notes |
+| `measure` | bits per ply under every encoding, E8 included |
+| `pack` `unpack` `export` | store a game, get it back, or emit JSON for a graphics layer |
+| `index` `book` `find` | build the index; browse openings; find a position by any move order |
+| `grammar` | let a compressor with no chess knowledge find what repeats — **X7** |
+| `chunks` | groups of squares that co-occur far more than chance — **X9** |
+| `think` | do bits track seconds? — **X11** |
+| `annotate` | put your own perceptions next to what the machine saw |
 
 ## The question
 

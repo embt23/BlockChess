@@ -74,6 +74,8 @@ jobs:
       - run: cargo run --release -q -- index corpus/classics.pgn
       - run: cargo run --release -q -- book corpus/classics.pgn e4
       - run: cargo run --release -q -- grammar corpus/classics.pgn --min 2
+      - run: cargo run --release -q -- think fixtures/clocks-positive.pgn --corpus fixtures/clocks-positive.pgn
+      - run: cargo run --release -q -- chunks fixtures/clocks-positive.pgn --from-ply 8 --show 2
 
   # Every number quoted in the papers is produced by a script; this checks the
   # papers still match.
