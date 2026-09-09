@@ -114,21 +114,56 @@ pub fn run(args: &[String]) -> Result<(), String> {
     println!("{:.2}s", t.elapsed().as_secs_f64());
 
     let after: usize = g.sequences.iter().map(|s| s.len()).sum();
+
+    // Counting symbols flatters the result and it took a real corpus to make
+    // that obvious. Induction *grows the alphabet* — every rule adds a symbol
+    // — so each surviving symbol costs more bits than the ones it replaced.
+    // A 1.14x reduction in symbol count was only 1.07x in bits.
+    let distinct_terminals = {
+        let mut set = std::collections::HashSet::new();
+        for s in &seqs {
+            for &x in s {
+                set.insert(x);
+            }
+        }
+        set.len().max(2)
+    };
+    let alpha_before = (distinct_terminals as f64).log2();
+    let alpha_after = ((distinct_terminals + g.rules.len()) as f64).log2();
+    let bits_before = total_plies as f64 * alpha_before;
+    let bits_after = (after + 2 * g.rules.len()) as f64 * alpha_after;
+
     println!();
-    println!("  COMPRESSION");
+    println!("  COMPRESSION   (in bits — counting symbols overstates it)");
     println!("  {:<30}{:>10}", "symbols before", total_plies);
     println!("  {:<30}{:>10}", "symbols after", after);
     println!("  {:<30}{:>10}", "rules invented", g.rules.len());
     println!(
-        "  {:<30}{:>10}   sequences + 2 per rule",
-        "total with grammar",
-        g.total_size()
+        "  {:<30}{:>10}   {} -> {} symbols wide",
+        "alphabet grew",
+        distinct_terminals + g.rules.len(),
+        distinct_terminals,
+        distinct_terminals + g.rules.len()
     );
     println!(
-        "  {:<30}{:>9.2}x",
-        "net reduction",
+        "  {:<30}{:>9.3}x   symbol count only",
+        "apparent reduction",
         total_plies as f64 / g.total_size().max(1) as f64
     );
+    println!(
+        "  {:<30}{:>9.3}x   <- the honest one",
+        "net reduction in bits",
+        bits_before / bits_after.max(1.0)
+    );
+    println!(
+        "  {:<30}{:>10.2}   vs E7's ~4.6 on this corpus",
+        "bits/ply after grammar",
+        bits_after / total_plies as f64
+    );
+    println!();
+    println!("  Re-Pair is a poor compressor of chess and that is expected —");
+    println!("  papers/08-layers.md §6. What it produces that a better one does");
+    println!("  not is a list you can read. That list is below.");
 
     // Rank by how much each symbol earned: (length - 1) saved symbols per
     // substitution. A long rare symbol and a short common one can be worth the
@@ -186,24 +221,87 @@ pub fn run(args: &[String]) -> Result<(), String> {
         contained,
         100.0 * contained as f64 / ranked.len().max(1) as f64
     );
+    // ---------------------------------------------------------------------
+    // The control. Without it the agreement figures are unfalsifiable.
+    //
+    // A two-ply run has thousands of chances to appear somewhere inside 3,810
+    // opening lines, so "48.7% occur inside a named line" could easily be
+    // coincidence rather than discovery. The question that matters is not
+    // "are the compressor's symbols named?" but "are they named MORE OFTEN
+    // than an equally common chess sequence that the compressor did not
+    // pick?"
+    //
+    // So: for each length the grammar produced, take that many real game
+    // prefixes of the same length straight from the corpus, and score them
+    // the same way. Real openings people actually played, chosen by nothing.
+    // If the compressor's rate is no better, it found frequency, not theory.
+    // ---------------------------------------------------------------------
+    let mut null_by_len: HashMap<usize, (usize, usize, usize)> = HashMap::new();
+    {
+        let mut cursor = 0usize;
+        let mut lens: Vec<usize> = by_len.keys().copied().collect();
+        lens.sort();
+        for l in lens {
+            let want = by_len[&l].0.max(50);
+            let mut n = 0;
+            let mut exact_n = 0;
+            let mut contained_n = 0;
+            let mut tried = 0;
+            while n < want && tried < seqs.len() {
+                let s = &seqs[cursor % seqs.len()];
+                cursor += 7; // stride, so we don't sample one region
+                tried += 1;
+                if s.len() < l {
+                    continue;
+                }
+                let run: Vec<Move> = s[..l].iter().map(|&x| Move(x as u16)).collect();
+                if eco.name_of(&run).is_some() {
+                    exact_n += 1;
+                    contained_n += 1;
+                } else if eco.contains_run(&run).is_some() {
+                    contained_n += 1;
+                }
+                n += 1;
+            }
+            null_by_len.insert(l, (n, exact_n, contained_n));
+        }
+    }
+
     println!();
-    println!("  by symbol length (long ones are the interesting rows):");
+    println!("  by symbol length, against a control of real game prefixes:");
     println!(
-        "  {:<10}{:>10}{:>12}{:>10}",
-        "plies", "symbols", "in theory", "share"
+        "  {:<7}{:>9}{:>10}{:>12}{:>10}",
+        "plies", "symbols", "in theory", "control", "lift"
     );
     let mut lens: Vec<usize> = by_len.keys().copied().collect();
     lens.sort();
     for l in lens {
         let (n, hit) = by_len[&l];
+        let share = 100.0 * hit as f64 / n as f64;
+        let (cn, _, chit) = null_by_len.get(&l).copied().unwrap_or((0, 0, 0));
+        let cshare = if cn > 0 {
+            100.0 * chit as f64 / cn as f64
+        } else {
+            f64::NAN
+        };
+        let lift = if cshare > 0.0 {
+            share / cshare
+        } else {
+            f64::NAN
+        };
+        // n is small at the long lengths, so say so rather than letting a
+        // 100% built on one symbol look like evidence.
+        let weak = if n < 10 { " (n small)" } else { "" };
         println!(
-            "  {:<10}{:>10}{:>12}{:>9.0}%",
-            l,
-            n,
-            hit,
-            100.0 * hit as f64 / n as f64
+            "  {:<7}{:>9}{:>11.0}%{:>11.0}%{:>9.2}x{}",
+            l, n, share, cshare, lift, weak
         );
     }
+    println!();
+    println!("  control = the same number of real game prefixes of that length,");
+    println!("  scored identically. lift above 1.0 means the compressor picked");
+    println!("  sequences that are named more often than the openings people");
+    println!("  actually play. At 1.0 it found frequency, not theory.");
 
     println!();
     println!("  WHAT IT NAMED   (top {show} by symbols saved)");
