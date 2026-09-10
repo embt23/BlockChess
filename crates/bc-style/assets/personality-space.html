@@ -130,6 +130,25 @@ td.hash{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2
 .who{display:flex; align-items:center; gap:9px; font-weight:500}
 .who svg{width:14px; height:14px; flex:none}
 
+/* player chips and the personal card */
+.chips{display:flex; gap:8px; flex-wrap:wrap; margin:0 0 16px}
+.chip{font-family:"IBM Plex Mono",monospace; font-size:12.5px; letter-spacing:.02em;
+  padding:6px 12px; border:1px solid var(--rule); background:var(--surface);
+  color:var(--ink-2); cursor:pointer; line-height:1.2}
+.chip:hover{border-color:var(--ink-3); color:var(--ink)}
+.chip[aria-pressed="true"]{border-color:currentColor; font-weight:500}
+.card{background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow);
+  padding:20px 22px; margin:0 0 18px}
+.card h3{font-family:Spectral,Georgia,serif; font-size:26px; font-weight:600; margin:0 0 2px}
+.card .sub{font-size:13.5px; color:var(--ink-3); margin:0 0 16px}
+.card dl{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:14px 22px; margin:0}
+.card dt{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3); margin:0 0 4px}
+.card dd{margin:0; font-size:15px; font-variant-numeric:tabular-nums}
+.card dd.hash{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2);
+  word-break:break-all}
+
 /* pull bars */
 .pullwrap{background:var(--surface); border:1px solid var(--rule); box-shadow:var(--shadow);
   padding:18px 20px; display:flex; flex-direction:column; gap:10px}
@@ -169,10 +188,7 @@ footer .root{word-break:break-all}
   <p class="eyebrow"><b>BlockChess</b> <span>·</span> <span>bc-style</span> <span>·</span>
      <span>episodes 05–09</span> <span>·</span> <span id="eb-corpus"></span></p>
   <h1>Personality Space</h1>
-  <p class="deck">Four players, built to differ, played 120 games against each other. Nobody
-  told the mathematics who they were. It found the axes on its own by factorising the corpus,
-  and the games <em>separated anyway</em> — which is the whole claim this project rests on:
-  that how you play is a thing that can be measured, committed to, and carried as a name.</p>
+  <p class="deck" id="deck"></p>
   <div class="reading" id="reading"></div>
   <div id="adequacy" hidden></div>
 </header>
@@ -180,9 +196,9 @@ footer .root{word-break:break-all}
 <section>
   <div class="shead"><span class="stage">Stage 4 · project</span>
     <h2>Where everyone stands</h2></div>
-  <p class="note">Every point is one game, seen from one player's side — 240 in all. Position is
-  that game's coordinates on the first two discovered axes. Nothing here is a rating: two players
-  can sit far apart at identical strength, because the axes measure <em>how</em>, not <em>how well</em>.</p>
+  <p class="note" id="scatter-note"></p>
+  <div id="chips" class="chips"></div>
+  <div id="card" class="card" hidden></div>
   <ul class="legend" id="legend"></ul>
   <figure>
     <div class="plotwrap"><div id="main"></div></div>
@@ -309,7 +325,7 @@ const TX=ticks(DX[0],DX[1],6), TY=ticks(DY[0],DY[1],5);
 const axLabel = i => `${DATA.axes[i].neg} ↔ ${DATA.axes[i].pos}`;
 
 function plot(opts){
-  const {w,h,m,showTicks,focus,trail,labels} = opts;
+  const {w,h,m,showTicks,focus,trail,labels,emphasis} = opts;
   const iw=w-m.l-m.r, ih=h-m.t-m.b;
   const X=v=>m.l+(v-DX[0])/(DX[1]-DX[0])*iw;
   const Y=v=>m.t+ih-(v-DY[0])/(DY[1]-DY[0])*ih;
@@ -340,8 +356,13 @@ function plot(opts){
   ctx.forEach(p=>{s+=mark("circle",X(p.coords[0]).toFixed(1),Y(p.coords[1]).toFixed(1),3);});
   s+=`</g>`;
   s+=`<g stroke="var(--surface)" stroke-width="1.5">`;
+  // When one player is selected the others stay visible but recede — the
+  // question is "where am I among them", so removing them would answer nothing.
   live.forEach(p=>{const pl=byName[p.player];
-    s+=`<g fill="var(${pl.varname})">${mark(pl.shape,X(p.coords[0]).toFixed(1),Y(p.coords[1]).toFixed(1),4.5)}</g>`;});
+    const dim = emphasis && p.player!==emphasis;
+    const fill = dim ? "var(--context)" : `var(${pl.varname})`;
+    const r = dim ? 3 : (emphasis ? 5.5 : 4.5);
+    s+=`<g fill="${fill}" opacity="${dim?0.55:1}">${mark(pl.shape,X(p.coords[0]).toFixed(1),Y(p.coords[1]).toFixed(1),r)}</g>`;});
   s+=`</g>`;
 
   if(trail){
@@ -360,6 +381,7 @@ function plot(opts){
     s+=`<g font-family="Spectral, Georgia, serif" font-size="15" font-weight="600" paint-order="stroke" stroke="var(--surface)" stroke-width="4.5" stroke-linejoin="round">`;
     // Alternate above/below so labels on neighbouring centroids cannot collide.
     players.forEach((p,i)=>{
+      if(emphasis && p.name!==emphasis) return;
       const dy = (i%2===0) ? -12 : 22;
       s+=`<text x="${(X(p.coords[0])+11).toFixed(1)}" y="${(Y(p.coords[1])+dy).toFixed(1)}" fill="var(${p.varname})">${esc(p.name)}</text>`;});
     s+=`</g>`;
@@ -397,10 +419,87 @@ document.getElementById("foot-root").textContent="corpus root  "+DATA.corpus_roo
 document.getElementById("legend").innerHTML=players.map(p=>
   `<li><svg class="sw" viewBox="0 0 16 16" aria-hidden="true"><g fill="var(${p.varname})">${mark(p.shape,8,8,5.5)}</g></svg>${esc(p.name)}</li>`).join("");
 
-/* ---- main plot ---- */
-const main=plot({w:940,h:560,m:{l:52,r:24,t:18,b:54},showTicks:true,labels:true,
-  aria:"Scatter plot of 240 games in personality space, coloured and shaped by player. Four clusters are visible."});
-document.getElementById("main").innerHTML=main.svg;
+/* ---- the prose, from the data ----
+   Written from DATA rather than typed, because a page that says "four players
+   built to differ" over somebody's real club would be stating a falsehood in
+   the most prominent place on it. */
+{
+  const n = players.length, g = DATA.games, sides = DATA.samples;
+  const sep = DATA.separation.between / DATA.separation.within;
+  const held = DATA.identification ? DATA.identification.held_out_accuracy : null;
+  document.getElementById("deck").innerHTML =
+    `${n} players, ${g} games. Nobody told the mathematics who they were \u2014 it found the axes `
+    + `on its own by factorising these games and nothing else. `
+    + (sep > 1.2
+        ? `The games <em>separated anyway</em>, which is the whole claim this rests on: that how `
+          + `you play is a thing that can be measured, committed to, and carried as a name.`
+        : `The games did <em>not</em> separate. That is a real answer and it is reported as one: `
+          + `on this corpus these eighteen measurements do not tell these players apart.`);
+  document.getElementById("scatter-note").innerHTML =
+    `Every point is one game, seen from one player's side \u2014 ${sides} in all. Position is that `
+    + `game's coordinates on the first two discovered axes. Nothing here is a rating: two players `
+    + `can sit far apart at identical strength, because the axes measure <em>how</em>, not `
+    + `<em>how well</em>.`
+    + (held!=null ? ` A single held-out game is attributed to the right player `
+        + `${(held*100).toFixed(1)}% of the time.` : "");
+}
+
+/* ---- who is looking? ----
+   The hash makes the page personal without making it private: everyone gets the
+   same file, and `#alice` is the link Alice keeps. */
+function whoFromHash(){
+  const raw = decodeURIComponent((location.hash||"").replace(/^#/,"")).trim();
+  return players.some(p=>p.name===raw) ? raw : null;
+}
+let selected = whoFromHash();
+let main;
+
+function drawMain(){
+  main = plot({w:940,h:560,m:{l:52,r:24,t:18,b:54},showTicks:true,labels:true,
+    emphasis:selected,
+    aria:`Scatter plot of ${DATA.samples} games in personality space, coloured and shaped by player.`});
+  document.getElementById("main").innerHTML = main.svg;
+}
+
+function drawChips(){
+  document.getElementById("chips").innerHTML = players.map(p=>
+    `<button class="chip" data-name="${esc(p.name)}" aria-pressed="${p.name===selected}"
+      style="color:var(${p.varname})">${esc(p.name)}</button>`).join("")
+    + `<button class="chip" data-name="" aria-pressed="${selected===null}">everyone</button>`;
+  document.querySelectorAll("#chips .chip").forEach(b=>{
+    b.addEventListener("click",()=>{
+      const n = b.getAttribute("data-name");
+      selected = n || null;
+      location.hash = selected ? encodeURIComponent(selected) : "";
+      render();
+    });
+  });
+}
+
+function drawCard(){
+  const el = document.getElementById("card");
+  if(!selected){ el.hidden = true; return; }
+  const p = byName[selected];
+  // Nearest other player, which is the question everybody asks first.
+  let near=null, nd=Infinity;
+  players.forEach(q=>{ if(q.name!==p.name){
+    const d = Math.hypot(...q.coords.map((c,i)=>c-p.coords[i]));
+    if(d<nd){ nd=d; near=q; } } });
+  const co = p.coords.map((c,i)=>`${DATA.axes[i].neg} \u2194 ${DATA.axes[i].pos}: ${c>=0?"+":""}${c.toFixed(2)}`);
+  el.innerHTML = `<h3 style="color:var(${p.varname})">${esc(p.name)}</h3>
+    <p class="sub">${p.games} games \u00b7 ${p.links.length} medals earned \u00b7 travelled ${p.path_length.toFixed(2)}</p>
+    <dl>
+      <div><dt>Nearest</dt><dd style="color:var(${near?near.varname:"--ink"})">${near?esc(near.name):"\u2014"}</dd></div>
+      <div><dt>Spread</dt><dd>${p.dispersion.toFixed(2)}</dd></div>
+      <div><dt>Where you stand</dt><dd style="font-size:13px">${co.slice(0,2).map(esc).join("<br>")}</dd></div>
+      <div><dt>Medal</dt><dd class="hash">${p.medal}</dd></div>
+    </dl>`;
+  el.hidden = false;
+}
+
+function render(){ drawChips(); drawCard(); drawMain(); }
+window.addEventListener("hashchange",()=>{ selected = whoFromHash(); render(); });
+render();
 
 /* ---- facets ---- */
 document.getElementById("facets").innerHTML=players.map(p=>{
