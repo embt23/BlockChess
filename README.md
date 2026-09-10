@@ -18,6 +18,8 @@ it was fitted to. A mutable database would let an operator quietly add or drop
 games, shift the axes, and silently re-judge every player who ever earned a
 medal.
 
+Run it on your own games: [`docs/friends-lens.md`](docs/friends-lens.md).
+
 Read [`METAPLAN.md`](METAPLAN.md) first — it says what this is, what order it
 happens in, and what was cut.
 
