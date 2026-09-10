@@ -23,6 +23,7 @@ usage: style <command> [source] [k]
   style viz games.pgn > out.html a page from your own games
   style write 6 > games.pgn       synthetic games as PGN, for trying the flow
 
+  style arena DIR fetch NAME     pull a Lichess player's games and land them
   style arena DIR add g.pgn      land a submission (validated, append-only)
   style arena DIR build          refit the lens, regenerate DIR/index.html
   style arena DIR status         roster, corpus root, tamper check
@@ -468,6 +469,32 @@ fn run_arena(args: &[String]) {
                 }
             }
         }
+        "fetch" => {
+            let Some(user) = args.get(4) else {
+                eprintln!("usage: style arena DIR fetch <lichess-username> [max]");
+                std::process::exit(2);
+            };
+            let max: u32 = args.get(5).and_then(|s| s.parse().ok()).unwrap_or(200);
+            match fetch_lichess(user, max) {
+                Ok(path) => match arena.add(&path) {
+                    Ok(a) => {
+                        println!("landed {} — {} games for {user}", a.file, a.accepted);
+                        if a.rejected > 0 {
+                            println!("  {} rejected (variants, or not replayable)", a.rejected);
+                        }
+                        println!("\nnow run:  style arena {dir} build");
+                    }
+                    Err(e) => {
+                        eprintln!("refused: {e}");
+                        std::process::exit(1);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("{e}");
+                    std::process::exit(1);
+                }
+            }
+        }
         "build" => {
             let corpus = arena.corpus().unwrap_or_else(|e| {
                 eprintln!("cannot read the corpus: {e}");
@@ -571,4 +598,57 @@ fn serve(arena: &Arena, port: u16) {
         let _ = stream.write_all(&body);
         let _ = stream.flush();
     }
+}
+
+/// Pull one player's games from Lichess into a temporary file.
+///
+/// This shells out to `curl` rather than speaking HTTPS. Implementing TLS to
+/// download a text file would be a strange place to spend the no-dependencies
+/// rule, and `curl` is on every machine this will run on.
+///
+/// **The success path has never run.** The sandbox this was written in has no
+/// route to `lichess.org`. What *is* exercised: the username guard rejects
+/// anything that is not alphanumeric before a process is spawned, and the
+/// failure path was watched returning a clean message on a refused connection.
+/// What is not: a response that actually contains games. Treat the first real
+/// run as the test, and check the game count it reports against what Lichess
+/// shows for that account.
+fn fetch_lichess(user: &str, max: u32) -> Result<std::path::PathBuf, String> {
+    if !user
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(format!("{user:?} is not a Lichess username"));
+    }
+    let out = std::env::temp_dir().join(format!("lichess-{user}.pgn"));
+    let url = format!(
+        "https://lichess.org/api/games/user/{user}\
+         ?max={max}&clocks=true&evals=false&opening=false"
+    );
+
+    let status = std::process::Command::new("curl")
+        .args([
+            "-sS",
+            "--fail",
+            "-H",
+            "Accept: application/x-chess-pgn",
+            "-o",
+            &out.to_string_lossy(),
+            &url,
+        ])
+        .status()
+        .map_err(|e| format!("could not run curl: {e}"))?;
+    if !status.success() {
+        return Err(format!("curl failed fetching {user} (exit {status})"));
+    }
+
+    let size = std::fs::metadata(&out).map(|m| m.len()).unwrap_or(0);
+    if size == 0 {
+        return Err(format!(
+            "lichess returned nothing for {user} — check the spelling, \
+             and that their games are public"
+        ));
+    }
+    println!("fetched {size} bytes for {user}");
+    Ok(out)
 }

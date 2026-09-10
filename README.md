@@ -51,10 +51,14 @@ cargo run --release -p bc-style --bin style -- viz > space.html  # a page
 cargo run --release -p bc-style --bin style -- viz my.pgn > mine.html
 
 # The arena — a corpus on disk that grows, and the page it produces.
-style arena club add week1.pgn   # validated, append-only, tamper-evident
+style arena club fetch alice     # pull a Lichess account's games and land them
+style arena club add week1.pgn   # or land a file you already have
 style arena club build           # refit the lens, regenerate club/index.html
 style arena club status          # roster, corpus root, integrity check
 style arena club serve 8080      # point your friends at it
+
+# Each person gets their own link into the same page:
+#   http://your-box:8080/#alice
 
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
