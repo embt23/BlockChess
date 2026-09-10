@@ -19,6 +19,7 @@
 //! personality* (attribution, statistical); Ed25519 says *this person is at the
 //! keyboard* (authentication, cryptographic). The old spec conflated them.
 
+pub mod arena;
 pub mod basis;
 pub mod chain;
 pub mod corpus;

@@ -50,6 +50,12 @@ cargo run --release -p bc-style --bin style -- interact          # the interacti
 cargo run --release -p bc-style --bin style -- viz > space.html  # a page
 cargo run --release -p bc-style --bin style -- viz my.pgn > mine.html
 
+# The arena — a corpus on disk that grows, and the page it produces.
+style arena club add week1.pgn   # validated, append-only, tamper-evident
+style arena club build           # refit the lens, regenerate club/index.html
+style arena club status          # roster, corpus root, integrity check
+style arena club serve 8080      # point your friends at it
+
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
 
@@ -59,6 +65,11 @@ cargo run --release --bin perft -- divide 3     # per-move breakdown
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
 time; it exists to be read. The node will link `ed25519-dalek`.
+
+Games enter through an **append-only** manifest: each submission is validated
+by replaying every move, hashed, and chained to the one before it, so a game
+that has landed cannot be edited, removed or reordered without the check
+noticing. Adding games is an append — nothing already on disk is rewritten.
 
 The crate refuses to be quoted on a corpus too small to support it — a basis
 fitted to fewer games than features is a well-formed object containing nothing,

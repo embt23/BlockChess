@@ -8,28 +8,40 @@
 //!                            how many games until a fresh account is unmasked
 
 use bc_hash::hex;
+use bc_style::arena::Arena;
 use bc_style::{identify, interaction, report, synth, Corpus, Lab};
 
 const USAGE: &str = "\
 usage: style <command> [source] [k]
 
-  commands   demo · identify · interact · export · viz
+  commands   demo · identify · interact · export · viz · write · arena
   source     a .pgn file, or a number of synthetic round-robin rounds
   k          axes to keep (default 4)
 
   style demo                     the constructed players, as a report
   style identify                 held-out attribution and the forgery margin
-  style viz games.pgn > out.html a page from your own games";
+  style viz games.pgn > out.html a page from your own games
+  style write 6 > games.pgn       synthetic games as PGN, for trying the flow
+
+  style arena DIR add g.pgn      land a submission (validated, append-only)
+  style arena DIR build          refit the lens, regenerate DIR/index.html
+  style arena DIR status         roster, corpus root, tamper check
+  style arena DIR serve [port]   serve DIR/index.html (default 8080)";
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let cmd = args.get(1).map(|s| s.as_str()).unwrap_or("demo");
 
-    let quiet = matches!(cmd, "export" | "viz");
+    if cmd == "arena" {
+        run_arena(&args);
+        return;
+    }
+
+    let quiet = matches!(cmd, "export" | "viz" | "write");
 
     if !matches!(
         cmd,
-        "demo" | "pgn" | "export" | "viz" | "identify" | "interact"
+        "demo" | "pgn" | "export" | "viz" | "identify" | "interact" | "write"
     ) {
         eprintln!("{USAGE}");
         std::process::exit(2);
@@ -57,6 +69,18 @@ fn main() {
     }
 
     let k: usize = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(4);
+
+    if cmd == "write" {
+        for g in &corpus.games {
+            println!(
+                "[White \"{}\"]\n[Black \"{}\"]\n[Result \"*\"]\n[Variant \"Standard\"]\n\n{} *\n",
+                g.white,
+                g.black,
+                bc_style::pgn::write_movetext(g)
+            );
+        }
+        return;
+    }
 
     if cmd == "identify" {
         report_identify(&corpus, k);
@@ -402,5 +426,149 @@ fn report_interaction(lab: &Lab) {
     for p in interaction::pulls(lab) {
         let bar = "▓".repeat((p.magnitude * 12.0).round().min(40.0) as usize);
         println!("  {:<14}{:>7.3}  {bar}", short(&p.opponent), p.magnitude);
+    }
+}
+
+/// The arena: a corpus on disk that grows, and the page it produces.
+fn run_arena(args: &[String]) {
+    let (Some(dir), Some(action)) = (args.get(2), args.get(3)) else {
+        eprintln!("{USAGE}");
+        std::process::exit(2);
+    };
+    let arena = match Arena::open(dir) {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("cannot open {dir}: {e}");
+            std::process::exit(1);
+        }
+    };
+
+    match action.as_str() {
+        "add" => {
+            let Some(file) = args.get(4) else {
+                eprintln!("usage: style arena DIR add <file.pgn>");
+                std::process::exit(2);
+            };
+            match arena.add(file) {
+                Ok(a) => {
+                    println!("landed {} — {} games", a.file, a.accepted);
+                    if a.rejected > 0 {
+                        println!(
+                            "  {} rejected (not replayable as standard chess)",
+                            a.rejected
+                        );
+                    }
+                    println!("  players   {}", a.players.join(", "));
+                    println!("  head      {}", hex(&a.head));
+                    println!("\nnow run:  style arena {dir} build");
+                }
+                Err(e) => {
+                    eprintln!("refused: {e}");
+                    std::process::exit(1);
+                }
+            }
+        }
+        "build" => {
+            let corpus = arena.corpus().unwrap_or_else(|e| {
+                eprintln!("cannot read the corpus: {e}");
+                std::process::exit(1);
+            });
+            if corpus.is_empty() {
+                eprintln!("no games yet — add a submission first");
+                std::process::exit(1);
+            }
+            let k: usize = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(4);
+            let Some(lab) = Lab::fit(corpus, k) else {
+                eprintln!("no usable games in the corpus");
+                std::process::exit(1);
+            };
+            let out = arena.dir.join("index.html");
+            if let Err(e) = std::fs::write(&out, report::render_page(&lab)) {
+                eprintln!("cannot write {}: {e}", out.display());
+                std::process::exit(1);
+            }
+            println!("built {} from {} games", out.display(), lab.corpus.len());
+            println!("  corpus root  {}", hex(&lab.basis.corpus_root));
+            match lab.basis.adequacy().warning() {
+                Some(w) => println!("  NOT YET MEANINGFUL — {w}"),
+                None => println!("  the corpus is large enough to support the lens"),
+            }
+        }
+        "status" => {
+            let v = arena.verify().unwrap_or_else(|e| {
+                eprintln!("cannot verify: {e}");
+                std::process::exit(1);
+            });
+            println!("submissions  {}", v.entries);
+            println!("games        {}", v.games);
+            println!("corpus root  {}", hex(&v.corpus_root));
+            println!("manifest     {}", hex(&v.head));
+            if v.problems.is_empty() {
+                println!("integrity    intact");
+            } else {
+                println!("integrity    {} PROBLEM(S)", v.problems.len());
+                for p in &v.problems {
+                    println!("  - {p}");
+                }
+            }
+            if let Ok(roster) = arena.roster() {
+                println!("\nroster");
+                for (name, n) in roster.iter().take(20) {
+                    println!("  {n:>5}  {name}");
+                }
+            }
+        }
+        "serve" => {
+            let port: u16 = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(8080);
+            serve(&arena, port);
+        }
+        _ => {
+            eprintln!("{USAGE}");
+            std::process::exit(2);
+        }
+    }
+}
+
+/// A static server for one page, in the standard library.
+///
+/// Friends-scale means one request at a time is genuinely enough, and a
+/// dependency-free server keeps the workspace's rule intact. It serves exactly
+/// one file and nothing else, so there is no path handling to get wrong.
+fn serve(arena: &Arena, port: u16) {
+    use std::io::{Read, Write};
+    let page = arena.dir.join("index.html");
+    if !page.exists() {
+        eprintln!(
+            "no page yet — run: style arena {} build",
+            arena.dir.display()
+        );
+        std::process::exit(1);
+    }
+
+    let listener = match std::net::TcpListener::bind(("0.0.0.0", port)) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("cannot listen on port {port}: {e}");
+            std::process::exit(1);
+        }
+    };
+    println!("serving {} on http://0.0.0.0:{port}", page.display());
+    println!("re-run `build` after each submission; refresh to see it.");
+
+    for stream in listener.incoming() {
+        let Ok(mut stream) = stream else { continue };
+        let mut buf = [0u8; 1024];
+        let _ = stream.read(&mut buf);
+        // The page is re-read per request, so a rebuild shows up on refresh
+        // without restarting the server.
+        let body = std::fs::read(&page).unwrap_or_default();
+        let header = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\
+             Content-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        );
+        let _ = stream.write_all(header.as_bytes());
+        let _ = stream.write_all(&body);
+        let _ = stream.flush();
     }
 }
