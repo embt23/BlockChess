@@ -39,15 +39,22 @@ material is symmetrical; the topology is not.
 For each occupied square, count the *distinct systems* that change state if that
 square's occupant changes. Call it the square's **coupling**.
 
-| Square | Systems it participates in | Coupling |
-|---|---|---|
-| **b4** | blocks a3–f8 · defends a5 · controls c5 · occupies the b-file · is the lever vs c6/d6 | **5** |
-| c6 | guards the dark complex · attacks a5 and b4 · defends e5 · blocks Bd7's b5–a4 diagonal | 4 |
-| e5 | phalanx with d5 · supports d4 · terminates the b2–h8 diagonal · fixes a dark-square target | 4 |
-| a5 | controls b6 · occupies the a-file · advance to a6 | 3 |
-| d5 | phalanx with e5 · controls c4/e4 · sits on its own bishop's colour | 3 |
-| a3 | owns one diagonal · blocks the a-file for a rook | 2 |
-| d7 | defends c6 · one open diagonal to h3 | 2 |
+Scored mechanically by `blockchess.metrics.coupling_table` over five
+computable predicates — `blocks_friendly_line`, `blocks_enemy_line`, `defends`,
+`sole_control`, `lever`:
+
+| Square | Man | Static | Latent | Systems |
+|---|---|---:|---:|---|
+| **b4** | wP | **4** | 4 | blocks_friendly_line, defends, sole_control, lever |
+| c6 | bN | 3 | 3 | blocks_friendly_line, defends, sole_control |
+| a3 | wB | 2 | 2 | defends, sole_control |
+| d7 | bB | 2 | 2 | defends, sole_control |
+| d5 | bP | 1 | **3** | sole_control |
+| e5 | bP | 1 | **3** | sole_control |
+| a5 | wP | 1 | 1 | sole_control |
+
+*Static* = systems live in the position as recorded. *Latent* = systems that
+switch on somewhere in the one-move neighbourhood.
 
 Coupling is not value. A queen has high coupling everywhere. The interesting case
 is a *pawn* with high coupling, because a pawn's state is expensive to change.
@@ -55,6 +62,16 @@ is a *pawn* with high coupling, because a pawn's state is expensive to change.
 b4 tops the table while being the cheapest man on the board. That is what
 "centre of rotation" should mean: **a low-value element carrying disproportionate
 structural load.**
+
+Two things the mechanical scoring changed from the first draft of this study:
+
+- **b4 scores 4, not 5.** The hand-count included "occupies the b-file", which
+  is a system for a rook that is not in the fragment. It is not live, so it does
+  not count. b4 still tops the table.
+- **d5 and e5 score static 1, latent 3.** The measure independently finds §3
+  below: the central pawns are doing almost nothing *now* and light up within a
+  single move. High latent over low static is the signature of a loaded square,
+  and it is visible without knowing the answer in advance.
 
 ---
 
@@ -78,11 +95,17 @@ buys:
 |---|---:|---:|---:|---:|---|
 | — (Position 1) | 4 | — | — | — | — |
 | Bb2 | 8 | +4 | 4 | 0 | yes |
-| b5 | 10 | +6 | 5 | 1 | **no** |
+| b5 | 10 | +6 | 6 | 0 | **no** |
 | Nb1–c3 | 12 | +8 | 0 | 8 | yes |
 
-*Unlocked* = squares gained by men already on the board. *Imported* = squares
-brought by a man arriving from elsewhere. The two are not interchangeable.
+*Unlocked* = squares gained by men already recorded in the fragment. *Imported*
+= squares brought by a man arriving from off-record. The two are not
+interchangeable.
+
+(The b5 row read 5/1 in the first draft, splitting out the pawn's own extra
+move as an import. That was inconsistent — the b-pawn was already in the
+fragment, so its gain is unlocked, exactly as the bishop's is under Bb2. The
+engine's rule is identity-based and the table now follows it.)
 
 **Nc3 produces the biggest raw number and unlocks nothing.** It adds mobility
 linearly by importing a piece. b5 and Bb2 unlock mobility, which is structural
@@ -224,6 +247,13 @@ is a decision you only get to make once.
    the move the position most wants. The question worth asking of a case study
    about *how you see*: was the gap that you read b4's coupling correctly but
    assumed a pivot has to move?
+
+---
+
+Every figure in this study is reproduced by `tests/test_position1.py` (29 tests)
+and can be regenerated with `python -m blockchess report
+games/01-self-play/study.json`. If a measure changes, the tests fail and this
+prose is known to be stale rather than quietly wrong.
 
 ---
 

@@ -1,0 +1,74 @@
+{
+  "name": "01 - self-play",
+  "note": "A game played against self, recorded as fragments. Positions 2 and 3 exist in the notebook and are not yet entered. The record is open: men absent from a note were not written down, not necessarily captured.",
+  "observations": [
+    {
+      "key": "position-1",
+      "board": {
+        "men": {
+          "a3": "wB",
+          "a5": "wP",
+          "b4": "wP",
+          "c6": "bN",
+          "d5": "bP",
+          "d7": "bB",
+          "e5": "bP"
+        },
+        "side_to_move": "w",
+        "unrecorded": [
+          "wK",
+          "bK"
+        ],
+        "label": "Position 1"
+      },
+      "note": "Recorded not in order of placement. Working read: b4 is the point of inflection / centre of balance / rotation.",
+      "source": "notebook, game played against self",
+      "order": 1
+    }
+  ],
+  "links": [],
+  "branches": {
+    "position-1": [
+      {
+        "name": "A - push the gate",
+        "moves": [
+          {
+            "move": "b4b5"
+          },
+          {
+            "introduce": "wN",
+            "at": "c3"
+          }
+        ],
+        "note": "Commits to the a3-f8 diagonal. b5 opens the bishop and hits the knight; Nc3 backs b5 and adds a second attacker to d5. Rules out a rook on a3 for as long as the bishop stays."
+      },
+      {
+        "name": "B - keep the gate",
+        "moves": [
+          {
+            "move": "a3b2"
+          },
+          {
+            "introduce": "wP",
+            "at": "e3"
+          },
+          {
+            "introduce": "wR",
+            "at": "a3"
+          }
+        ],
+        "note": "Commits to the b2-h8 diagonal. Bb2 re-aims at e5 for free; e3 denies d4, the square that shields e5; the rook takes the square the bishop left. Nc3 is excluded here -- c3 blocks the new diagonal the same way b4 blocked the old."
+      },
+      {
+        "name": "C - probe first",
+        "moves": [
+          {
+            "introduce": "wP",
+            "at": "e3"
+          }
+        ],
+        "note": "The branch-neutral move. e3 denies d4 in both schemes and blocks neither diagonal, so it buys information about Black's intent before b4's bit is spent."
+      }
+    ]
+  }
+}
