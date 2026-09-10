@@ -260,3 +260,81 @@ pub fn occupied_cells(basis: &Basis, points: &[Vec<f64>]) -> Vec<f64> {
         })
         .collect()
 }
+
+/// How strongly one discovered axis tracks the players' ratings.
+#[derive(Clone, Debug)]
+pub struct AxisStrength {
+    pub axis: usize,
+    /// Pearson correlation between position on this axis and rating.
+    pub r: f64,
+    /// Game-sides that carried a rating.
+    pub rated: usize,
+}
+
+/// Is the basis just rating in disguise?
+///
+/// This is the first question a careful reader should ask, and the one that can
+/// quietly sink the whole idea. Strength is a real, large, already-named axis of
+/// chess. If the "personality" axes turn out to track it, then the medal is an
+/// Elo rating with extra steps and every claim about *style* is a claim about
+/// *skill* wearing a different word.
+///
+/// So: correlate each axis against the rating recorded with the game. A high
+/// `|r|` on an axis means that axis is measuring strength. A low `|r|`
+/// everywhere is the result the project needs and has not yet earned — the
+/// synthetic archetypes carry no ratings, so this returns nothing until it is
+/// pointed at real games.
+///
+/// Note what it cannot tell you: a *low* correlation does not prove the axes
+/// measure personality, only that they do not measure the one confounder we can
+/// name. Ruling out the obvious rival is the least a measurement can do, not
+/// the most.
+pub fn strength_leakage(lab: &Lab) -> Vec<AxisStrength> {
+    let mut pairs: Vec<(Vec<f64>, f64)> = Vec::new();
+    for p in &lab.points {
+        let Some(g) = lab.corpus.games.get(p.game) else {
+            continue;
+        };
+        let elo = if p.player == g.white {
+            g.white_elo
+        } else {
+            g.black_elo
+        };
+        if let Some(e) = elo {
+            pairs.push((p.coords.clone(), e as f64));
+        }
+    }
+    if pairs.len() < 3 {
+        return Vec::new();
+    }
+
+    let n = pairs.len() as f64;
+    let mean_y = pairs.iter().map(|(_, y)| y).sum::<f64>() / n;
+    let sd_y = (pairs.iter().map(|(_, y)| (y - mean_y).powi(2)).sum::<f64>() / n).sqrt();
+
+    (0..lab.basis.k)
+        .map(|axis| {
+            let mean_x = pairs.iter().map(|(x, _)| x[axis]).sum::<f64>() / n;
+            let sd_x = (pairs
+                .iter()
+                .map(|(x, _)| (x[axis] - mean_x).powi(2))
+                .sum::<f64>()
+                / n)
+                .sqrt();
+            let cov = pairs
+                .iter()
+                .map(|(x, y)| (x[axis] - mean_x) * (y - mean_y))
+                .sum::<f64>()
+                / n;
+            AxisStrength {
+                axis,
+                r: if sd_x > 0.0 && sd_y > 0.0 {
+                    cov / (sd_x * sd_y)
+                } else {
+                    0.0
+                },
+                rated: pairs.len(),
+            }
+        })
+        .collect()
+}

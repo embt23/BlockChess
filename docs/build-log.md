@@ -207,3 +207,53 @@ everything printed next to it.**
 **Regression tests:** `asking_for_more_axes_than_the_data_supports_is_caught`,
 `a_thin_corpus_is_caught_separately`, `the_warning_travels_into_the_json_and_the_page`,
 `the_synthetic_demo_corpus_is_adequate`.
+
+---
+
+## 07 — Every player was about to be named after their rating
+
+**Symptom.** None, and that is the entry. The parser had been given four famous
+games typed out by hand, and it read them perfectly. Then it was given a
+round-trip oracle — render a generated game to SAN, read it back, demand the
+same moves — and one of the first tests came back:
+
+```
+  left: "1523"
+ right: "alice0"
+```
+
+**Cause.** Reading a tag was `line.strip_prefix('[')?.strip_prefix(key)?`. The
+tag `[WhiteElo "1523"]` begins with the characters `White`, so asking for the
+`White` tag matched it, found the first quoted string after the prefix, and
+returned the rating. Tags are read in file order, so `WhiteElo` — which comes
+*after* `White` in every real export — overwrote the name every time.
+
+On a Lichess file, **every player would have been named after their rating.**
+Two people at 1523 would have merged into one player. One person whose rating
+moved would have become several. Every medal in the corpus would have been
+minted for a number.
+
+**Why it hid.** The four hand-written classics carry `[Event]`, `[Site]`,
+`[Date]`, `[White]`, `[Black]`, `[Result]` and nothing else. No ratings, no
+`[Variant]`, no clock comments — none of the tags a real export carries. The
+test corpus and the target corpus had different *shapes*, and every test passed
+because the bug needs a tag that the fixtures did not contain.
+
+**The fix.** One condition: after the key is stripped, the remainder must begin
+with whitespace, so `WhiteElo` no longer answers to `White`.
+
+**Lesson.** Four hand-picked examples are not a sample, they are an
+illustration. The bug was not in the hard part — SAN disambiguation, en
+passant, promotion, castling all worked first time — it was in the boring part,
+reading a header, which nobody thinks to test because nobody thinks it can be
+wrong. That is the same shape as bug 01, where the hash compression function
+was right and the buffering was wrong.
+
+The general form, and it now has three instances in this log: **build the
+generator, not just the examples.** A round-trip oracle over thousands of
+generated games found in one run what a hand-written fixture set had concealed
+completely, and it did it because the generator produces shapes nobody would
+think to type.
+
+**Regression tests:** `a_rating_tag_does_not_become_the_player`,
+`tag_order_does_not_matter`, `many_games_in_one_file_keep_their_identities`.

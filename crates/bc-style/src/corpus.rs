@@ -20,6 +20,17 @@ pub struct GameRecord {
     pub black: String,
     pub start: Position,
     pub moves: Vec<Move>,
+    /// Ratings at the time, when the source recorded them.
+    ///
+    /// Deliberately **not** part of [`GameRecord::canonical_bytes`]. The corpus
+    /// commits to what was played, not to what either player was rated that
+    /// week; a rating is an opinion of a third party and it changes after the
+    /// fact. Keeping it out means a re-export with updated ratings still hashes
+    /// to the same root. It is kept because strength is the one axis we already
+    /// know exists, so it is the control the discovered axes must be checked
+    /// against — see `identify::strength_leakage`.
+    pub white_elo: Option<u16>,
+    pub black_elo: Option<u16>,
 }
 
 impl GameRecord {

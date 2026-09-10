@@ -183,6 +183,8 @@ pub fn play(white: &Style, black: &Style, rng: &mut Rng, max_plies: usize) -> Ga
         black: black.name.to_string(),
         start,
         moves,
+        white_elo: None,
+        black_elo: None,
     }
 }
 

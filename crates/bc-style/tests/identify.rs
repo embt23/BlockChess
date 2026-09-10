@@ -178,3 +178,71 @@ fn occupied_cells_are_finite_and_per_axis() {
     assert_eq!(cells.len(), sp.lab.basis.k);
     assert!(cells.iter().all(|c| c.is_finite() && *c > 0.0));
 }
+
+// --- Is the basis just rating in disguise? -----------------------------------
+
+use bc_style::GameRecord;
+
+/// Rebuild a corpus with ratings attached by a rule, so the detector can be
+/// checked against a known answer.
+fn rated(rounds: usize, mut elo_of: impl FnMut(&str) -> u16) -> Lab {
+    let mut c = Corpus::new();
+    for g in synth::round_robin(rounds, 0x5EED_1234, 120) {
+        let (w, b) = (elo_of(&g.white), elo_of(&g.black));
+        c.push(GameRecord {
+            white_elo: Some(w),
+            black_elo: Some(b),
+            ..g
+        });
+    }
+    Lab::fit(c, 4).expect("should fit")
+}
+
+/// Positive control: give each archetype its own rating and the axes that
+/// separate them must correlate with it. If this does not fire, the detector
+/// cannot detect anything and its silence elsewhere means nothing.
+#[test]
+fn strength_leakage_is_detected_when_it_is_there() {
+    let lab = rated(8, |name| match name {
+        "Tal" => 1200,
+        "Petrosian" => 1600,
+        "Capablanca" => 2000,
+        _ => 2400,
+    });
+    let rows = bc_style::identify::strength_leakage(&lab);
+    assert_eq!(rows.len(), lab.basis.k);
+    assert!(rows[0].rated > 0);
+    let worst = rows.iter().map(|r| r.r.abs()).fold(0.0, f64::max);
+    assert!(
+        worst > 0.3,
+        "ratings tied to identity produced no correlation: {worst:.3}"
+    );
+}
+
+/// Negative control: ratings unrelated to who is playing must not correlate.
+#[test]
+fn unrelated_ratings_do_not_correlate() {
+    let mut n = 0u16;
+    let lab = rated(8, move |_| {
+        n = n.wrapping_add(37);
+        1500 + (n % 400)
+    });
+    let rows = bc_style::identify::strength_leakage(&lab);
+    let worst = rows.iter().map(|r| r.r.abs()).fold(0.0, f64::max);
+    assert!(
+        worst < 0.3,
+        "noise ratings produced a correlation of {worst:.3}"
+    );
+}
+
+/// Without ratings the honest answer is nothing, not zero. Reporting r = 0
+/// would read as "checked, and the axes are clean".
+#[test]
+fn no_ratings_means_no_answer() {
+    let mut c = Corpus::new();
+    for g in synth::round_robin(4, 0x5EED_1234, 120) {
+        c.push(g);
+    }
+    let lab = Lab::fit(c, 4).unwrap();
+    assert!(bc_style::identify::strength_leakage(&lab).is_empty());
+}

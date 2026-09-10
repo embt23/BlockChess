@@ -8,7 +8,7 @@
 //! episode 03's attack ("that game is legal, trust me") pointed at the corpus.
 
 use crate::corpus::GameRecord;
-use bc_chess::types::{file_of, rank_of, Piece, FLAG_CASTLE, FLAG_PROMO};
+use bc_chess::types::{file_of, rank_of, Piece, FLAG_CASTLE, FLAG_EP, FLAG_PROMO};
 use bc_chess::{Move, Position};
 
 #[derive(Debug)]
@@ -130,82 +130,105 @@ pub fn resolve_san(pos: &Position, token: &str) -> Result<Move, PgnError> {
 pub fn parse(text: &str) -> (Vec<GameRecord>, usize) {
     let mut games = Vec::new();
     let mut skipped = 0usize;
-    let mut white = String::new();
-    let mut black = String::new();
-    let mut fen: Option<String> = None;
+    let mut tags = Tags::default();
     let mut movetext = String::new();
     let mut in_moves = false;
 
-    let flush = |white: &mut String,
-                 black: &mut String,
-                 fen: &mut Option<String>,
-                 movetext: &mut String,
-                 games: &mut Vec<GameRecord>,
-                 skipped: &mut usize| {
-        if !movetext.trim().is_empty() {
-            match build(white, black, fen.as_deref(), movetext) {
-                Ok(g) => games.push(g),
-                Err(_) => *skipped += 1,
-            }
-        }
-        white.clear();
-        black.clear();
-        *fen = None;
-        movetext.clear();
-    };
-
     for line in text.lines() {
-        let t = line.trim();
+        // A BOM on the first line would otherwise stop `[Event ...]` looking
+        // like a tag, and the whole file would parse as one nameless game.
+        let t = line.trim_start_matches('\u{feff}').trim();
+
         if t.starts_with('[') {
             if in_moves {
-                flush(
-                    &mut white,
-                    &mut black,
-                    &mut fen,
-                    &mut movetext,
-                    &mut games,
-                    &mut skipped,
-                );
+                flush(&mut tags, &mut movetext, &mut games, &mut skipped);
                 in_moves = false;
             }
-            if let Some(v) = tag_value(t, "White") {
-                white = v;
-            } else if let Some(v) = tag_value(t, "Black") {
-                black = v;
-            } else if let Some(v) = tag_value(t, "FEN") {
-                fen = Some(v);
-            }
+            tags.read(t);
         } else if !t.is_empty() {
             in_moves = true;
-            movetext.push(' ');
-            movetext.push_str(t);
+            // A `;` comment runs to end of line. Lines are joined below, so it
+            // has to go now — afterwards there is no end of line left to run
+            // to, and it would swallow the rest of the game.
+            let t = match t.find(';') {
+                Some(i) => t[..i].trim_end(),
+                None => t,
+            };
+            if !t.is_empty() {
+                movetext.push(' ');
+                movetext.push_str(t);
+            }
         }
     }
-    flush(
-        &mut white,
-        &mut black,
-        &mut fen,
-        &mut movetext,
-        &mut games,
-        &mut skipped,
-    );
+    flush(&mut tags, &mut movetext, &mut games, &mut skipped);
     (games, skipped)
 }
 
+/// The tags of the game currently being read.
+#[derive(Default)]
+struct Tags {
+    white: String,
+    black: String,
+    white_elo: Option<u16>,
+    black_elo: Option<u16>,
+    variant: Option<String>,
+    fen: Option<String>,
+}
+
+impl Tags {
+    fn read(&mut self, line: &str) {
+        if let Some(v) = tag_value(line, "White") {
+            self.white = v;
+        } else if let Some(v) = tag_value(line, "Black") {
+            self.black = v;
+        } else if let Some(v) = tag_value(line, "WhiteElo") {
+            self.white_elo = v.parse().ok();
+        } else if let Some(v) = tag_value(line, "BlackElo") {
+            self.black_elo = v.parse().ok();
+        } else if let Some(v) = tag_value(line, "Variant") {
+            self.variant = Some(v);
+        } else if let Some(v) = tag_value(line, "FEN") {
+            self.fen = Some(v);
+        }
+    }
+}
+
+fn flush(tags: &mut Tags, movetext: &mut String, games: &mut Vec<GameRecord>, skipped: &mut usize) {
+    if !movetext.trim().is_empty() {
+        match build(tags, movetext) {
+            Ok(g) => games.push(g),
+            Err(_) => *skipped += 1,
+        }
+    }
+    *tags = Tags::default();
+    movetext.clear();
+}
+
+/// Read one tag, requiring the name to end where the key ends.
+///
+/// Without that requirement `[WhiteElo "1523"]` answers to `White`, and on any
+/// real export every player is named by their rating rather than themselves.
+/// See `docs/build-log.md` 07.
 fn tag_value(line: &str, key: &str) -> Option<String> {
     let rest = line.strip_prefix('[')?.strip_prefix(key)?;
+    if !rest.starts_with([' ', '\t']) {
+        return None;
+    }
     let start = rest.find('"')? + 1;
     let end = rest[start..].find('"')? + start;
     Some(rest[start..end].to_string())
 }
 
-fn build(
-    white: &str,
-    black: &str,
-    fen: Option<&str>,
-    movetext: &str,
-) -> Result<GameRecord, PgnError> {
-    let start = match fen {
+fn build(tags: &Tags, movetext: &str) -> Result<GameRecord, PgnError> {
+    // Chess960 and the rest are different games with different castling; this
+    // engine would mis-replay them rather than fail loudly, which is worse.
+    // "From Position" is ordinary chess from a supplied FEN, so it is allowed.
+    if let Some(v) = &tags.variant {
+        if !v.eq_ignore_ascii_case("standard") && !v.eq_ignore_ascii_case("from position") {
+            return Err(PgnError(format!("unsupported variant {v}")));
+        }
+    }
+    let start = match tags.fen.as_deref() {
         Some(f) => Position::from_fen(f).map_err(|e| PgnError(e.to_string()))?,
         None => Position::startpos(),
     };
@@ -221,10 +244,12 @@ fn build(
         return Err(PgnError("no moves".into()));
     }
     Ok(GameRecord {
-        white: white.to_string(),
-        black: black.to_string(),
+        white: tags.white.clone(),
+        black: tags.black.clone(),
         start,
         moves,
+        white_elo: tags.white_elo,
+        black_elo: tags.black_elo,
     })
 }
 
@@ -293,4 +318,108 @@ fn tokenise(movetext: &str) -> Vec<String> {
         })
         .filter(|t| !t.is_empty())
         .collect()
+}
+
+/// Render one move as SAN, in the position it is played in.
+///
+/// This exists for two reasons and the first is the important one: it gives the
+/// *reader* an oracle. Rendering a known game and parsing it back must return
+/// the same moves, so the parser can be tested against thousands of generated
+/// games rather than against a handful of examples somebody typed by hand.
+///
+/// Disambiguation follows the standard rule — file if that separates the
+/// candidates, else rank, else both — and it is computed from the legal move
+/// list rather than from piece geometry, so a piece that is pinned and
+/// therefore *cannot* legally move to the square correctly does not force a
+/// disambiguator.
+pub fn write_san(pos: &Position, m: Move) -> String {
+    let mut s = String::new();
+
+    if m.flag() == FLAG_CASTLE {
+        s.push_str(if file_of(m.to()) == 6 { "O-O" } else { "O-O-O" });
+    } else {
+        let (_, piece) = match pos.piece_at(m.from()) {
+            Some(p) => p,
+            None => return String::new(),
+        };
+        let captures = m.flag() == FLAG_EP || pos.piece_at(m.to()).is_some();
+
+        if piece == Piece::Pawn {
+            if captures {
+                s.push((b'a' + file_of(m.from())) as char);
+                s.push('x');
+            }
+        } else {
+            s.push(piece.ch().to_ascii_uppercase());
+
+            // Which other pieces of this kind could also land there legally?
+            let rivals: Vec<Move> = pos
+                .generate_legal()
+                .as_slice()
+                .iter()
+                .copied()
+                .filter(|o| {
+                    o.to() == m.to()
+                        && o.from() != m.from()
+                        && matches!(pos.piece_at(o.from()), Some((_, p)) if p == piece)
+                })
+                .collect();
+            if !rivals.is_empty() {
+                let same_file = rivals
+                    .iter()
+                    .any(|o| file_of(o.from()) == file_of(m.from()));
+                let same_rank = rivals
+                    .iter()
+                    .any(|o| rank_of(o.from()) == rank_of(m.from()));
+                if !same_file {
+                    s.push((b'a' + file_of(m.from())) as char);
+                } else if !same_rank {
+                    s.push((b'1' + rank_of(m.from())) as char);
+                } else {
+                    s.push((b'a' + file_of(m.from())) as char);
+                    s.push((b'1' + rank_of(m.from())) as char);
+                }
+            }
+            if captures {
+                s.push('x');
+            }
+        }
+        s.push((b'a' + file_of(m.to())) as char);
+        s.push((b'1' + rank_of(m.to())) as char);
+        if m.flag() == FLAG_PROMO {
+            s.push('=');
+            s.push(m.promo().ch().to_ascii_uppercase());
+        }
+    }
+
+    let after = pos.make_move(m);
+    if after.in_check(after.side) {
+        s.push(if after.generate_legal().is_empty() {
+            '#'
+        } else {
+            '+'
+        });
+    }
+    s
+}
+
+/// Render a game's movetext, numbered as PGN expects.
+pub fn write_movetext(g: &GameRecord) -> String {
+    let mut pos = g.start;
+    let mut out = String::new();
+    let mut n = pos.fullmove;
+    for (i, &m) in g.moves.iter().enumerate() {
+        if pos.side == bc_chess::types::Color::White {
+            out.push_str(&format!("{n}. "));
+        } else if i == 0 {
+            out.push_str(&format!("{n}... "));
+        }
+        out.push_str(&write_san(&pos, m));
+        out.push(' ');
+        if pos.side == bc_chess::types::Color::Black {
+            n += 1;
+        }
+        pos = pos.make_move(m);
+    }
+    out.trim_end().to_string()
 }

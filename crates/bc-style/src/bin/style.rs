@@ -241,6 +241,30 @@ fn report_identify(corpus: &Corpus, k: usize) {
         );
     }
 
+    println!("\nis the basis just rating in disguise?");
+    let leak = identify::strength_leakage(&sp.lab);
+    if leak.is_empty() {
+        println!("  No ratings in this corpus, so the check cannot run. It is the first");
+        println!("  question a careful reader asks — strength is a real, large,");
+        println!("  already-named axis of chess, and if these axes track it then the");
+        println!("  medal is an Elo rating with extra steps. Point this at real games");
+        println!("  and it answers.");
+    } else {
+        for r in &leak {
+            let verdict = if r.r.abs() > 0.5 {
+                "   <- this axis is largely strength"
+            } else if r.r.abs() > 0.3 {
+                "   <- partly strength"
+            } else {
+                ""
+            };
+            println!("  axis {}   r = {:+.3}{verdict}", r.axis, r.r);
+        }
+        println!("  over {} rated game-sides", leak[0].rated);
+        println!("\n  A low correlation does not prove these axes measure personality,");
+        println!("  only that they do not measure the one rival we can name.");
+    }
+
     let all: Vec<Vec<f64>> = sp.lab.points.iter().map(|p| p.coords.clone()).collect();
     let cells = identify::occupied_cells(&sp.lab.basis, &all);
     let bits: f64 = cells.iter().map(|c| c.max(1.0).log2()).sum();
