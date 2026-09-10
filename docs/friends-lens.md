@@ -66,13 +66,29 @@ Then read the deck at the top of the page. It reports one of two outcomes, and
 ## Checking nobody has fiddled with it
 
 ```sh
-style arena club status
+style arena club status   # is the evidence intact?
+style arena club audit    # are the published medals the ones it produces?
 ```
 
-Reports the roster, the corpus root, and whether anything has been changed since
-it landed. Editing a stored game, doctoring a manifest line, deleting a file or
-reordering submissions are each detected, because every entry is hashed and
-chained to the one before it.
+`status` reports the roster, the corpus root, and whether anything has changed
+since it landed. Editing a stored game, doctoring a manifest line, deleting a
+file or reordering submissions are each detected, because every entry is hashed
+and chained to the one before it.
+
+`audit` is the stronger claim and the one the whole idea rests on: **anyone can
+recompute your identity.** It ignores the page and the medal file, replays the
+games, refits the lens from scratch, mints every medal again, and diffs the
+result against what was published. A third party needs nothing but this
+directory — and the point is that they need not trust whoever ran `build`.
+
+It exits non-zero when it fails, so it works in a cron job:
+
+```
+PASS — every published medal is the medal these games produce.
+```
+
+If you add games and forget to rebuild, it says so rather than passing:
+the medals were minted under a different corpus.
 
 ## The deeper questions
 

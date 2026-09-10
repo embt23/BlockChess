@@ -281,6 +281,195 @@ impl Arena {
     }
 }
 
+// --- Published claims, and checking them ------------------------------------
+
+/// What one build asserted about one player.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Claim {
+    pub player: String,
+    pub medal: Hash,
+    pub games: usize,
+}
+
+/// A disagreement between what was published and what the corpus produces.
+#[derive(Clone, Debug)]
+pub enum Discrepancy {
+    /// Published, but the corpus no longer produces it.
+    Changed {
+        player: String,
+        published: Hash,
+        recomputed: Hash,
+    },
+    /// Published, but this player is not in the corpus at all.
+    Vanished { player: String },
+    /// In the corpus, but never published.
+    Unpublished { player: String },
+}
+
+impl std::fmt::Display for Discrepancy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Discrepancy::Changed {
+                player,
+                published,
+                recomputed,
+            } => write!(
+                f,
+                "{player}: published {} but the corpus produces {}",
+                &hex(published)[..16],
+                &hex(recomputed)[..16]
+            ),
+            Discrepancy::Vanished { player } => {
+                write!(f, "{player}: published a medal but is not in the corpus")
+            }
+            Discrepancy::Unpublished { player } => {
+                write!(f, "{player}: in the corpus but no medal was published")
+            }
+        }
+    }
+}
+
+impl Arena {
+    fn claims_path(&self) -> PathBuf {
+        self.dir.join("MEDALS")
+    }
+
+    /// Record what this build asserts, so it can be checked later by someone
+    /// who was not here when it ran.
+    ///
+    /// The claim and the check have to be *separate artifacts*, or verification
+    /// is a program agreeing with itself. This writes the assertion down; the
+    /// corpus is the evidence; [`Arena::audit`] recomputes from the evidence and
+    /// compares. A third party needs only this directory.
+    pub fn publish_claims(&self, claims: &[Claim], corpus_root: &Hash, k: usize) -> io::Result<()> {
+        let mut out = format!(
+            "# bc-style medals v1\n# corpus\t{}\n# axes\t{k}\n",
+            hex(corpus_root)
+        );
+        for c in claims {
+            out.push_str(&format!("{}\t{}\t{}\n", c.player, hex(&c.medal), c.games));
+        }
+        fs::write(self.claims_path(), out)
+    }
+
+    /// Read back what was published, if anything.
+    pub fn claims(&self) -> io::Result<(Vec<Claim>, Option<Hash>, usize)> {
+        let Ok(text) = fs::read_to_string(self.claims_path()) else {
+            return Ok((Vec::new(), None, 0));
+        };
+        let mut root = None;
+        let mut k = 0usize;
+        let mut out = Vec::new();
+        for line in text.lines() {
+            if let Some(rest) = line.strip_prefix("# corpus\t") {
+                root = Some(parse_hex(rest.trim()));
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("# axes\t") {
+                k = rest.trim().parse().unwrap_or(0);
+                continue;
+            }
+            if line.starts_with('#') || line.trim().is_empty() {
+                continue;
+            }
+            let f: Vec<&str> = line.split('\t').collect();
+            if f.len() != 3 {
+                continue;
+            }
+            out.push(Claim {
+                player: f[0].to_string(),
+                medal: parse_hex(f[1]),
+                games: f[2].parse().unwrap_or(0),
+            });
+        }
+        Ok((out, root, k))
+    }
+}
+
+/// The result of recomputing every published medal from the corpus.
+#[derive(Clone, Debug)]
+pub struct Audit {
+    pub published: usize,
+    pub corpus_root: Hash,
+    /// The root the claims were minted under, if any were.
+    pub claimed_root: Option<Hash>,
+    pub discrepancies: Vec<Discrepancy>,
+}
+
+impl Audit {
+    /// The claims match the corpus, and the corpus is the one they were minted
+    /// under.
+    pub fn passes(&self) -> bool {
+        self.published > 0
+            && self.discrepancies.is_empty()
+            && self.claimed_root == Some(self.corpus_root)
+    }
+}
+
+impl Arena {
+    /// Recompute every published medal from the games on disk.
+    ///
+    /// This is the whole "anyone can recompute your identity" claim, made
+    /// executable. Nothing here trusts the page, the manifest's own arithmetic,
+    /// or the process that wrote the medals: the corpus is replayed, the lens is
+    /// refitted from scratch, every medal is minted again, and the results are
+    /// diffed against what was published.
+    ///
+    /// A third party needs only this directory — and the point of that is that
+    /// they need not trust whoever ran `build`.
+    pub fn audit(&self) -> io::Result<Audit> {
+        let (claims, claimed_root, k) = self.claims()?;
+        let corpus = self.corpus()?;
+        let corpus_root = corpus.root();
+
+        let mut discrepancies = Vec::new();
+        let recomputed: Vec<Claim> = match crate::Lab::fit(corpus, k.max(1)) {
+            Some(lab) => lab
+                .corpus
+                .players()
+                .into_iter()
+                .filter_map(|name| {
+                    let p = lab.profile(&name)?;
+                    Some(Claim {
+                        medal: p.medal(&lab.basis),
+                        games: p.games,
+                        player: name,
+                    })
+                })
+                .collect(),
+            None => Vec::new(),
+        };
+
+        for c in &claims {
+            match recomputed.iter().find(|r| r.player == c.player) {
+                Some(r) if r.medal != c.medal => discrepancies.push(Discrepancy::Changed {
+                    player: c.player.clone(),
+                    published: c.medal,
+                    recomputed: r.medal,
+                }),
+                Some(_) => {}
+                None => discrepancies.push(Discrepancy::Vanished {
+                    player: c.player.clone(),
+                }),
+            }
+        }
+        for r in &recomputed {
+            if !claims.iter().any(|c| c.player == r.player) {
+                discrepancies.push(Discrepancy::Unpublished {
+                    player: r.player.clone(),
+                });
+            }
+        }
+
+        Ok(Audit {
+            published: claims.len(),
+            corpus_root,
+            claimed_root,
+            discrepancies,
+        })
+    }
+}
+
 /// Keep submitted names from escaping the games directory.
 fn sanitise(s: &str) -> String {
     let cleaned: String = s

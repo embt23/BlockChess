@@ -27,6 +27,7 @@ usage: style <command> [source] [k]
   style arena DIR add g.pgn      land a submission (validated, append-only)
   style arena DIR build          refit the lens, regenerate DIR/index.html
   style arena DIR status         roster, corpus root, tamper check
+  style arena DIR audit          recompute every medal and check the claims
   style arena DIR serve [port]   serve DIR/index.html (default 8080)";
 
 fn main() {
@@ -514,7 +515,28 @@ fn run_arena(args: &[String]) {
                 eprintln!("cannot write {}: {e}", out.display());
                 std::process::exit(1);
             }
+            // Write down what this build asserts, so somebody who was not here
+            // when it ran can check it against the games themselves.
+            let claims: Vec<bc_style::arena::Claim> = lab
+                .corpus
+                .players()
+                .into_iter()
+                .filter_map(|name| {
+                    let p = lab.profile(&name)?;
+                    Some(bc_style::arena::Claim {
+                        medal: p.medal(&lab.basis),
+                        games: p.games,
+                        player: name,
+                    })
+                })
+                .collect();
+            if let Err(e) = arena.publish_claims(&claims, &lab.basis.corpus_root, k) {
+                eprintln!("cannot write MEDALS: {e}");
+                std::process::exit(1);
+            }
+
             println!("built {} from {} games", out.display(), lab.corpus.len());
+            println!("  published    {} medals to MEDALS", claims.len());
             println!("  corpus root  {}", hex(&lab.basis.corpus_root));
             match lab.basis.adequacy().warning() {
                 Some(w) => println!("  NOT YET MEANINGFUL — {w}"),
@@ -543,6 +565,55 @@ fn run_arena(args: &[String]) {
                 for (name, n) in roster.iter().take(20) {
                     println!("  {n:>5}  {name}");
                 }
+            }
+        }
+        "audit" => {
+            let v = arena.verify().unwrap_or_else(|e| {
+                eprintln!("cannot verify: {e}");
+                std::process::exit(1);
+            });
+            let a = arena.audit().unwrap_or_else(|e| {
+                eprintln!("cannot audit: {e}");
+                std::process::exit(1);
+            });
+
+            println!("recomputing every published medal from the games on disk\n");
+            println!("  submissions      {}", v.entries);
+            println!("  games replayed   {}", v.games);
+            println!("  corpus root      {}", hex(&a.corpus_root));
+            match a.claimed_root {
+                Some(r) if r == a.corpus_root => println!("  minted under     the same corpus"),
+                Some(r) => println!("  minted under     {}  <- A DIFFERENT CORPUS", hex(&r)),
+                None => println!("  minted under     nothing published yet"),
+            }
+            println!("  medals published {}", a.published);
+
+            if !v.problems.is_empty() {
+                println!("\nthe games themselves");
+                for p in &v.problems {
+                    println!("  - {p}");
+                }
+            }
+            if !a.discrepancies.is_empty() {
+                println!("\nthe medals");
+                for d in &a.discrepancies {
+                    println!("  - {d}");
+                }
+            }
+
+            let ok = v.problems.is_empty() && a.passes();
+            println!(
+                "\n{}",
+                if ok {
+                    "PASS — every published medal is the medal these games produce."
+                } else if a.published == 0 {
+                    "NOTHING TO CHECK — run `build` first."
+                } else {
+                    "FAIL — the published medals are not what these games produce."
+                }
+            );
+            if !ok && a.published > 0 {
+                std::process::exit(1);
             }
         }
         "serve" => {
