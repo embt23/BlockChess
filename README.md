@@ -41,6 +41,9 @@ time; it exists to be read. The node will link `ed25519-dalek`.
 Bugs found along the way, and why they hid, are in
 [`docs/build-log.md`](docs/build-log.md).
 
+> **Working on this repository?** Read [`CLAUDE.md`](CLAUDE.md) first. It holds
+> the thesis, the invariants, and a task-indexed map of everything below.
+
 ## Specification
 
 | File | Contents |
@@ -55,6 +58,8 @@ Bugs found along the way, and why they hid, are in
 | [`spec/07-servers.md`](spec/07-servers.md) | The server layer and its trust ladder |
 | [`spec/08-privacy.md`](spec/08-privacy.md) | The privacy ladder |
 | [`spec/09-open-questions.md`](spec/09-open-questions.md) | Decisions not yet made |
+| [`spec/10-personality.md`](spec/10-personality.md) | **The thesis.** Why the player, not the game, is the asset |
+| [`spec/11-resources.md`](spec/11-resources.md) | The four transactable layers: GAME, STAKE, STYLE, CLAIM |
 | [`docs/atlas.md`](docs/atlas.md) | The knowledge map — every primitive, and the attack that motivates it |
 | [`docs/build-log.md`](docs/build-log.md) | Bugs found while building, and what each one teaches |
 

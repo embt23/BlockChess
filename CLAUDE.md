@@ -1,0 +1,184 @@
+# BlockChess — read this first
+
+**This file holds only what cannot be re-derived from the code.** Facts
+recoverable by reading a source file do not belong here. Decisions, invariants,
+and the reasons behind them do. Compress accordingly when editing it.
+
+---
+
+## What this is
+
+A blockchain, built from scratch, where two people wager on a chess game.
+Peer-to-peer, non-custodial, open source. Above it, anyone may run a server —
+friend lobbies, tournaments, bot arenas, teaching ladders, style markets.
+
+The build doubles as a documentary series: an atlas of cryptography, data
+structures, group theory and information theory, with chess wagering as the
+through-line that makes every abstract primitive concrete.
+
+## The thesis
+
+> **Everything worth money here is a divergence between two models of the same
+> thing.**
+
+Four quantities, one operation `D(· ‖ ·)`:
+
+| | Is | File |
+|---|---|---|
+| **Edge** — bankroll growth | `D(belief ‖ odds)` | `spec/06` §4 |
+| **Identity** — how much you are you | `D(π_you ‖ π_pop)` | `spec/10` §4 |
+| **Evidence** — that someone cheated | `D(observed ‖ claimed)` | `spec/06` §5 |
+| **Value** — what a style is worth | `D(posterior ‖ prior)` | `spec/10` §5 |
+
+A corollary that collapses two planned subsystems into one: **the cheat detector
+and the style asset are the same object.** One says *"this does not look like
+you"*; the other says *"this is what I look like."*
+
+## The four structural insights
+
+Everything in the design follows from these. If a proposed change contradicts
+one, it is almost certainly wrong.
+
+1. **The chain is a court, not a referee.** Moves are exchanged peer-to-peer and
+   signed; the chain sees two transactions per game. It is visited only when
+   someone cheats.
+2. **A chess channel is strictly easier than a payment channel.** Ply only
+   increases and money moves only on terminal states, so old states are
+   harmless. `Higher ply wins` replaces Lightning's entire revocation apparatus.
+   Consequence: watchtowers here hold no secrets and cannot steal, so they can
+   be run by strangers.
+3. **∀ is expensive, ∃ is cheap.** Proving checkmate quantifies over ~218 moves;
+   refuting it takes one. So claims are optimistic and refutations are
+   verified — and it is free, because refuting requires no liveness the protocol
+   did not already require.
+4. **The game carries no information; the players carry all of it.** The rules
+   are common knowledge and common knowledge has zero surprisal. A game is a
+   sample from two policies. *The policy is the asset; the game is evidence of
+   it.*
+
+---
+
+## Invariants
+
+Violating one of these is a bug, not a design choice. Cite them by tag.
+
+**Protocol**
+- `P1` Moves never go on-chain except under dispute.
+- `P2` Higher ply always wins. No revocation secrets, no penalty transactions.
+- `P3` Never verify checkmate. Assert it; allow refutation by a single move.
+- `P4` Challenge windows are counted in **blocks, never seconds**. A halted chain
+  must not expire anyone's window.
+- `P5` The chess rules exist **exactly once** (`bc-chess`) and are compiled for
+  both the client and the on-chain adjudicator. Two implementations means a
+  consensus split with money on it.
+- `P6` Servers relay signatures; by default they never custody funds.
+
+**Economic**
+- `E1` **Never mint tokens for playing.** The moment playing pays, two bots farm
+  each other. No exceptions, no "activity rewards", no emissions.
+- `E2` You may publish any function of **your own** decisions. Never a model that
+  predicts your opponents'. (Reason is economic, not just privacy: it stops
+  strong players being farmed for data.)
+- `E3` Claims are **attribution, never exclusion**, and every claim costs a real
+  countersigned game.
+
+**Engineering**
+- `G1` **Every layer is verified against an oracle someone else published.**
+  FIPS vectors, RFC 8032, perft counts, CT vectors. A reference you wrote
+  yourself is not an oracle — it is a second implementation with its own bugs.
+  This rule exists because it caught a real bug that twelve hand-written tests
+  missed.
+- `G2` No file over ~300 lines. No function that cannot be held in the head.
+- `G3` Spec before code. The spec files are the scripts for the series.
+
+---
+
+## Where to look
+
+Task-indexed. Read the row, not the whole tree.
+
+| If you are… | Read |
+|---|---|
+| orienting from scratch | this file, then `spec/00-overview.md` |
+| touching the channel or the move protocol | `spec/04-channel.md` |
+| touching disputes, timeouts, clocks | `spec/05-adjudication.md` |
+| touching chess rules, board encoding, terminal conditions | `spec/03-position.md` + `crates/bc-chess` |
+| touching hashing, signatures, encodings | `spec/01-primitives.md` |
+| touching blocks, state, consensus, censorship | `spec/02-chain.md` |
+| touching stakes, odds, rake, ratings, cheat detection | `spec/06-economics.md` |
+| touching servers, matchmaking, trust, jurisdiction | `spec/07-servers.md` |
+| touching privacy, stealth addresses, ZK | `spec/08-privacy.md` |
+| **touching style, identity, or why any of this matters** | **`spec/10-personality.md`** |
+| touching tokens, wagers, style markets, novelty claims | `spec/11-resources.md` |
+| about to make a design decision | `spec/09-open-questions.md` — check it is not already decided |
+| planning work or an episode | `docs/atlas.md` |
+| wondering why something is written oddly | `docs/build-log.md` |
+
+## Where the surprises are
+
+Read `docs/build-log.md` before debugging anything in `bc-hash` or `bc-sig`.
+Two entries in particular:
+
+- A hash that **passed every official FIPS vector** and still silently discarded
+  buffered bytes across `update()` calls. Official vectors are single-call; the
+  bug lived between calls.
+- A field-arithmetic borrow bug that fired only on the doubled identity element,
+  and whose wrong answers were **still valid points on the curve** — so the
+  obvious sanity check passed. RFC 8032 caught it; nothing else did.
+
+Both are why `G1` exists.
+
+---
+
+## State
+
+| Episode | Crate | Oracle | Status |
+|---|---|---|---|
+| 01 hashing | `bc-hash` | FIPS 180-4 | ✅ |
+| 02 signatures | `bc-sig` | RFC 8032 | ✅ |
+| 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
+| 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
+| 05–06 consensus | — | — | not started |
+| 07 state channel | — | — | not started ← **the intellectual core** |
+
+44 tests, clippy and fmt clean. CI runs the suite plus the slow exact perft
+runs.
+
+```sh
+cargo test --workspace                          # fast suite
+cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
+cargo run --release --bin perft -- 6
+```
+
+**`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
+time; it exists to be read. The node links `ed25519-dalek`.
+
+## Next
+
+The channel (episode 07) does not depend on consensus — it needs only something
+that can hold an escrow. Built against a stub ledger it reaches a real wagered
+game in weeks rather than months, and consensus slides underneath later without
+touching it.
+
+**Milestone E is the project: *you can win against an opponent who
+disconnects*.** Everything before it is prerequisites; everything after is
+expansion. When unsure what to work on, ask which task most shortens the path to
+that sentence.
+
+---
+
+## Vocabulary
+
+- **ply** — one move by one player. The sequence number. Monotonic.
+- **certified state** — a game state signed by *both* players. The unit of
+  evidence.
+- **Δ** — the challenge window, in blocks.
+- **clock dilation** — the map from game-clock milliseconds to an on-chain block
+  budget, preserving the ratio so stalling cannot buy time back (`spec/05`).
+- **π_you / π_pop** — your policy, and the population's. Divergence between them
+  is identity (`spec/10`).
+- **style** — a model of `π_you`. Publishable under `E2`.
+- **novelty** — a `(position, move)` pair in no prior public game. Claimable by
+  proof-of-play plus a Merkle **non-inclusion** proof (`spec/11` L3).
+- **GAME / STAKE / STYLE / CLAIM** — the four resource layers (`spec/11`):
+  consumable, fungible, informational, positional.

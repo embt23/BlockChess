@@ -246,3 +246,75 @@ separate.
 oracle for the compressed version when it lands. Building the obvious thing
 first and then optimising against it as a reference is the same pattern used for
 proof-of-work before BFT (D4).
+
+---
+
+# Act II decisions — the personality layer
+
+Arising from `10-personality.md` and `11-resources.md`. None are urgent; all
+should be settled before any code in this area is written.
+
+## D16 — What makes a GAME token scarce?
+
+▶ **Prepaid blockspace.** A game costs exactly two on-chain transactions, so one
+GAME is prepaid gas for exactly one game, burned on open. The decisive argument
+is sponsorship: a teaching server must be able to give someone a hundred games
+without giving them anything of value, and a separate consumable is the only
+clean way. Alternatives and their costs are in `11-resources.md` L0.
+
+Subject to `E1` regardless of choice: GAME is never minted by playing.
+
+## D17 — What is wagered?
+
+▶ **A separate play-token with no cash value for v1, with the channel built
+asset-agnostic underneath**, so moving to real value later is configuration
+rather than a rewrite.
+
+Worth prototyping on one server: wagering GAME itself, so that **your winnings
+are more games**. Self-contained, no external value, no regulatory surface, and
+the loop is genuinely elegant — a strong player accumulates play-time. Needs a
+faucet or weak players get locked out.
+
+## D18 — How is style published?
+
+▶ **Fingerprint first, model later.** Summary statistics — opening repertoire
+distribution, aggression index, time-per-complexity curve, material-versus-
+initiative bias — are cheap, barely leaky, and probably carry most of the useful
+signal for matchmaking and preparation.
+
+The full policy model needs the three-part stack (provenance by signature and
+ZK, privacy by differential privacy, confidentiality by FHE-gated queries) set
+out in `11-resources.md` L2. Note that **differential privacy, not homomorphic
+encryption, is the tool for the stated problem** — the question is what the
+output reveals, not who may compute on it. FHE's real home is selling queries
+without selling weights.
+
+## D19 — Is there a claim layer at all?
+
+▶ **Yes, as attribution — never exclusion** (`E3`). A novelty is a
+`(position, move)` pair in no prior public game; claiming it requires a
+countersigned game record plus a Merkle non-inclusion proof against an earlier
+registry root.
+
+Both spam defences are structural rather than administrative: a claim costs a
+real game against a real opponent, and claims earn nothing unless other games
+play into them. Citation economy, not land registry.
+
+Open sub-question: do novelties bear royalties when played into
+(`11-resources.md` L3 option D), or is credit the whole reward? Credit is
+simpler and probably sufficient; royalties need the rest working first.
+
+## D20 — Measure the divergence before building on it ▶ **do this first**
+
+`10-personality.md` §7 estimates `D(π_you ‖ π_pop) ≈ 0.02–0.10` nats per move
+and concludes a game emits roughly four orders of magnitude more information
+about the players than about the result. The conclusion is robust to large
+errors in that estimate, but the estimate is still an estimate.
+
+Measuring it is cheap: fit a population move model on a public game corpus, fit
+per-player models on heavy users, and compute the cross-entropy difference. It
+is a weekend, it needs no protocol, and it either grounds the entire Act II
+thesis in a real number or kills it early.
+
+**This is the highest-value-per-hour task in the project and it can be done
+today, independently of everything else.**

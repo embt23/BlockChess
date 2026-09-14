@@ -45,6 +45,24 @@ Each episode below is: **an attack**, then **the primitive that kills it**, then
 Eighteen episodes. Each is genuinely a different region of the map, and the
 sequence has no gaps — you never need a concept you have not already built.
 
+### Act II — making the *player* an object
+
+Act I makes the game trustless. Act II makes the personality tradeable. The
+argument for why this is where the value actually is: `spec/10-personality.md`.
+
+| # | The attack / question | The primitive | The mathematics | You build |
+|---|---|---|---|---|
+| 19 | "What even *is* a playing style?" | policy models | `π: Position → Distribution`; cross-entropy; Maia and human-move prediction | a population model `π_pop` |
+| 20 | "Prove that's really how you play" | compression as measurement | `D(π_you ‖ π_pop)` = bits saved by being compressed as yourself; arithmetic coding | the divergence measurement (D20) |
+| 21 | "Your ranking is a lie" | non-transitivity | matchup matrices; transitive vs cyclic decomposition; why Elo is rank-one and cannot express a cycle | a style vector, not a scalar |
+| 22 | "I'll sell you my opponents too" | differential privacy | ε-indistinguishability; membership inference; DP-SGD; why DP and not FHE | a publishable fingerprint |
+| 23 | "Who played it first?" | priority without property | timestamped commitment; **non-inclusion proofs** (episode 04, reused); proof-of-play | the novelty registry |
+| 24 | "You sold it, now I'll resell it" | selling use without ownership | homomorphic evaluation; MPC; why information markets are structurally broken | FHE-gated style queries |
+
+Episode 20 is the one that can be filmed **now**, before any of the protocol
+exists — it needs only a public game corpus. It is also the episode that decides
+whether Act II is real.
+
 ---
 
 ## Bridges from electrical engineering
