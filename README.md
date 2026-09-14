@@ -14,18 +14,21 @@ hold your keys and, in the default configuration, never hold your money.
 
 ## Status
 
-Episodes 01–04 and 07 implemented and green. `perft(6) = 119,060,324` exact.
+Episodes 01–04, 07 and 08 implemented and green. `perft(6) = 119,060,324` exact.
 
-**Two people can play a whole wagered game and settle it.** Milestone D. The
-chain sees two transactions for 33 plies:
+**You can win a wagered game against an opponent who disconnects.** Milestone
+E — the sentence the whole project was aimed at. No cooperation from the
+loser, no trusted third party, and the chain is never asked who was right,
+only whether anybody moved.
 
 ```sh
 cargo run --release --bin play      # Morphy's Opera Game, signed every ply
+cargo run --release --bin dispute   # …and one won against someone who left
 ```
 
-What it does not yet survive is an opponent who stops answering. That is
-episode 08, and it is the difference between a convenient system and a
-trustless one.
+The chain sees two transactions for a 33-ply game. It sees a few more when
+someone vanishes, and then the game simply continues on-chain under the same
+rules, slowly, until one side stops moving and forfeits.
 
 | Crate | Episode | What it is | Oracle |
 |---|---|---|---|
@@ -34,6 +37,7 @@ trustless one.
 | [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft, the canonical 26-byte packed position, terminal conditions | published perft counts, FEN, published mates |
 | [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (`tx_root`) and a sparse Merkle tree (`state_root`) with proofs of absence | Certificate Transparency vectors |
 | [`bc-channel`](crates/bc-channel) | 07 | The game channel — signed states, the hash chain, Fischer clocks, cooperative settlement, and a stub escrow | a published game: Morphy 1858, mate on move 17 |
+| [`bc-channel::dispute`](crates/bc-channel/src/dispute) | 08 | The adjudicator — clock dilation, higher-ply-wins, optimistic mate claims and one-move refutation | the worked dilation table in `spec/05` |
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been
@@ -66,7 +70,7 @@ Bugs found along the way, and why they hid, are in
 | [`spec/02-chain.md`](spec/02-chain.md) | Accounts, sparse Merkle state, blocks, consensus, censorship |
 | [`spec/03-position.md`](spec/03-position.md) | Board encoding, move generation, Zobrist, terminal conditions |
 | [`spec/04-channel.md`](spec/04-channel.md) | The game channel — the heart of the protocol, and `crates/bc-channel` |
-| [`spec/05-adjudication.md`](spec/05-adjudication.md) | Disputes, clock dilation, fraud proofs |
+| [`spec/05-adjudication.md`](spec/05-adjudication.md) | Disputes, clock dilation, fraud proofs — and `crates/bc-channel/src/dispute` |
 | [`spec/06-economics.md`](spec/06-economics.md) | Handicap odds, rake, Kelly, cheat detection |
 | [`spec/07-servers.md`](spec/07-servers.md) | The server layer and its trust ladder |
 | [`spec/08-privacy.md`](spec/08-privacy.md) | The privacy ladder |
