@@ -80,9 +80,15 @@ Violating one of these is a bug, not a design choice. Cite them by tag.
   predicts your opponents'. (Reason is economic, not just privacy: it stops
   strong players being farmed for data.)
 - `E3` Claims are **attribution, never exclusion**, and every claim costs a real
-  countersigned game.
+  countersigned game. *Signed by both voices 2026-09-14 (`spec/09` D19). Until
+  then this invariant asserted one side of an openly DISPUTED question — see the
+  note on that entry in `docs/duality.md`, which is worth reading before adding
+  any invariant.*
 
 **Engineering**
+- `G0` **The person filming types the code the episode is about.** Evan writes
+  the episode's subject — the arithmetic, the rule, the check. Claude writes
+  plumbing, tests, serialisation and oracle harnesses. `spec/09` D26.
 - `G1` **Every layer is verified against an oracle someone else published.**
   FIPS vectors, RFC 8032, perft counts, CT vectors. A reference you wrote
   yourself is not an oracle — it is a second implementation with its own bugs.
@@ -185,6 +191,29 @@ distance to Milestone E, and it needs: `DisputeOpen`, the Δ window counted in
 blocks (`P4`), clock dilation (`spec/05`), and the optimistic mate claim with
 its one-move refutation (`P3`). The refutation half already exists —
 `Position::refutes_terminal_claim`.
+
+Five things about episode 08 were decided on 2026-09-14 and are **not**
+re-litigable from the code (`spec/09` D21–D25):
+
+1. **PoW first.** D4's throwaway week is spent *before* the adjudicator, not
+   after. Milestone E says *"you can win against an opponent who disconnects"*
+   — against a stub height counter that sentence is simulated, not earned.
+2. **Δ and τ come from a time-control class table**, not from free-form
+   `GameTerms` integers. A band wide enough for bullet and correspondence both
+   is wide enough to hold a hostile value for either.
+3. **The oracle is split.** Terminal-claim predicates are differential-tested
+   against a published external rules implementation; the dispute state machine
+   is exhaustively model-checked. Neither half is called an oracle where it is
+   not one.
+4. **`bc-adjudicator` is a new `no_std` crate** depending only on `bc-chess`,
+   linked by the node *and* by `bc-channel` — so a client can run a whole
+   dispute locally before spending gas.
+5. **`adjudicator_ver` is an integer on the wire and a ruleset hash in state.**
+
+**Before or alongside it: D20.** Settled as *do it now, minimally* — but the
+kill threshold goes into `spec/09` **before** the measurement runs, or the
+result cannot falsify anything. The proposed threshold is there and is the one
+remaining item awaiting Evan's signature.
 
 **Milestone E is the project: *you can win against an opponent who
 disconnects*.** Everything before it is prerequisites; everything after is

@@ -1,0 +1,29 @@
+# Licence for the specification and documentation
+
+Copyright 2026 The BlockChess Authors.
+
+The prose, diagrams and tables in this repository -- everything under
+`spec/` and `docs/`, together with `README.md` and `CLAUDE.md` -- are
+licensed under the
+
+**Creative Commons Attribution 4.0 International Licence (CC BY 4.0)**
+
+<https://creativecommons.org/licenses/by/4.0/>
+
+You are free to share and adapt this material for any purpose, including
+commercially, provided you give appropriate credit, link to the licence,
+and indicate if changes were made.
+
+Source code is **not** covered by this licence. All code in `crates/` is
+licensed under the Apache License, Version 2.0 -- see `LICENSE`.
+
+---
+
+## Why attribution and not share-alike
+
+`spec/09-open-questions.md` D13 originally proposed CC BY-SA 4.0. It was
+changed to CC BY 4.0 for one reason specific to this project: D14 records
+that **the spec files are the scripts for the series**, so the most
+important works derived from this prose are videos. Share-alike would
+place an unresolved copyleft question over them. Attribution gets the
+credit requirement with none of that exposure.
