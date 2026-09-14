@@ -24,6 +24,7 @@ only whether anybody moved.
 ```sh
 cargo run --release --bin play      # Morphy's Opera Game, signed every ply
 cargo run --release --bin dispute   # …and one won against someone who left
+cargo run --release -p bc-style --bin measure -- <pgn-dir>   # D20, on humans
 ```
 
 The chain sees two transactions for a 33-ply game. It sees a few more when
@@ -39,6 +40,14 @@ rules, slowly, until one side stops moving and forfeits.
 | [`bc-channel`](crates/bc-channel) | 07 | The game channel — signed states, the hash chain, Fischer clocks, cooperative settlement, and a stub escrow | a published game: Morphy 1858, mate on move 17 |
 | [`bc-channel::dispute`](crates/bc-channel/src/dispute) | 08 | The adjudicator — clock dilation, higher-ply-wins, optimistic mate claims and one-move refutation | the worked dilation table in `spec/05` |
 | [`bc-style`](crates/bc-style) | 20 | Measuring `D(π_you ‖ π_pop)` — SAN/PGN, a log-linear policy, and per-player adaptation | synthetic players of known divergence |
+
+**D20 has a number: [`docs/d20-result.md`](docs/d20-result.md).** Over 150
+masters, `D(π_you ‖ π_pop)` measures **0.013 nats/move** — about a quarter of
+what `spec/10` assumed — which the pre-registered threshold in `spec/09`
+scores **AMBER**: Act II survives, its timescales do not. Identification runs
+at **70× chance** from held-out games, which is the result that matters, since
+picking one player out of 150 is what a cheat detector and a style asset both
+do.
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been

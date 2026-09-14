@@ -325,3 +325,55 @@ parser and `bc-chess` against each other in one assertion.
 formats where it degrades quietly. Had SAN been parsed generatively — render
 each legal move to a string and compare — the same bug would have produced a
 plausible but wrong move sequence and quietly poisoned a corpus.
+
+---
+
+## 12 — The adjudicator computes the quantifier it exists to avoid
+
+Found while writing `docs/episode-08-gap.md`, by reading episode 08's code
+against `P3` rather than against its own tests. Not a wrong answer — a wrong
+cost, which is the kind that passes every test you thought to write.
+
+**The invariant.** `P3`: *never verify checkmate; assert it and allow
+refutation by a single move.* The whole of `spec/05`'s cost argument rests on
+it — claiming mate is ∀ over ~218 moves, refuting it is ∃ over one, and the
+expensive side is the one that is usually true and therefore never checked.
+
+**What shipped.** `Dispute::apply_move` calls `settled_on_the_board`, which
+calls `Position::outcome()`, which calls `no_legal_moves()`, which calls
+`generate_legal()`. So **every on-chain move generates the full legal move
+set** to notice a mate that has appeared on the board.
+
+**Why it looked right.** It is right, in the sense of returning correct
+answers, and it is genuinely convenient: a game that ends by mate during a
+dispute settles immediately rather than waiting for someone to claim it. The
+test `the_game_continues_on_chain_under_the_same_rules` asserts exactly that
+and passes. Nothing about the behaviour is wrong.
+
+The mistake was reasoning about `P3` as a rule concerning *claims* — never
+accept "this is mate" without allowing refutation — when it is a rule
+concerning *computation*. The client-side code has the same call and there it
+is correct, because `docs/duality.md`'s "Where the expensive check belongs"
+says the expensive check belongs where it is cheap. The adjudicator is the
+other side of that entry, and the same line of code changes meaning when it
+crosses the boundary.
+
+**What it costs.** On a real chain, one dispute move is either one check test
+or two hundred and eighteen move generations plus two hundred and eighteen
+check tests. Per move, for every disputed game. `P3` exists because somebody
+pays gas for that.
+
+**The fix is not local.** Mate during a dispute should be reached the way
+every other terminal condition is — through `DisputeClaimTerminal`, which is
+already optimistic and already refutable. That means `apply_move` returns
+`Continues` unconditionally and a player who has just delivered mate claims
+it. It belongs with D24's extraction of `bc-adjudicator`, where a `no_std`
+crate boundary makes "this is consensus code" a property of the compiler
+rather than of the reader's memory.
+
+**Lesson.** An invariant stated as a rule about *what you may believe* will be
+read that way, and this one is a rule about *what you may spend*. Both
+readings license the same behaviour at the client and different behaviour at
+the chain, and the code that differs sits in two crates that currently share
+a module. Boundaries that exist only in prose do not enforce anything — which
+is the argument for D24 restated as a bug.

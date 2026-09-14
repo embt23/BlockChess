@@ -163,7 +163,7 @@ silently.
 | 02 signatures | `bc-sig` | RFC 8032 | ✅ |
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
-| D20 style estimator | `bc-style` | synthetic ground truth | ✅ calibrated
+| D20 style estimator | `bc-style` | synthetic ground truth | ✅ **measured: AMBER** — `docs/d20-result.md` |
 | 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
 | 08 adjudication | `bc-channel::dispute` | spec/05 worked table | ⚠️ **Milestone E demonstrated, not earned** — against a stub height counter, not a chain (D21). See `docs/episode-08-gap.md` |
 | 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
@@ -215,9 +215,13 @@ something computed rather than argued.
 
 Three directions, in the order I would take them:
 
-1. **D20** (`spec/09`), the divergence measurement. Needs no protocol, can be
-   done today, and either grounds Act II in a real number or kills it. The
-   spec calls it the highest value per hour in the project and it still is.
+1. ~~**D20**~~ — **done, and the answer is AMBER.** `D = 0.013` nats/move over
+   150 masters against the 0.02–0.10 `spec/10` assumed, so ~1.5 bits of
+   identity per game rather than ~6. Act II survives because the claim that
+   mattered was identity against *exploitable* result (still 5,000×); what
+   died is identity against the raw result, which is now a tie. Every
+   timescale downstream of `spec/10` §7 is wrong by ~4× and needs rewriting —
+   that rewrite is unclaimed work. `docs/d20-result.md`.
 2. **Episodes 05–06, consensus.** The adjudicator runs against
    `bc-channel::ledger`, which is a `BTreeMap` with no blocks, no consensus
    and no censorship resistance. Everything above it is written not to care,

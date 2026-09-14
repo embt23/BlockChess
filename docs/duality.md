@@ -72,6 +72,7 @@ diligence.
 | **Analysis (first)** | Near-even wagering is an almost-zero-capacity channel. At +7 Elo you need ~3,500 games to double a bankroll. Concluded: the interesting games are the mismatched ones. A dead end dressed as a result. |
 | **Intuition** | The value is not in who won. It is in the styles — in what people trade about how they play. |
 | **Analysis (after)** | Correct, and quantifiable: a game emits ~6 bits about who you are against ~0.0003 exploitable bits about who won. Four orders of magnitude. |
+| **Measured (2026-09-14)** | ~1.5 bits, not ~6 — the estimate behind it was about 4× high (`docs/d20-result.md`). The intuition still holds and by a wide margin: 1.5 against 0.0003 is a factor of 5,000. What dies is a *different* sentence the analysis had been writing, that identity dwarfs the raw win/draw/loss result — at 1.5 against 1.4 bits, it ties it. The claim that survives is the one about **exploitable** bits, which was also the one that mattered. |
 | **Status** | **CERTIFIED.** Recorded deliberately: *the intuition resolved a problem the analysis had created and could not solve from inside itself.* `spec/10` §7. |
 
 ### Why style exists at all

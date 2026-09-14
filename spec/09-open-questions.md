@@ -473,8 +473,16 @@ one: `D̂` (raw), `D̂ / 0.60` (the point estimate of true `D`), and
 | True `D(π_you ‖ π_pop)` | Raw `D̂` at 60% | Detection time | Verdict |
 |---|---|---|---|
 | ≥ 0.02 nats/move | ≥ 0.012 | ~9 games | thesis holds as written |
-| 0.005 – 0.02 | 0.003 – 0.012 | ~35–140 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
-| < 0.005 nats/move | < 0.003 | > 140 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
+| 0.005 – 0.02 | 0.003 – 0.012 | ~9–36 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
+| < 0.005 nats/move | < 0.003 | > 36 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
+
+*(The detection-time column read "~35–140 games" and "> 140 games" in the
+first draft. Those were computed for the wrong endpoints: at α = 0.001,
+`ln(1000)/D` over ~38 of a player's own moves per game gives 9 games at
+D = 0.02 and 36 at D = 0.005, and the 140 figure corresponds to D = 0.0013 —
+which is well inside the dead band rather than at its edge. The verdict cuts
+are on nats/move and are unaffected, but the practical reading changes: the
+amber band is "a detector needs tens of games", not "hundreds".)*
 
 Rationale for the cut at 0.005 true: it is 4× below the low end of the existing
 0.02–0.10 estimate, so it cannot be tripped by the estimate merely being
@@ -643,18 +651,52 @@ risks stalling on borrow-checker fights in the exact month the project needs
 momentum), and the status quo of Claude writing everything (fastest, and the
 duality entry's objection stands).
 
-### Status
+### Result — **AMBER** (2026-09-14)
+
+Measured, against the threshold above, after it was signed. Full write-up in
+[`docs/d20-result.md`](../docs/d20-result.md).
+
+| | 150 players |
+|---|---|
+| `D̂` raw, mean | 0.0079 nats/move |
+| `D` corrected | **0.0132 nats/move** |
+| recovery interval | [0.0081, 0.0343] |
+| identification | **73/150 = 48.7%**, chance 0.7% |
+
+**Act II survives; its timescales do not.** `spec/10` §7 and `spec/13` were
+written against roughly twice this figure and need rewriting. A cheat
+detector at α = 0.001 needs ~14 games, not the ~9 the estimate implied.
+
+Three reasons the figure is a lower bound, all pushing the same way: the
+corpus is masters rather than a mixed field (flagged before the run), the
+806-feature model cannot express everything a policy does, and — the one that
+is a limitation of the calibration itself — **the 0.60 recovery factor was
+measured against synthetic players drawn from the estimator's own hypothesis
+class**, so it excludes model misspecification by construction and is
+therefore an upper bound on recovery for real humans. 0.0132 is a lower bound
+on a lower bound.
+
+The strong result is identification: **70× chance** from held-out games using
+only `δ`. That is the operation both Act II products actually perform, and it
+reproduces McIlroy-Young et al. (KDD 2022). Identification being excellent
+while per-move divergence is middling is not a contradiction — identification
+is comparative and needs only distinctiveness, divergence is absolute and is
+what sets detection time.
+
+### How it was built
 
 **The instrument is built and calibrated** — `crates/bc-style`,
 `docs/d20-calibration.md`. It recovers a mean 60% of true divergence, reports
 +0.0006 nats/move for a chimera (a dataset with no player behind it), and
 identifies players from held-out games at 45% against 10% chance.
 
-**The corpus is resolved.** `lichess.org` and `database.lichess.org` are both
-refused by this session's egress policy (403 at the proxy), but
+**The corpus.** `lichess.org` and `database.lichess.org` are both refused by
+this session's egress policy (403 at the proxy), but
 `raw.githubusercontent.com` is not, and `rozim/ChessData`'s `mega2600_part_*`
 files are 138,348 games at 2600+ with **349 players holding ≥200 games** —
-which is exactly the density the calibration says is required.
+exactly the density the calibration requires. 138,188 parsed, **zero
+unparseable**, which incidentally validates the SAN reader and `bc-chess`
+against each other across a century of master play.
 
 One consequence of that substitution is worth stating before any number
 arrives, because it cuts *against* the thesis and so should not be discovered
