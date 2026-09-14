@@ -74,12 +74,47 @@ Bugs found along the way, and why they hid, are in
 | [`spec/06-economics.md`](spec/06-economics.md) | Handicap odds, rake, Kelly, cheat detection |
 | [`spec/07-servers.md`](spec/07-servers.md) | The server layer and its trust ladder |
 | [`spec/08-privacy.md`](spec/08-privacy.md) | The privacy ladder |
-| [`spec/09-open-questions.md`](spec/09-open-questions.md) | Decisions not yet made |
+| [`spec/09-open-questions.md`](spec/09-open-questions.md) | Every decision that forks the project, and which of them are settled |
 | [`spec/10-personality.md`](spec/10-personality.md) | **The thesis.** Why the player, not the game, is the asset |
 | [`spec/11-resources.md`](spec/11-resources.md) | The four transactable layers: GAME, STAKE, STYLE, CLAIM |
 | [`docs/atlas.md`](docs/atlas.md) | The knowledge map — every primitive, and the attack that motivates it |
 | [`docs/build-log.md`](docs/build-log.md) | Bugs found while building, and what each one teaches |
 
+## Governance
+
+There is one thing worth stating plainly rather than leaving to be discovered.
+
+`GameTerms.adjudicator_ver` pins each channel to a version of the chess rules,
+and **every version is kept forever**, so an upgrade is purely additive: a
+channel opened under version 3 is adjudicated by version 3 no matter what is
+registered later. Nobody can reach into an open channel, change who won a
+finished game, or strand money by shipping an upgrade.
+
+Registering a *new* version is currently the privilege of **one key, held by
+Evan ([@embt23](https://github.com/embt23))**, with effect delayed by a timelock
+counted in blocks so that anyone who objects can close their channels before a
+change lands.
+
+This is a benevolent dictatorship and it is described as one. The alternative
+available today — a two-thirds validator vote over a small, personally recruited
+validator set — is a mechanism that would describe the same few people while
+sounding like a constitution.
+
+The condition for handing the key to validator control is *(to be filled in
+before the first public testnet: a minimum count of independently operated
+validators, and a chain carrying something other than play tokens)*.
+
+Reasoning and alternatives: [`spec/09-open-questions.md`](spec/09-open-questions.md) D11, D25.
+
 ## Licence
 
-TBD — intended to be permissive and open source.
+Two licences, because the code and the prose do different jobs.
+
+- **Code** — everything in `crates/` — is [Apache License 2.0](LICENSE).
+  Permissive, and it carries the explicit patent grant MIT lacks.
+- **Prose** — everything in `spec/` and `docs/`, and the Markdown at the root —
+  is [CC BY 4.0](LICENSE-DOCS). Attribution, not share-alike: the spec files are
+  the scripts for the video series, and share-alike would hang an unresolved
+  copyleft question over works derived from them.
+
+See [`NOTICE`](NOTICE), and [`spec/09-open-questions.md`](spec/09-open-questions.md) D13 for why AGPL was considered and rejected.

@@ -80,9 +80,15 @@ Violating one of these is a bug, not a design choice. Cite them by tag.
   predicts your opponents'. (Reason is economic, not just privacy: it stops
   strong players being farmed for data.)
 - `E3` Claims are **attribution, never exclusion**, and every claim costs a real
-  countersigned game.
+  countersigned game. *Signed by both voices 2026-09-14 (`spec/09` D19). Until
+  then this invariant asserted one side of an openly DISPUTED question — see the
+  note on that entry in `docs/duality.md`, which is worth reading before adding
+  any invariant.*
 
 **Engineering**
+- `G0` **The person filming types the code the episode is about.** Evan writes
+  the episode's subject — the arithmetic, the rule, the check. Claude writes
+  plumbing, tests, serialisation and oracle harnesses. `spec/09` D26.
 - `G1` **Every layer is verified against an oracle someone else published.**
   FIPS vectors, RFC 8032, perft counts, CT vectors. A reference you wrote
   yourself is not an oracle — it is a second implementation with its own bugs.
@@ -156,7 +162,7 @@ silently.
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
 | 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
-| 08 adjudication | `bc-channel::dispute` | spec/05 worked table | ✅ **Milestone E** — you can win against an opponent who disconnects |
+| 08 adjudication | `bc-channel::dispute` | spec/05 worked table | ⚠️ **Milestone E demonstrated, not earned** — against a stub height counter, not a chain (D21). See `docs/episode-08-gap.md` |
 | 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
 | 10 forced inclusion | — | — | not started — see **Next**, the nearest real hole |
 
@@ -184,6 +190,25 @@ underneath later without the channel noticing.
 against an opponent who stopped answering — no cooperation, no third party.
 That sentence was the project; what follows is expansion, and for the first
 time the question "what next" has more than one defensible answer.
+
+**But five decisions arrived after it shipped, and the shipped code does not
+yet meet four of them** (`spec/09` D21–D25, settled 2026-09-14). They are not
+re-litigable from the code; the code is what has to move. The gap is written
+out in [`docs/episode-08-gap.md`](docs/episode-08-gap.md) — read it before
+touching `bc-channel::dispute`.
+
+| Decided | Shipped |
+|---|---|
+| **D21** PoW first, so Milestone E is earned rather than simulated | a stub `BTreeMap` height counter — so the claim above is **demonstrated, not earned** |
+| **D22** Δ and τ from a time-control class table | free-form `delta_blocks`/`budget_tau_ms` in `GameTerms` — and D22 says this one cannot be retrofitted after first testnet |
+| **D23** split oracle: differential-test the terminal predicates, model-check the state machine | the spec's worked table and hand-chosen positions |
+| **D24** `bc-adjudicator`, a `no_std` crate depending only on `bc-chess` | inside `bc-channel::dispute` + `ledger::adjudicate` |
+| **D25** `adjudicator_ver` = integer on the wire, ruleset hash in state | integer only |
+
+D22 and D24 are the load-bearing ones: D22 because `GameTerms` is what signed
+channels commit to, D24 because a client that links the adjudicator can run a
+dispute locally before spending gas, which turns the griefing analysis into
+something computed rather than argued.
 
 Three directions, in the order I would take them:
 

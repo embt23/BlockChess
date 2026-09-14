@@ -106,8 +106,10 @@ diligence.
 | **Intuition** | The first person to play in a certain area of chess should be able to own that area. |
 | **Analysis** | Ownership means exclusion. Exclusion is unenforceable — you cannot stop anyone playing 1.e4 — and invites land-grabbing by bots that never play a game. Priority and attribution *are* enforceable, because timestamped commitment is the one thing a chain is unambiguously for, and they are positive-sum. |
 | **Where they agree** | That being first to see something should matter, and should be provable. |
-| **Where they do not** | Whether the reward is exclusion or credit. |
-| **Status** | **DISPUTED.** The analysis pushed; the intuition has not answered. `spec/11` L3 records the attribution design as a *proposal*, not a decision. Do not treat D19 as settled. |
+| **Where they did not** | Whether the reward is exclusion or credit. |
+| **Intuition, signing (2026-09-14)** | Credit. Attribution is the whole reward, everywhere in the system — not only in consensus. Chosen over two alternatives that would have preserved ownership in some enforceable form: exclusion permitted at the server layer while consensus records only priority, and a compulsory licence diverting basis points from wagered games into claimed lines. Neither was taken. |
+| **Status** | **CERTIFIED.** Settled by signature, not by argument — which is the only thing that could have settled it. `spec/09` D19. |
+| **Note** | Recorded because of *how* it nearly went wrong. While this entry stood DISPUTED, `E3` — "claims are attribution, never exclusion" — had already been promoted to an **invariant** in `CLAUDE.md`, in a list whose header says violating one is a bug rather than a design choice. One side of an openly disputed question was being enforced as law while the other side's author had not spoken. That is this file's stated failure mode, *the analytic voice writes the documents*, occurring in the live repository rather than in the abstract. The outcome happens to match what the analysis wanted; that is not what makes it legitimate. The signature is. |
 
 ### Keeping a style private
 
@@ -130,11 +132,11 @@ diligence.
 
 | | |
 |---|---|
-| **Intuition** *(reconstructed — see status)* | Two boards with the same pieces, the same side to move and the same things available are the same position. Every player who has ever claimed a repetition believes this, and not one of them was counting halfmoves. |
+| **Intuition** | Two boards with the same pieces, the same side to move and the same things available are the same position. Every player who has ever claimed a repetition believes this, and not one of them was counting halfmoves. |
 | **Analysis (first)** | A position is what `apply()` needs, so it is the FEN fields minus the move number — including the halfmove clock, which the fifty-move rule reads. One packed form, one hash, `pos_hash`. Repetition compares it. |
 | **Analysis (after)** | Wrong, and wrong in the characteristic direction. Two occurrences of a position *always* differ in the halfmove clock, because plies happened in between — which is what a repetition is. The comparison could never fire. Position identity and repetition identity are different relations and FIDE's is the coarser one. Two tags over the same bytes. |
-| **Status** | **HALF-SIGNED, and recorded as evidence for this file's own thesis.** The failure was **premature rigour**: the encoding was *more precise than the thing it modelled*, and the surplus precision was the bug. It looked like diligence — a position hash that commits to everything is obviously better than one that does not — right up to the point where the behaviour was tested. `docs/build-log.md` §05, `spec/03`. |
-| **Note** | The intuition column here is a reconstruction of the ordinary reading, not Evan's words. He has not signed it. If it misstates what the informal view actually is, replace it rather than leaving a plausible sentence standing in for a real one. |
+| **Status** | **CERTIFIED (2026-09-14), and recorded as evidence for this file's own thesis.** The failure was **premature rigour**: the encoding was *more precise than the thing it modelled*, and the surplus precision was the bug. It looked like diligence — a position hash that commits to everything is obviously better than one that does not — right up to the point where the behaviour was tested. `docs/build-log.md` §05, `spec/03`. |
+| **Note** | The intuition column stood for a time as a *reconstruction* — the ordinary reading written out by the analysis, explicitly marked as not Evan's words and not signed. It has now been read and signed as an accurate statement of the informal view, so the marker is gone. It mattered that it carried one: an entry whose whole subject is a plausible formalism substituting for the truth would have been a poor place to leave a plausible sentence substituting for a real view. |
 
 ### Where the expensive check belongs
 
@@ -150,8 +152,9 @@ diligence.
 | | |
 |---|---|
 | **Analysis** | Asked whether to keep writing the implementation or to hand over scaffolds and failing tests, on the grounds that a series about *learning* this material may be poorly served by code its author did not type. |
-| **Intuition** | Has not answered. |
-| **Status** | **HALF-SIGNED.** Open. |
+| **Intuition (2026-09-14)** | Split it by layer. Evan writes the code that *is* the episode's subject — the dilation arithmetic, the refutation check, the budget rules. Claude writes plumbing, tests, serialisation and the oracle harness. The part that gets filmed is typed by the person filming it. |
+| **Resolution** | The analysis had framed it as all-or-nothing and the answer was neither. Both failure modes it was weighing — a series whose author did not write the hard part, and a project that stalls in borrow-checker fights during the month it most needs momentum — are avoided by cutting along the line between what an episode *is about* and what it merely requires. |
+| **Status** | **AMENDED.** The question was real; the binary it was posed as was not. `spec/09` D26. |
 
 ---
 
