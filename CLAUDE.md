@@ -112,6 +112,7 @@ Task-indexed. Read the row, not the whole tree.
 | touching tokens, wagers, style markets, novelty claims | `spec/11-resources.md` |
 | about to make a design decision | `spec/09-open-questions.md` — check it is not already decided |
 | planning work or an episode | `docs/atlas.md` |
+| touching the channel implementation, clocks, or settlement | `crates/bc-channel` — start at its `lib.rs` |
 | wondering why something is written oddly | `docs/build-log.md` |
 | about to treat a design question as settled | `docs/duality.md` — check it is not HALF-SIGNED or DISPUTED |
 
@@ -155,15 +156,17 @@ silently.
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
 | 05–06 consensus | — | — | not started |
-| 07 state channel | — | — | not started ← **the intellectual core** |
+| 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
+| 08 adjudication | — | — | not started ← **the next thing that matters** |
 
-44 tests, clippy and fmt clean. CI runs the suite plus the slow exact perft
-runs.
+109 tests, clippy and fmt clean. CI runs the suite, the slow exact perft runs,
+and the full-game demo.
 
 ```sh
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
 cargo run --release --bin perft -- 6
+cargo run --release --bin play                  # a whole wagered game
 ```
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
@@ -171,15 +174,26 @@ time; it exists to be read. The node links `ed25519-dalek`.
 
 ## Next
 
-The channel (episode 07) does not depend on consensus — it needs only something
-that can hold an escrow. Built against a stub ledger it reaches a real wagered
-game in weeks rather than months, and consensus slides underneath later without
-touching it.
+Episode 07 is done and it was built against a stub ledger (`bc-channel::ledger`)
+rather than waiting for consensus, exactly as planned: consensus slides
+underneath later without the channel noticing.
+
+**Episode 08, the adjudicator.** Everything in `bc-channel` assumes both
+players keep answering. When one stops, the honest player holds a certified
+state and nowhere to take it. Giving it somewhere to go is the whole remaining
+distance to Milestone E, and it needs: `DisputeOpen`, the Δ window counted in
+blocks (`P4`), clock dilation (`spec/05`), and the optimistic mate claim with
+its one-move refutation (`P3`). The refutation half already exists —
+`Position::refutes_terminal_claim`.
 
 **Milestone E is the project: *you can win against an opponent who
 disconnects*.** Everything before it is prerequisites; everything after is
 expansion. When unsure what to work on, ask which task most shortens the path to
 that sentence.
+
+Note the one task that is *not* on this path and is still worth doing first:
+**D20** (`spec/09`), the divergence measurement. It needs no protocol, it can
+be done today, and it either grounds Act II in a real number or kills it.
 
 ---
 
@@ -187,7 +201,12 @@ that sentence.
 
 - **ply** — one move by one player. The sequence number. Monotonic.
 - **certified state** — a game state signed by *both* players. The unit of
-  evidence.
+  evidence. One signature is a claim; two is a fact.
+- **pos_hash / rep_hash** — two hashes over the same packed position, asking
+  different questions. `pos_hash` commits to everything including the halfmove
+  clock, because a dispute replays moves from it. `rep_hash` clears that clock,
+  because two occurrences of a position always differ in it — that is what a
+  repetition is. Confusing them is `docs/build-log.md` §05.
 - **Δ** — the challenge window, in blocks.
 - **clock dilation** — the map from game-clock milliseconds to an on-chain block
   budget, preserving the ratio so stalling cannot buy time back (`spec/05`).
