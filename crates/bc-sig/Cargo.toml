@@ -1,0 +1,9 @@
+[package]
+name = "bc-sig"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bc-hash = { path = "../bc-hash" }
