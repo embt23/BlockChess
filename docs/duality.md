@@ -126,6 +126,25 @@ diligence.
 | **Status** | **HALF-SIGNED, and deliberately so.** The analytic voice signs the *structure* and does not sign the metaphysics — not because it rejects it, but because that is not a claim it is in a position to adjudicate. The intuition holds it; the record keeps it in his words. |
 | **Note** | The engineering does not depend on the metaphysics. That is a feature: it means the architecture stands for people who do not share the frame, while remaining true to the frame that generated it. `spec/10` §8. |
 
+### What "the same position" means
+
+| | |
+|---|---|
+| **Intuition** *(reconstructed — see status)* | Two boards with the same pieces, the same side to move and the same things available are the same position. Every player who has ever claimed a repetition believes this, and not one of them was counting halfmoves. |
+| **Analysis (first)** | A position is what `apply()` needs, so it is the FEN fields minus the move number — including the halfmove clock, which the fifty-move rule reads. One packed form, one hash, `pos_hash`. Repetition compares it. |
+| **Analysis (after)** | Wrong, and wrong in the characteristic direction. Two occurrences of a position *always* differ in the halfmove clock, because plies happened in between — which is what a repetition is. The comparison could never fire. Position identity and repetition identity are different relations and FIDE's is the coarser one. Two tags over the same bytes. |
+| **Status** | **HALF-SIGNED, and recorded as evidence for this file's own thesis.** The failure was **premature rigour**: the encoding was *more precise than the thing it modelled*, and the surplus precision was the bug. It looked like diligence — a position hash that commits to everything is obviously better than one that does not — right up to the point where the behaviour was tested. `docs/build-log.md` §05, `spec/03`. |
+| **Note** | The intuition column here is a reconstruction of the ordinary reading, not Evan's words. He has not signed it. If it misstates what the informal view actually is, replace it rather than leaving a plausible sentence standing in for a real one. |
+
+### Where the expensive check belongs
+
+| | |
+|---|---|
+| **Analysis (first)** | `P3`: never verify checkmate. Proving mate quantifies over ~218 moves; refuting it takes one. The chain asserts and waits to be refuted. |
+| **In the code** | The receiving client verifies mate *in full*, every ply — the exact `∀` the invariant appears to forbid. |
+| **Resolution** | Not a violation, and the distinction is worth keeping. `P3` is about a court: metered computation, adjudicating strangers' money, under an adversary who chooses the input. A receiving client has the move generator already in memory and its own stake at risk. The invariant is not *never compute the `∀`* — it is *never make the court compute it*, and the corollary is that the expensive check should live exactly where it is cheap. |
+| **Status** | **AMENDED.** `P3`'s reading tightened; its substance unchanged. `spec/04`, "What a receiver checks about `status`". |
+
 ### Who writes the code
 
 | | |

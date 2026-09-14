@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["crates/bc-hash", "crates/bc-chess", "crates/bc-sig", "crates/bc-merkle", "crates/bc-style"]
+members = [
+    "crates/bc-hash",
+    "crates/bc-chess",
+    "crates/bc-sig",
+    "crates/bc-merkle",
+    "crates/bc-channel",
+    "crates/bc-style",
+]
 
 [workspace.package]
 version = "0.1.0"

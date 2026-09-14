@@ -109,7 +109,85 @@ move per dispute.
 
 ---
 
-## 05 — The experiment that confounded itself
+## 05 — The repetition key that could never match
+
+**Symptom.** A threefold-repetition test could not be made to pass. Shuffling a
+rook a1–a2–a1 while the enemy king shuffled h8–g8–h8 returns the board to a
+position it has demonstrably occupied before, and the channel counted one
+occurrence every time. Not off by one — the count never rose at all.
+
+**Cause.** `spec/04` puts `pos_hash` in every state, and `spec/03` defines it
+over the packed position, which includes the halfmove clock. Two occurrences of
+a position *always* differ in that clock: plies happened in between, which is
+what a repetition is. So the hashes could never be equal, and the comparison
+`spec/03` prescribes — "three signed states with equal `pos_hash`" — detects
+nothing, ever.
+
+**Why it hid.** Because it looks right, and because nothing else notices. The
+clock has to be in the packed form: the adjudicator replays moves from it, and
+the fifty-move rule reads that exact field. Every other use of `pos_hash` is
+correct. Only the repetition comparison wants a *coarser* notion of sameness
+than the one the encoding provides, and nothing in the type system says so.
+
+**The real distinction.** Position identity and repetition identity are
+different relations. FIDE's is the coarser one: pieces, side to move, castling
+rights, en-passant availability — and it says nothing about the fifty-move
+counter. We had been treating one hash as answering both questions.
+
+**Fix.** Two domain-separated hashes over the same bytes. `pos_hash`
+(`BC/pos/v1`) commits to everything, because move replay needs everything;
+`rep_hash` (`BC/rep/v1`) is the same encoding with the halfmove field cleared,
+and repetition compares that. `spec/03` and `spec/04` amended.
+
+**What it costs the chain.** A threefold claim must now carry the three packed
+positions, not just the three states, so the adjudicator can recompute both
+hashes. Three unpacks and six hashes instead of three comparisons. Still O(1),
+and still paid for by the opponent's own past signatures rather than by
+replaying the game.
+
+**Lesson.** When one hash is asked to answer two questions about sameness,
+check that they are the same question. They were not, and the way this surfaced
+is worth keeping: not by inspection of the spec, which reads perfectly, but by
+a test of the *behaviour* the spec was describing. Episode 01's bug was found
+the same way — by testing the interface rather than the algorithm.
+
+**Regression test:** `threefold_repetition_is_three_signatures_not_a_history_replay`.
+
+---
+
+## 06 — The en passant that three different checks all miss
+
+Not a bug that shipped — `spec/03` called for this before the code existed —
+but the third case is worth recording, because two obvious implementations
+handle only the first two.
+
+An en-passant target must not be recorded in the canonical position unless a
+*legal* capture onto it exists. Three ways for one not to exist:
+
+1. **No pawn beside it.** After `1.e4` the target is e3 and there is no black
+   pawn within three files. Handled by any implementation that looks.
+2. **The capturing pawn is pinned.** `4k3/8/8/8/3Pp3/8/8/K3R3 b - d3` — the e4
+   pawn cannot leave the e-file. Handled by anything that tests legality.
+3. **Both pawns leave the rank at once.** `8/8/8/8/k2Pp2Q/8/8/3K4 b - d3` —
+   `exd3` e.p. removes the capturer *and* the captured from the fourth rank,
+   opening the line from h4 to the king on a4. Neither pawn is pinned; no
+   single-piece pin test finds it.
+
+The third is why `ep_effective` asks the move generator rather than reasoning
+about pins. There is exactly one implementation of the rules (`P5`), and the
+cost of consulting it is one `make_move` per candidate pawn, once per ply.
+
+Getting this wrong is not a movegen bug — legality is unaffected either way.
+It is a *hashing* bug: the same position acquires two encodings, so the
+threefold comparison silently stops working. Same failure as bug 05, reached
+from the opposite direction.
+
+**Regression tests:** `ep_by_a_pinned_pawn_is_not_recorded`,
+`ep_that_would_expose_the_king_sideways_is_not_recorded`.
+
+---
+
+## 07 — The experiment that confounded itself
 
 **Symptom.** The personality estimator recovered strong styles poorly and weak
 ones not at all, with no clear pattern.
@@ -131,7 +209,7 @@ what it claims. A result table that only shows results cannot be audited.
 
 ---
 
-## 06 — The ground truth was wrong, not the estimator
+## 08 — The ground truth was wrong, not the estimator
 
 **Symptom.** Players constructed with *zero* personality measured +0.010
 nats/move of divergence. Read as estimator bias — the exact failure the whole
@@ -161,7 +239,7 @@ nats/move, which is the control that was actually wanted.
 
 ---
 
-## 07 — The PGN parser that silently deleted every other move
+## 09 — The PGN parser that silently deleted every other move
 
 **Symptom.** A hand-written test parsing Morphy's Opera Game failed immediately,
 while a nearly identical Scholar's Mate test passed.
