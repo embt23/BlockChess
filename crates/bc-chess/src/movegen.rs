@@ -192,9 +192,28 @@ impl Position {
     }
 
     /// Does this pseudo-legal move leave our own king attacked?
+    ///
+    /// Assumes `m` came from [`Position::generate_pseudo`]; it will panic on a
+    /// move with no piece on its from-square. Use [`Position::is_move_legal`]
+    /// for input from the network.
     #[inline]
     pub fn is_legal(&self, m: Move) -> bool {
         let after = self.make_move(m);
         !after.in_check(self.side)
+    }
+
+    /// Is `m` a legal move here? **Total** — safe on arbitrary 16 bits.
+    ///
+    /// Everything that arrives over the wire goes through this rather than
+    /// [`Position::is_legal`]. A move is two bytes from a counterparty who may
+    /// want the adjudicator to panic, and a node that panics on a hostile
+    /// input is a node that has stopped.
+    pub fn is_move_legal(&self, m: Move) -> bool {
+        if self.piece_at(m.from()).map(|(c, _)| c) != Some(self.side) {
+            return false;
+        }
+        let mut pseudo = MoveList::new();
+        self.generate_pseudo(&mut pseudo);
+        pseudo.as_slice().contains(&m) && self.is_legal(m)
     }
 }
