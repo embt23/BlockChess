@@ -99,7 +99,7 @@ Task-indexed. Read the row, not the whole tree.
 
 | If you are… | Read |
 |---|---|
-| orienting from scratch | this file, then `spec/00-overview.md` |
+| orienting from scratch | this file, then [`docs/duality.md`](docs/duality.md), then `spec/00-overview.md` |
 | touching the channel or the move protocol | `spec/04-channel.md` |
 | touching disputes, timeouts, clocks | `spec/05-adjudication.md` |
 | touching chess rules, board encoding, terminal conditions | `spec/03-position.md` + `crates/bc-chess` |
@@ -113,6 +113,7 @@ Task-indexed. Read the row, not the whole tree.
 | about to make a design decision | `spec/09-open-questions.md` — check it is not already decided |
 | planning work or an episode | `docs/atlas.md` |
 | wondering why something is written oddly | `docs/build-log.md` |
+| about to treat a design question as settled | `docs/duality.md` — check it is not HALF-SIGNED or DISPUTED |
 
 ## Where the surprises are
 
@@ -129,6 +130,21 @@ Two entries in particular:
 Both are why `G1` exists.
 
 ---
+
+## Two voices
+
+This project has two authors with two epistemologies — one that reaches for
+meaning and whole structures, one that reaches for theorems and counterexamples.
+[`docs/duality.md`](docs/duality.md) keeps both readings of every major idea,
+with a status on each: **CERTIFIED**, **AMENDED**, **HALF-SIGNED**, or
+**DISPUTED** — the same countersignature rule the channel protocol uses, applied
+to the design itself.
+
+`G4` **Neither voice deletes the other.** An intuition that cannot yet be
+formalised stays, marked half-signed; it is not decoration and not an
+untidiness. An entry marked HALF-SIGNED or DISPUTED is **not settled**, however
+confident the analytic column sounds. Surface it rather than resolving it
+silently.
 
 ## State
 
