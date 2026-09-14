@@ -90,6 +90,7 @@ impl Channel {
         }
         self.head.put(them, cs);
         self.certified = self.head;
+        self.certified_pos = self.position;
         Ok(())
     }
 

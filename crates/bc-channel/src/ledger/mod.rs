@@ -19,7 +19,13 @@
 //! - **Non-custody.** [`Ledger::open_game`] moves money only against the
 //!   players' own signatures. Whoever *submits* the transaction is irrelevant
 //!   to it; a server is a relay, not a custodian (`P6`).
+//!
+//! The adjudicator hangs off this type in [`adjudicate`] — episode 08, and the
+//! reason a stub was enough to build the channel against.
 
+pub mod adjudicate;
+
+use crate::dispute::Dispute;
 use crate::msg::{draw_bytes, resign_bytes, Signed};
 use crate::offer::GameOffer;
 use crate::state::Status;
@@ -32,6 +38,10 @@ pub type Account = [u8; 32];
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LedgerError {
     BadOffer,
+    NotInDispute,
+    AlreadyInDispute,
+    BadPosition,
+    Dispute(crate::dispute::DisputeError),
     Expired,
     InsufficientFunds,
     DuplicateChannel,
@@ -62,9 +72,17 @@ struct Escrow {
     settled: bool,
 }
 
+impl From<crate::dispute::DisputeError> for LedgerError {
+    fn from(e: crate::dispute::DisputeError) -> LedgerError {
+        LedgerError::Dispute(e)
+    }
+}
+
 pub struct Ledger {
     balances: BTreeMap<Account, u128>,
     channels: BTreeMap<Hash, Escrow>,
+    /// Channels currently being played out on-chain.
+    disputes: BTreeMap<Hash, Dispute>,
     pub height: u64,
 }
 
@@ -79,6 +97,7 @@ impl Ledger {
         Ledger {
             balances: BTreeMap::new(),
             channels: BTreeMap::new(),
+            disputes: BTreeMap::new(),
             height: 0,
         }
     }

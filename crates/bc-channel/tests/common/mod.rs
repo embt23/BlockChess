@@ -100,3 +100,56 @@ impl Table {
         }
     }
 }
+
+/// A terms block with a shorter ply cap, for testing the forced draw.
+pub fn table_capped(start: Position, max_plies: u16) -> Table {
+    let (wsk, bsk, ssk) = keys();
+    let mut offer = offer_for(&start, 0, &ssk);
+    offer.terms.max_plies = max_plies;
+
+    let mut ledger = Ledger::new();
+    ledger.credit(&offer.white_pk, START_BALANCE);
+    ledger.credit(&offer.black_pk, START_BALANCE);
+    ledger
+        .open_game(
+            &offer,
+            &wsk.sign(&offer.signing_bytes()),
+            &bsk.sign(&offer.signing_bytes()),
+        )
+        .expect("open");
+
+    Table {
+        white: Channel::open(offer, wsk, Color::White, start),
+        black: Channel::open(offer, bsk, Color::Black, start),
+        ledger,
+        offer,
+    }
+}
+
+impl Table {
+    /// The best evidence a player holds: the highest state their opponent
+    /// signed, plus the packed position it names.
+    pub fn evidence(&self, who: Color) -> (bc_channel::Signed, Vec<u8>) {
+        let ch = match who {
+            Color::White => &self.white,
+            Color::Black => &self.black,
+        };
+        let (signed, pos) = ch.evidence();
+        (signed, pos.pack().as_slice().to_vec())
+    }
+}
+
+impl Table {
+    /// A player's highest *fully certified* state and its position — what a
+    /// threefold claim is built from, since one signature is not evidence.
+    pub fn certified(&self, who: Color) -> (bc_channel::Signed, Vec<u8>) {
+        let ch = match who {
+            Color::White => &self.white,
+            Color::Black => &self.black,
+        };
+        (
+            *ch.certified(),
+            ch.certified_position().pack().as_slice().to_vec(),
+        )
+    }
+}

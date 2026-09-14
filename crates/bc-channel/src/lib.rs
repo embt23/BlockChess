@@ -29,6 +29,7 @@
 //! | [`clock`] | Fischer accounting, and enforcement by refusal to countersign |
 //! | [`rules`] | which terminal claims a receiver should believe |
 //! | [`game`] | one player's state machine |
+//! | [`dispute`] | the adjudicator: the same game, on-chain, slowly |
 //! | [`ledger`] | a stub escrow, standing in for episodes 05–06 |
 //!
 //! ## What is not here yet
@@ -39,6 +40,7 @@
 //! it is the difference between a convenient system and a trustless one.
 
 pub mod clock;
+pub mod dispute;
 pub mod game;
 pub mod ledger;
 pub mod msg;
@@ -46,6 +48,7 @@ pub mod offer;
 pub mod rules;
 pub mod state;
 
+pub use dispute::{ClaimKind, Dispute, DisputeError, MoveOutcome, Refutation};
 pub use game::{Channel, ChannelError};
 pub use ledger::{Ledger, LedgerError, Payout};
 pub use msg::{MoveMsg, Signed};
