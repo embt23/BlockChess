@@ -16,6 +16,12 @@ pub const RANK_5: Bitboard = RANK_1 << 32;
 pub const RANK_7: Bitboard = RANK_1 << 48;
 pub const RANK_8: Bitboard = RANK_1 << 56;
 
+/// The light-square complex: squares where file + rank is odd (b1, a2, …).
+/// Used by the insufficient-material test, which needs to know whether two
+/// bishops can ever meet.
+pub const LIGHT_SQUARES: Bitboard = 0x55AA_55AA_55AA_55AA;
+pub const DARK_SQUARES: Bitboard = !LIGHT_SQUARES;
+
 #[inline]
 pub const fn bit(sq: u8) -> Bitboard {
     1u64 << sq

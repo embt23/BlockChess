@@ -10,11 +10,16 @@
 pub mod attacks;
 pub mod bitboard;
 pub mod movegen;
+pub mod pack;
 pub mod perft;
 pub mod position;
+pub mod terminal;
 pub mod types;
+pub mod uci;
 
 pub use bitboard::Bitboard;
+pub use pack::{unpack, PackError, Packed, MAX_PACKED_LEN};
 pub use perft::{divide, perft};
 pub use position::{FenError, Position};
+pub use terminal::Outcome;
 pub use types::{Color, Move, MoveList, Piece, Square};

@@ -21,7 +21,17 @@ GameState {
 state_hash = H_domain("BC/state/v1", encode(GameState))
 ```
 
-Fixed size: 32+2+32+2+32+4+4+1 = **109 bytes**, hashing to 32.
+Fixed size: 32+2+32+2+32+4+4+1 = **109 bytes**, hashing to 32. Integers are
+little-endian, the fields are laid out in the order above with no padding, and
+`state_hash` is over exactly those 109 bytes. Two implementations that disagree
+about the layout produce different hashes, and a signature over one is not a
+signature over the other — so the byte layout is as consensus-critical as the
+rules of chess.
+
+`pos_hash` here is the **full** position hash, not the repetition key
+`rep_hash`. A state must commit to the halfmove clock, because a dispute
+replays moves from the position it names. Repetition compares the coarser
+hash; see `spec/03-position.md`.
 
 ### The state is a hash chain
 
@@ -74,6 +84,7 @@ GameOffer {
   stake_black     u128
   terms           GameTerms
   server_pk       [u8;32]     zero if none
+  open_nonce      [u8;32]     random; see below
   rake_bps        u16         basis points, 0-500 (max 5%)
   expiry_block    u64         offer is void after this height
 }
@@ -103,6 +114,17 @@ of funds**. The worst a T0 server can do is refuse to submit, or submit late
 (hence `expiry_block`). It can never take the money. This one structural choice
 removes the entire category of "the exchange ran off with the deposits", which
 is the dominant failure mode of real money-gaming platforms.
+
+Both players sign `H_domain("BC/offer/v1", encode(GameOffer))`.
+
+`open_nonce` appeared in the `channel_id` derivation above but was missing from
+the field list — an omission, now fixed. Without it, the same two players
+agreeing the same terms for the same stakes twice derive the **same channel
+id**, and every signed state from the first game is valid evidence in the
+second. Two friends playing a rematch is not an exotic case.
+
+A rake with `server_pk = 0` is rejected. A rake with nobody to pay it to is a
+burn, and a burn is a mint with the sign flipped (`E1`).
 
 `stake_white` and `stake_black` need not be equal — see the handicap odds in
 `06-economics.md`.
@@ -157,6 +179,31 @@ Increment is added *after* the move, per Fischer rules. A move that would take
 the mover's clock below zero produces `status = opponent wins` — a self-declared
 flag, which an honest client does and which a dishonest client simply will not
 send, at which point you go to chain.
+
+**The shape of that state.** A conceded flag advances the ply with `move = 0`,
+an unchanged `pos_hash`, and the conceding player's clock at zero: a transition
+that is not a move. It is the only such transition the protocol allows, and it
+advances the ply so that `higher ply wins` (`P2`) still decides between a
+concession and anything posted before it.
+
+### What a receiver checks about `status`
+
+A terminal claim is accepted if **either**:
+
+1. the receiver's own board agrees — mate, stalemate, the fifty-move clock,
+   insufficient material, or a third occurrence by `rep_hash`; **or**
+2. it declares the *mover* the loser.
+
+Clause 2 is why resignation, the conceded flag, and "I have lost on time" cost
+nothing to verify: nobody lies to lose. Clause 1 is the client paying for a `∀`
+that the chain refuses to pay for (`P3`).
+
+Those two are not in tension, and the reason is worth stating because it
+recurs. `P3` is about the chain, where the computation is metered and the money
+belongs to strangers. A receiving client is in the opposite position on both
+counts: the move generator is already in memory and the stake at risk is its
+own. Same asymmetry, seen from the two sides — and the reason the expensive
+check lives exactly where it is cheap.
 
 ### Closing — cooperative
 
