@@ -57,6 +57,10 @@ pub struct Channel {
     position: Position,
     head: Signed,
     certified: Signed,
+    /// The position `certified` names. Kept because it is half of what you
+    /// post to open a dispute, and it is not recoverable from `position`
+    /// once the game has moved past it.
+    certified_pos: Position,
     /// One repetition key per ply reached, oldest first. Threefold is a
     /// count over this, and the evidence for it is the opponent's own past
     /// signatures (`spec/03`).
@@ -83,6 +87,7 @@ impl Channel {
             position: start,
             head: genesis,
             certified: genesis,
+            certified_pos: start,
             rep_hashes: vec![rep],
         }
     }
@@ -97,6 +102,32 @@ impl Channel {
     /// The highest state signed by both. What you take to the chain.
     pub fn certified(&self) -> &Signed {
         &self.certified
+    }
+
+    /// The position the certified state names.
+    pub fn certified_position(&self) -> &Position {
+        &self.certified_pos
+    }
+
+    /// The best evidence this player holds, and the position it names:
+    /// **the highest-ply state the opponent signed**.
+    ///
+    /// This is what `DisputeOpen` takes, and the reason it always exists is
+    /// the countersignature riding along with each move (`spec/04`). Two
+    /// cases, and both are covered:
+    ///
+    /// - The opponent moved last, so the head is theirs and they signed it.
+    /// - You moved last, so the head is yours alone — but the state before it
+    ///   is certified, and certified includes their signature.
+    ///
+    /// A state you signed yourself proves nothing, so the head is only
+    /// offered when they have actually put their name to it.
+    pub fn evidence(&self) -> (Signed, Position) {
+        if self.head.sig(self.me.flip()).is_some() {
+            (self.head, self.position)
+        } else {
+            (self.certified, self.certified_pos)
+        }
     }
     pub fn ply(&self) -> u16 {
         self.head.state.ply
@@ -224,6 +255,7 @@ impl Channel {
         };
         if self.head.is_certified() {
             self.certified = self.head;
+            self.certified_pos = self.position;
         }
 
         let sig = self.sk.sign(&next.hash());

@@ -45,6 +45,24 @@ Requirements:
 - `state.pos_hash` matches the supplied plaintext position
 - the channel is `ACTIVE`
 
+### The ply-0 exception
+
+The signature requirement has one hole, and leaving it open locks money up
+forever. **At ply 0 nobody has signed a state**, so a player whose opponent
+vanishes before making their first move can satisfy no version of "signed by
+the opponent" — and both stakes stay escrowed with nobody able to reclaim
+them, ever.
+
+The opening state needs no signature of its own. It is fixed by the
+`OpenGame` transaction, which already carries both players' signatures over a
+`GameOffer` committing to `start_pos_hash` and `base_time_ms`. So a dispute
+opened at ply 0 is admitted when the state **is** the opening state, which
+the escrow can reconstruct and compare for itself.
+
+The general shape is worth keeping: an authorisation rule derived from "who
+signed this object" fails on the first object, because the first object is
+authorised by the thing that created the channel rather than by play.
+
 You post a state your *opponent* signed, because a state you signed yourself
 proves nothing. The best state you can post is the highest-ply one they
 countersigned. Since countersignatures ride along with moves (`04-channel.md`),
@@ -140,20 +158,39 @@ the process terminates: budgets only decrease.
 | `Threefold` | three signed states | equal `pos_hash`, distinct plies, immediate, final |
 | `Checkmate` | none | **optimistic** — refutable |
 | `Stalemate` | none | **optimistic** — refutable |
-| `Timeout` | none | budget check, immediate, final |
 
-The first five and the last are decided on the spot. The two optimistic ones
-open a refutation window of Δ blocks.
+The first five are decided on the spot. The two optimistic ones open a
+refutation window of Δ blocks.
+
+**`Timeout` is not a claim kind.** It was listed as one in the first draft,
+and it does not belong: a timeout is not an assertion about anything that
+needs evidence or a claimant, it is a statement about block heights that
+anyone can read off the chain. `DisputeFinalize` already computes it. It
+would also have been the only kind whose outcome depended on the board rather
+than on who was claiming, which is the sort of asymmetry that turns into a
+bug in a match arm later.
 
 ### `DisputeRefute { channel_id, move }`
 
-The claimed-mated player posts **one move**. The adjudicator checks it is legal
-and that the resulting position does not leave the mover in check. If it
-verifies:
+One move, from the player the claim is **against** — the one with something
+to lose. The adjudicator checks it is legal in the disputed position. If it
+verifies, the claim is struck and **the false claimant's budget is halved**.
 
-- the terminal claim is struck,
-- the game resumes at the refuting move,
-- **the false claimant's budget is halved** as a penalty.
+What happens next depends on whose move it was, and the first draft of this
+section got it wrong by treating the two cases alike.
+
+| Claim | Claimed by | Refuted by | On success |
+|---|---|---|---|
+| `Checkmate` | the mover's opponent | the allegedly mated player | the game **resumes at the refuting move** |
+| `Stalemate` | the side to move | their opponent | the claim is struck and **nothing is played** |
+
+For mate this is straightforward: the refuting move is the refuter's own, so
+playing it is exactly right. For stalemate it is not. There the claimant *is*
+the side to move, and the refuter is their opponent, who is merely exhibiting
+that a legal move exists. Playing it would let an opponent choose your move
+for you — which is not a penalty, it is a different game. So a stalemate
+refutation strikes the claim, resets the deadline, and leaves the claimant to
+actually move.
 
 If the window expires with no refutation, the claim stands and the game settles.
 
@@ -197,7 +234,10 @@ BlackWins  →  black receives pot − fee
 Draw       →  each receives their own stake, minus fee pro-rata
 ```
 
-The rake goes to `server_pk`, or is burned if `server_pk` is zero.
+The rake goes to `server_pk`. It is **not** burned when `server_pk` is zero —
+a burn is a mint with the sign flipped, and `E1` says the supply only ever
+moves sideways. An offer carrying a non-zero `rake_bps` with no server to pay
+is rejected at `OpenGame`, so this case cannot reach settlement (`spec/04`).
 
 **Rake is charged on draws too.** It is tempting to waive it as a courtesy, but
 waiving it makes the draw the cheapest outcome and creates a small standing
@@ -228,7 +268,7 @@ mitigation is that the cost is small and bounded, and servers can insure it.
 ## Parameter summary
 
 ```
-DELTA_BLOCKS         256     per-response window        (GameTerms)
+DELTA_BLOCKS         256     per-response window        (GameTerms, min 64)
 MIN_MOVE_BLOCKS        8     floor on per-move consumption
 FLOOR_BLOCKS          32     added to every budget
 TAU_MS                50     ms of game clock per block of budget

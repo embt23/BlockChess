@@ -155,18 +155,20 @@ silently.
 | 02 signatures | `bc-sig` | RFC 8032 | ✅ |
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
-| 05–06 consensus | — | — | not started |
 | 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
-| 08 adjudication | — | — | not started ← **the next thing that matters** |
+| 08 adjudication | `bc-channel::dispute` | spec/05 worked table | ✅ **Milestone E** — you can win against an opponent who disconnects |
+| 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
+| 10 forced inclusion | — | — | not started — see **Next**, the nearest real hole |
 
-109 tests, clippy and fmt clean. CI runs the suite, the slow exact perft runs,
-and the full-game demo.
+139 tests, clippy and fmt clean. CI runs the suite, the slow exact perft runs,
+and both demos.
 
 ```sh
 cargo test --workspace                          # fast suite
 cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
 cargo run --release --bin perft -- 6
 cargo run --release --bin play                  # a whole wagered game
+cargo run --release --bin dispute               # …won against someone who left
 ```
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
@@ -178,22 +180,28 @@ Episode 07 is done and it was built against a stub ledger (`bc-channel::ledger`)
 rather than waiting for consensus, exactly as planned: consensus slides
 underneath later without the channel noticing.
 
-**Episode 08, the adjudicator.** Everything in `bc-channel` assumes both
-players keep answering. When one stops, the honest player holds a certified
-state and nowhere to take it. Giving it somewhere to go is the whole remaining
-distance to Milestone E, and it needs: `DisputeOpen`, the Δ window counted in
-blocks (`P4`), clock dilation (`spec/05`), and the optimistic mate claim with
-its one-move refutation (`P3`). The refutation half already exists —
-`Position::refutes_terminal_claim`.
+**Milestone E is reached.** `cargo run --bin dispute` wins a wagered game
+against an opponent who stopped answering — no cooperation, no third party.
+That sentence was the project; what follows is expansion, and for the first
+time the question "what next" has more than one defensible answer.
 
-**Milestone E is the project: *you can win against an opponent who
-disconnects*.** Everything before it is prerequisites; everything after is
-expansion. When unsure what to work on, ask which task most shortens the path to
-that sentence.
+Three directions, in the order I would take them:
 
-Note the one task that is *not* on this path and is still worth doing first:
-**D20** (`spec/09`), the divergence measurement. It needs no protocol, it can
-be done today, and it either grounds Act II in a real number or kills it.
+1. **D20** (`spec/09`), the divergence measurement. Needs no protocol, can be
+   done today, and either grounds Act II in a real number or kills it. The
+   spec calls it the highest value per hour in the project and it still is.
+2. **Episodes 05–06, consensus.** The adjudicator runs against
+   `bc-channel::ledger`, which is a `BTreeMap` with no blocks, no consensus
+   and no censorship resistance. Everything above it is written not to care,
+   which was the point of building in this order — but "not custodial" is
+   only true once nobody owns that map.
+3. **Episode 10, forced inclusion.** The dispute deadlines assume your
+   transaction gets in. A validator who censors `DisputeMove` for Δ blocks
+   wins the game for your opponent, and nothing in episode 08 stops them.
+   This is the nearest real hole in what now exists.
+
+The invariant to keep asking: which task most shortens the path to something
+a stranger would trust with money.
 
 ---
 
@@ -208,6 +216,11 @@ be done today, and it either grounds Act II in a real number or kills it.
   because two occurrences of a position always differ in it — that is what a
   repetition is. Confusing them is `docs/build-log.md` §05.
 - **Δ** — the challenge window, in blocks.
+- **budget** — a player's total remaining on-chain blocks in a dispute, set
+  once by dilating their game clock. Not per move; each move also costs at
+  least `MIN_MOVE_BLOCKS`.
+- **evidence** — the highest state your *opponent* signed. What `DisputeOpen`
+  takes, and why countersignatures ride along with moves. `Channel::evidence`.
 - **clock dilation** — the map from game-clock milliseconds to an on-chain block
   budget, preserving the ratio so stalling cannot buy time back (`spec/05`).
 - **π_you / π_pop** — your policy, and the population's. Divergence between them

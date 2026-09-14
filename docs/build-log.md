@@ -184,3 +184,68 @@ from the opposite direction.
 
 **Regression tests:** `ep_by_a_pinned_pawn_is_not_recorded`,
 `ep_that_would_expose_the_king_sideways_is_not_recorded`.
+
+---
+
+## 07 — The dispute nobody could open
+
+**Symptom.** Building episode 08's tests, every scenario that started from a
+fresh channel failed at `DisputeOpen` with `BadSignature` — including the
+simplest one imaginable: two players fund a game, one of them never shows up.
+
+**Cause.** `spec/05` admits a dispute only on a state signed by your
+*opponent*, which is the right rule and the reason the whole mechanism works:
+a state you signed yourself proves nothing. But **at ply 0 nobody has signed a
+state**. The opening position is not a move; it is the thing moves start from.
+There is no signature on it and there never will be.
+
+So a player whose opponent vanished before making their first move could
+satisfy no version of the requirement. Both stakes sit in escrow and no
+sequence of messages by anyone ever releases them. Not a griefing vector — a
+permanent lock, reachable by accident, on a game that never started.
+
+**Fix.** The opening state does not need a signature of its own, because it
+already has two. The `OpenGame` transaction carries both players' signatures
+over a `GameOffer` that commits to `start_pos_hash` and `base_time_ms`, which
+is every field of the ply-0 state. The escrow can reconstruct it and compare.
+`spec/05` amended with a "ply-0 exception" section.
+
+**Lesson.** An authorisation rule of the form *"admit this object if the right
+party signed it"* has a hole at the first object, because the first object is
+authorised by whatever created the sequence rather than by anything inside it.
+Genesis is not the zeroth element of the chain; it is the thing the chain
+hangs from. This is the same shape as bug 01 — the compression function was
+fine and the *buffering around it* was wrong — and it showed up the same way,
+by testing the interface rather than the algorithm.
+
+**Regression test:** `you_can_win_against_an_opponent_who_disconnects` reaches
+the adjudicator at all because of this; `the_board_checkable_draws_need_no_evidence_but_must_be_true`
+opens at ply 0 directly.
+
+---
+
+## 08 — Refuting a stalemate is not the same as refuting a mate
+
+Not a bug that ran, but a line of spec that would have become one.
+
+`spec/05` said a successful refutation strikes the claim and **the game
+resumes at the refuting move**. True for checkmate: the claim is "you have no
+move", the refuter is the allegedly mated player, and the move they post is
+their own. Playing it is exactly right.
+
+Stalemate inverts every one of those. The claimant *is* the side to move — "I
+have no move" — so the refuter is their **opponent**, and the move being
+exhibited belongs to the claimant. Resuming at it would let your opponent
+choose your move for you. That is not a penalty for a false claim; it is a
+different game.
+
+So the two cases share a check and not a consequence: both verify one legal
+move and both halve the liar's budget, but mate resumes at the move and
+stalemate merely strikes the claim and makes the claimant move.
+
+**Lesson.** Two mechanisms that verify the same predicate are not therefore
+the same mechanism. The tell here was the word "the refuting move" quietly
+assuming the refuter owned it — an ownership question the shared predicate
+does not ask.
+
+**Regression test:** `a_stalemate_refutation_does_not_let_the_opponent_pick_your_move`.

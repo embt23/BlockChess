@@ -39,3 +39,5 @@ jobs:
       # and that the ledger conserved, so a red run here means the channel
       # disagrees with a game the world has had since 1858.
       - run: cargo run -p bc-channel --release --bin play
+      # Milestone E. Asserts its own verdict and that the ledger conserved.
+      - run: cargo run -p bc-channel --release --bin dispute
