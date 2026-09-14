@@ -27,16 +27,25 @@ Tags in use:
 
 ```
 "BC/state/v1"       hash of a game state (the thing players sign)
-"BC/pos/v1"         hash of a position   (used for repetition detection)
+"BC/pos/v1"         hash of a position   (the full packed form)
+"BC/rep/v1"         repetition key       (the same bytes, halfmove cleared)
 "BC/tx/v1"          hash of a transaction
 "BC/header/v1"      hash of a block header
 "BC/smt/leaf/v1"    sparse Merkle leaf
 "BC/smt/node/v1"    sparse Merkle internal node
 "BC/chanid/v1"      channel identifier derivation
+"BC/offer/v1"       game offer, as accepted by both players
 "BC/resign/v1"      resignation message
 "BC/draw/v1"        draw agreement message
 "BC/vrf/v1"         matchmaking randomness
 ```
+
+`BC/pos/v1` and `BC/rep/v1` are the clearest illustration of why the registry
+exists: they hash **the same 26 bytes** and mean different things. One asks
+"is this the same position?", the other "is this the same position *for
+repetition*?", and the answers differ by the halfmove clock. Two questions,
+two tags, and a signature over one is not a signature over the other. See
+`docs/build-log.md` §05 for what happened when they shared a tag.
 
 **Why this matters.** Without separation, a 64-byte structure signed in one
 context can be reinterpreted as a different 64-byte structure in another. The

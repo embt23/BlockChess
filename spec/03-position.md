@@ -80,15 +80,37 @@ repetition detection. Reject any encoding with `ep_file` set to a square where
 no en-passant capture is actually possible; otherwise two representations of the
 same position hash differently and threefold repetition silently breaks.
 
-## Position hash
+## Position hash, and the repetition key
 
 ```
 pos_hash = H_domain("BC/pos/v1", packed_position)
+rep_hash = H_domain("BC/rep/v1", packed_position with halfmove zeroed)
 ```
 
-Used for repetition detection and inside the state hash. Note this is a
-*cryptographic* hash — collisions must be infeasible because a collision would
-let someone forge a repetition claim.
+Two hashes over the same bytes, because there are two different questions.
+
+`pos_hash` goes inside the state hash and must commit to **everything**: the
+adjudicator replays moves from the packed form, and the fifty-move rule reads
+the halfmove field. Nothing may be left out of it.
+
+`rep_hash` is what a repetition claim compares, and it must **not** include the
+halfmove clock. Two occurrences of a position always differ in that clock —
+plies happened in between, which is what a repetition is — so comparing
+`pos_hash` detects a repetition exactly never. This is FIDE's definition:
+pieces, side to move, castling rights, en-passant availability, and nothing
+about the fifty-move counter.
+
+The cost on-chain: a threefold claim carries the three **packed positions**,
+not only the three states, so the adjudicator can check each against its
+state's `pos_hash` and then compare the three `rep_hash`es. Three unpacks and
+six hashes — still O(1), and still without replaying a single move.
+
+Both are *cryptographic* hashes: a collision in either would forge a repetition
+claim.
+
+> This was wrong in the first draft of the spec, and the way it was found is
+> worth keeping. The text read perfectly; a test of the behaviour it described
+> could not be made to pass. `docs/build-log.md` §05.
 
 ### Zobrist hashing (engine-internal only)
 
@@ -180,7 +202,7 @@ This table is the core of the adjudicator's design. Read the third column as
 | **Draw agreed** | either | O(1) | verify two signatures over `("BC/draw/v1", channel, ply)` |
 | **Fifty-move** | either | O(1) | `halfmove == 100` — it is a field in the position |
 | **Insufficient material** | either | O(1) | popcounts on the bitboards |
-| **Threefold repetition** | either | O(1) | three signed states with equal `pos_hash` and distinct plies |
+| **Threefold repetition** | either | O(1) | three signed states at distinct plies whose packed positions share a `rep_hash` |
 | **Stalemate** | either | **optimistic** | asserted; refuted by one legal move |
 | **Checkmate** | winner | **optimistic** | asserted; refuted by one legal escaping move |
 | **Loss on time** | either | O(1) | budget exhausted — see `05-adjudication.md` |
