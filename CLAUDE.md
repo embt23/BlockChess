@@ -114,7 +114,8 @@ Task-indexed. Read the row, not the whole tree.
 | planning work or an episode | `docs/atlas.md` |
 | touching the channel implementation, clocks, or settlement | `crates/bc-channel` — start at its `lib.rs` |
 | wondering why something is written oddly | `docs/build-log.md` |
-| measuring style, or reading a PGN | `docs/d20-calibration.md` + `crates/bc-style` |
+| measuring style | `docs/d20-calibration.md` + `crates/bc-style` |
+| reading a PGN or writing notation | `crates/bc-chess/src/san.rs` and `uci.rs` |
 | about to treat a design question as settled | `docs/duality.md` — check it is not HALF-SIGNED or DISPUTED |
 
 ## Where the surprises are

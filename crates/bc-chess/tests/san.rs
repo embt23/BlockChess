@@ -4,8 +4,8 @@
 //! that parses to a *checkmate* has validated the parser and `bc-chess`
 //! together.
 
-use bc_chess::Position;
-use bc_style::san::{parse, parse_movetext};
+use bc_chess::san::{parse_movetext, parse_san};
+use bc_chess::{Piece, Position};
 
 /// Morphy — Duke of Brunswick & Count Isouard, Paris 1858. The "Opera Game".
 /// Exercises captures, checks, castling long, and mate.
@@ -63,29 +63,29 @@ fn comments_variations_and_nags_are_skipped() {
 fn file_and_rank_disambiguation() {
     // Two knights on d2 and f2 can both reach e4; SAN must say which.
     let pos = Position::from_fen("4k3/8/8/8/8/8/3N1N2/4K3 w - - 0 1").unwrap();
-    let nd = parse(&pos, "Nde4").expect("Nde4");
-    let nf = parse(&pos, "Nfe4").expect("Nfe4");
+    let nd = parse_san(&pos, "Nde4").expect("Nde4");
+    let nf = parse_san(&pos, "Nfe4").expect("Nfe4");
     assert_eq!(nd.from() % 8, 3);
     assert_eq!(nf.from() % 8, 5);
     // Ambiguous notation must be refused rather than guessed at.
-    assert!(parse(&pos, "Ne4").is_none());
+    assert!(parse_san(&pos, "Ne4").is_none());
 
     // Same file, different ranks — rank disambiguation.
     let pos = Position::from_fen("4k3/8/8/8/3N4/8/3N4/4K3 w - - 0 1").unwrap();
-    assert_eq!(parse(&pos, "N2b3").unwrap().from() / 8, 1);
-    assert_eq!(parse(&pos, "N4b3").unwrap().from() / 8, 3);
+    assert_eq!(parse_san(&pos, "N2b3").unwrap().from() / 8, 1);
+    assert_eq!(parse_san(&pos, "N4b3").unwrap().from() / 8, 3);
 }
 
 #[test]
 fn promotions_and_underpromotions() {
     let pos = Position::from_fen("4k3/P7/8/8/8/8/8/4K3 w - - 0 1").unwrap();
     for (tok, want) in [
-        ("a8=Q", bc_chess::Piece::Queen),
-        ("a8=R", bc_chess::Piece::Rook),
-        ("a8=B", bc_chess::Piece::Bishop),
-        ("a8=N", bc_chess::Piece::Knight),
+        ("a8=Q", Piece::Queen),
+        ("a8=R", Piece::Rook),
+        ("a8=B", Piece::Bishop),
+        ("a8=N", Piece::Knight),
     ] {
-        let m = parse(&pos, tok).unwrap_or_else(|| panic!("{tok}"));
+        let m = parse_san(&pos, tok).unwrap_or_else(|| panic!("{tok}"));
         assert_eq!(m.promo(), want, "{tok}");
     }
 }
@@ -93,16 +93,20 @@ fn promotions_and_underpromotions() {
 #[test]
 fn castling_both_spellings_and_sides() {
     let pos = Position::from_fen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1").unwrap();
-    assert_eq!(parse(&pos, "O-O").unwrap().to(), 6);
-    assert_eq!(parse(&pos, "O-O-O").unwrap().to(), 2);
-    assert_eq!(parse(&pos, "0-0").unwrap().to(), 6, "digit-zero spelling");
+    assert_eq!(parse_san(&pos, "O-O").unwrap().to(), 6);
+    assert_eq!(parse_san(&pos, "O-O-O").unwrap().to(), 2);
+    assert_eq!(
+        parse_san(&pos, "0-0").unwrap().to(),
+        6,
+        "digit-zero spelling"
+    );
 }
 
 #[test]
 fn en_passant_and_rejection_of_nonsense() {
     let pos = Position::from_fen("4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1").unwrap();
-    assert!(parse(&pos, "exd6").is_some());
-    assert!(parse(&pos, "Qz9").is_none());
-    assert!(parse(&pos, "Nf3").is_none(), "no knight on the board");
-    assert!(parse(&pos, "").is_none());
+    assert!(parse_san(&pos, "exd6").is_some());
+    assert!(parse_san(&pos, "Qz9").is_none());
+    assert!(parse_san(&pos, "Nf3").is_none(), "no knight on the board");
+    assert!(parse_san(&pos, "").is_none());
 }

@@ -1,5 +1,10 @@
 //! Standard Algebraic Notation — the move format every chess corpus uses.
 //!
+//! Sits beside `uci`, the other notation reader: UCI (`e2e4`) is what the
+//! protocol and our own game files speak, SAN (`Nf3`) is what published games
+//! and PGN archives speak. Both are notation over the same rules, so both live
+//! here rather than wherever they happened to be needed first.
+//!
 //! Parsing SAN generatively (render each legal move to SAN, compare strings) is
 //! fiddly because of disambiguation rules. Parsing it as a *filter* is not: SAN
 //! states a piece, a destination, and as much of the origin as was needed to be
@@ -11,11 +16,11 @@
 //! two instead of silently corrupting the corpus. A whole game that parses to
 //! the end is almost certainly parsed correctly.
 
-use bc_chess::types::{Piece, FLAG_CASTLE, FLAG_PROMO};
-use bc_chess::{Move, Position};
+use crate::types::{Piece, FLAG_CASTLE, FLAG_PROMO};
+use crate::{Move, Position};
 
 /// Parse one SAN token in `pos`, returning the legal move it names.
-pub fn parse(pos: &Position, token: &str) -> Option<Move> {
+pub fn parse_san(pos: &Position, token: &str) -> Option<Move> {
     // Strip check/mate marks and annotations: Qxe7+ Rd8# Nf3! e4?!
     let t: String = token
         .chars()
@@ -146,7 +151,7 @@ pub fn parse_movetext(start: &Position, movetext: &str) -> Option<Vec<Move>> {
         if tok.is_empty() {
             continue;
         }
-        let m = parse(&pos, tok)?;
+        let m = parse_san(&pos, tok)?;
         pos = pos.make_move(m);
         out.push(m);
     }
