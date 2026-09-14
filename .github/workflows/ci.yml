@@ -34,3 +34,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --release
       - run: cargo test -p bc-chess --release -- --ignored --nocapture
+      # The D20 calibration report, printed in the log so a regression in the
+      # personality estimator is visible and not just a red assertion.
+      - run: cargo run --release -p bc-style --bin calibrate

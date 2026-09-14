@@ -304,7 +304,7 @@ Open sub-question: do novelties bear royalties when played into
 (`11-resources.md` L3 option D), or is credit the whole reward? Credit is
 simpler and probably sufficient; royalties need the rest working first.
 
-## D20 — Measure the divergence before building on it ▶ **do this first**
+## D20 — Measure the divergence before building on it ▶ **half done**
 
 `10-personality.md` §7 estimates `D(π_you ‖ π_pop) ≈ 0.02–0.10` nats per move
 and concludes a game emits roughly four orders of magnitude more information
@@ -316,5 +316,17 @@ per-player models on heavy users, and compute the cross-entropy difference. It
 is a weekend, it needs no protocol, and it either grounds the entire Act II
 thesis in a real number or kills it early.
 
-**This is the highest-value-per-hour task in the project and it can be done
-today, independently of everything else.**
+**Status.** The estimator is built and calibrated against synthetic players
+whose divergence is known exactly — see `docs/d20-calibration.md` and
+`crates/bc-style`. It recovers a mean 60% of true divergence (a lower bound, by
+construction), reports +0.0006 nats/move for a dataset with no player behind it,
+and identifies players from held-out games at 45% against 10% chance.
+
+**What remains.** Running it on humans. Blocked: `lichess.org` and
+`database.lichess.org` are refused by this session's egress policy. Any PGN
+corpus with player identities and hundreds of games per player will do; the
+reader is built and tested.
+
+The calibration also fixed the experiment design: a player needs **hundreds** of
+games, not tens, before moderate style is measurable. A null result on a light
+user means "not enough data", not "no personality".

@@ -113,6 +113,7 @@ Task-indexed. Read the row, not the whole tree.
 | about to make a design decision | `spec/09-open-questions.md` — check it is not already decided |
 | planning work or an episode | `docs/atlas.md` |
 | wondering why something is written oddly | `docs/build-log.md` |
+| measuring style, or reading a PGN | `docs/d20-calibration.md` + `crates/bc-style` |
 | about to treat a design question as settled | `docs/duality.md` — check it is not HALF-SIGNED or DISPUTED |
 
 ## Where the surprises are
@@ -154,6 +155,7 @@ silently.
 | 02 signatures | `bc-sig` | RFC 8032 | ✅ |
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
+| D20 style estimator | `bc-style` | synthetic ground truth | ✅ calibrated; awaiting a real corpus |
 | 05–06 consensus | — | — | not started |
 | 07 state channel | — | — | not started ← **the intellectual core** |
 

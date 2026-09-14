@@ -302,9 +302,13 @@ standing rule is that every layer is checked against work someone else did.
 3. **Information is copyable.** Sell a model and the buyer can resell it. This
    is the fundamental defect of information markets and it needs a mechanism,
    not a hope. See `11-resources.md` §4.
-4. **The estimate in §7 is an estimate.** `D(π_you ‖ π_pop)` for real humans
-   should be *measured* on real game corpora before anything is built on the
-   number. That measurement is cheap and should happen early.
+4. **The estimate in §7 is still an estimate.** The *instrument* now exists and
+   is calibrated — see `docs/d20-calibration.md` — but it has not yet been
+   pointed at humans. The estimator recovers ~60% of a known divergence, so any
+   figure it returns is a **lower bound**; it reads +0.0006 nats/move on a
+   dataset with no player behind it, so it does not fabricate signal; and it
+   needs **hundreds of games per player** before moderate style is visible.
+   Until it runs on a real corpus, §7 remains a prediction.
 
 ---
 

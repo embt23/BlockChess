@@ -22,6 +22,7 @@ Episodes 01–04 implemented and green. `perft(6) = 119,060,324` exact.
 | [`bc-sig`](crates/bc-sig) | 02 | Ed25519 from scratch — field arithmetic mod 2^255−19, twisted Edwards group law, point compression | RFC 8032 vectors |
 | [`bc-chess`](crates/bc-chess) | 03 | Bitboards, legal move generation, FEN, perft | published perft counts |
 | [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (`tx_root`) and a sparse Merkle tree (`state_root`) with proofs of absence | Certificate Transparency vectors |
+| [`bc-style`](crates/bc-style) | 20 | Measuring `D(π_you ‖ π_pop)` — SAN/PGN, a log-linear policy, and per-player adaptation | synthetic players of known divergence |
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been
