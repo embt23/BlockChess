@@ -249,3 +249,79 @@ assuming the refuter owned it — an ownership question the shared predicate
 does not ask.
 
 **Regression test:** `a_stalemate_refutation_does_not_let_the_opponent_pick_your_move`.
+
+---
+
+## 09 — The experiment that confounded itself
+
+**Symptom.** The personality estimator recovered strong styles poorly and weak
+ones not at all, with no clear pattern.
+
+**Cause.** Not in the estimator. The synthetic corpus generator emits games
+grouped by player — all of player 0's, then all of player 1's — and the
+train/validation/test split was taken by index. So player 0 got almost all of
+the training data and player 9 almost all of the test data. Personality strength
+was perfectly confounded with sample size, because the players were created in
+order of increasing strength.
+
+**How it surfaced.** Not from the results, which looked plausible. From the
+`train` and `test` columns printed beside them: 7426/1436 on the first row and
+2600/5140 on the last. The diagnostic was in the table by accident.
+
+**Lesson.** Print the size of every split next to every result. It costs one
+column and it is the cheapest possible check that an experiment is measuring
+what it claims. A result table that only shows results cannot be audited.
+
+---
+
+## 10 — The ground truth was wrong, not the estimator
+
+**Symptom.** Players constructed with *zero* personality measured +0.010
+nats/move of divergence. Read as estimator bias — the exact failure the whole
+calibration exercise exists to detect.
+
+**Cause.** The ground truth compared each player against the **base policy** the
+synthetic world was built from. But the estimator measures divergence from the
+**fitted population model**, and those are not the same distribution: the fitted
+population is the average of everyone actually playing, and it is pulled off the
+base by whichever eccentric players are in the corpus.
+
+So a personality-free player genuinely *does* diverge from the population — by
+however much the population as a whole is skewed. The estimator was right. The
+oracle was wrong.
+
+**Lesson.** When an estimator disagrees with ground truth, the ground truth is a
+suspect too. This is the third time in this project that a reference
+implementation turned out to be the broken half (see 03). The habit to build:
+before believing a discrepancy, ask what *exactly* each side is computing, and
+whether they are the same quantity.
+
+It also changed the design of the null control. "A player with no personality"
+is not testable against a skewed population. What is testable is a **chimera** —
+a player-shaped pile of moves each drawn from a random member of the
+population — whose true policy *is* the population mixture. That reads +0.0006
+nats/move, which is the control that was actually wanted.
+
+---
+
+## 11 — The PGN parser that silently deleted every other move
+
+**Symptom.** A hand-written test parsing Morphy's Opera Game failed immediately,
+while a nearly identical Scholar's Mate test passed.
+
+**Cause.** The tokeniser discarded any whitespace-separated token that started
+with a digit and contained a dot, treating it as a move number. PGN writes
+`1. e4` and `1.e4` interchangeably — so for the second spelling the move was
+thrown away along with its number. Scholar's Mate had been typed with spaces;
+the Opera Game had not.
+
+**Why it could not have hidden.** SAN is parsed as a *filter* over the legal
+move list, so dropping White's move makes Black's move illegal for White on the
+very next token. A game that parses to the end is almost certainly parsed
+correctly — and the Opera Game ends in mate, so reaching the end validates the
+parser and `bc-chess` against each other in one assertion.
+
+**Lesson.** Prefer formats where a parse error propagates immediately over
+formats where it degrades quietly. Had SAN been parsed generatively — render
+each legal move to a string and compare — the same bug would have produced a
+plausible but wrong move sequence and quietly poisoned a corpus.

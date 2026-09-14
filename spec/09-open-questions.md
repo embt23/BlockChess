@@ -411,7 +411,7 @@ royalty that would have honoured the original intuition. The ledger entry moves
 to **CERTIFIED** because it was signed, not because the argument was loud, and
 `E3` is legitimate law rather than a presumption.
 
-## D20 — Measure the divergence before building on it ▶ **do this first**
+## D20 — Measure the divergence before building on it ▶ **half done**
 
 `10-personality.md` §7 estimates `D(π_you ‖ π_pop) ≈ 0.02–0.10` nats per move
 and concludes a game emits roughly four orders of magnitude more information
@@ -435,26 +435,58 @@ advance. Without a pre-registered threshold the result gets rationalised
 whichever way it lands, and a measurement that cannot falsify anything is not
 worth the weekend.
 
-**Minimal, not full.** `π_pop` is **not** trained here — that is episode 19 and
-it is weeks. Use a published, rating-conditioned human-move-prediction model as
-the baseline and the Lichess open database for per-player histories. The
-baseline is then someone else's published artefact rather than one of ours,
-which is the `G1` posture. It lives in a separate research directory or
-repository: no Python enters the Rust workspace.
+**Minimal, not full.** `π_pop` is not the episode-19 model; it is a log-linear
+policy over `bc-chess`'s legal moves, fit on the same corpus the players are
+drawn from.
 
-**The threshold — proposed, and it needs Evan's signature before the
-measurement runs, not after.** Working from `13`'s detection time
-`≈ ln(1/α)/D_KL`, at α = 0.001:
+*This amends the original wording, which called for a published
+rating-conditioned model (Maia) as the baseline on `G1` grounds.* The
+amendment is not a relaxation. `G1` asks for an oracle someone else published
+because a reference you wrote yourself is a second implementation with its own
+bugs — but the thing needing verification here is **the estimator's bias**, and
+for that a published model is no oracle at all: run against Maia, the true
+divergence is still unknown, so a number comes back with no way to tell what
+fraction of it is real. The calibration instead uses synthetic players whose
+policies are known in closed form, which makes the true answer *computable
+exactly*. That is a stronger check than a published baseline could give, and it
+is what produced the 60% recovery factor the threshold above now depends on.
 
-| Measured `D(π_you ‖ π_pop)` | Detection time | Verdict |
-|---|---|---|
-| ≥ 0.02 nats/move (the estimate) | ~9 games | thesis holds as written |
-| 0.005 – 0.02 | ~35–140 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
-| < 0.005 nats/move | > 140 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
+Cross-checking against Maia once a number exists remains worth doing, and is
+not a blocker. No Python enters the Rust workspace either way.
 
-Rationale for the cut at 0.005: it is 4× below the low end of the existing
+**The threshold — SIGNED 2026-09-14, before the measurement ran.** Working
+from `13`'s detection time `≈ ln(1/α)/D_KL`, at α = 0.001.
+
+**The cuts are on TRUE divergence, not on the raw estimate.** This distinction
+was missing from the first draft of this table and it inverted the test. The
+estimator recovers a **mean 60% of the truth, range 23–97%**
+(`docs/d20-calibration.md`), so a true `D` of 0.02 — the low end of `spec/10`
+§7's own estimate — reads back as **0.012**, and at the bottom of the recovery
+range as **0.0046**. Against cuts applied to the raw number, *the thesis being
+exactly right would have registered as amber, or as dead.* A pre-registered
+test that fails when the hypothesis is true is worse than no test.
+
+So the estimator reports three figures and the verdict is read off the middle
+one: `D̂` (raw), `D̂ / 0.60` (the point estimate of true `D`), and
+`[D̂/0.97, D̂/0.23]` as the recovery interval.
+
+| True `D(π_you ‖ π_pop)` | Raw `D̂` at 60% | Detection time | Verdict |
+|---|---|---|---|
+| ≥ 0.02 nats/move | ≥ 0.012 | ~9 games | thesis holds as written |
+| 0.005 – 0.02 | 0.003 – 0.012 | ~35–140 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
+| < 0.005 nats/move | < 0.003 | > 140 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
+
+Rationale for the cut at 0.005 true: it is 4× below the low end of the existing
 0.02–0.10 estimate, so it cannot be tripped by the estimate merely being
-optimistic — only by it being wrong in kind.
+optimistic — only by it being wrong in kind. (On the raw scale that cut is
+0.003, which is **5× the chimera reading** of +0.0006 — the level at which the
+estimator demonstrably separates a real player from a dataset with nobody
+behind it. The two rationales agree, which is reassuring rather than
+coincidental: both are asking how far above noise the signal has to sit.)
+
+**If the recovery factor is re-measured, this table does not move.** The cuts
+are on true `D`; a better instrument changes the raw column and nothing else.
+That is the point of stating them this way round.
 
 ---
 
@@ -610,3 +642,32 @@ Rejected: full handover of scaffolds only (slowest path to Milestone E, and it
 risks stalling on borrow-checker fights in the exact month the project needs
 momentum), and the status quo of Claude writing everything (fastest, and the
 duality entry's objection stands).
+
+### Status
+
+**The instrument is built and calibrated** — `crates/bc-style`,
+`docs/d20-calibration.md`. It recovers a mean 60% of true divergence, reports
++0.0006 nats/move for a chimera (a dataset with no player behind it), and
+identifies players from held-out games at 45% against 10% chance.
+
+**The corpus is resolved.** `lichess.org` and `database.lichess.org` are both
+refused by this session's egress policy (403 at the proxy), but
+`raw.githubusercontent.com` is not, and `rozim/ChessData`'s `mega2600_part_*`
+files are 138,348 games at 2600+ with **349 players holding ≥200 games** —
+which is exactly the density the calibration says is required.
+
+One consequence of that substitution is worth stating before any number
+arrives, because it cuts *against* the thesis and so should not be discovered
+afterwards: these are elite over-the-board games, so `π_pop` is the **master**
+population rather than the general one. Masters resemble each other far more
+than a mixed-rating online field does, so the measured divergence should come
+out **smaller** here than `spec/10` §7 imagines. This makes the test
+conservative: clearing the threshold on this corpus is stronger evidence than
+clearing it on Lichess, and failing to clear it is weaker evidence against.
+The identification check gets harder in the same direction — 349 candidates
+puts chance at 0.29% rather than 10%.
+
+**The calibration also fixed the experiment design.** A player needs
+**hundreds** of games, not tens, before moderate style is measurable. A null
+result on a light user means "not enough data", not "no personality".
+

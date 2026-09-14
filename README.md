@@ -38,6 +38,7 @@ rules, slowly, until one side stops moving and forfeits.
 | [`bc-merkle`](crates/bc-merkle) | 04 | RFC 6962 list tree (`tx_root`) and a sparse Merkle tree (`state_root`) with proofs of absence | Certificate Transparency vectors |
 | [`bc-channel`](crates/bc-channel) | 07 | The game channel — signed states, the hash chain, Fischer clocks, cooperative settlement, and a stub escrow | a published game: Morphy 1858, mate on move 17 |
 | [`bc-channel::dispute`](crates/bc-channel/src/dispute) | 08 | The adjudicator — clock dilation, higher-ply-wins, optimistic mate claims and one-move refutation | the worked dilation table in `spec/05` |
+| [`bc-style`](crates/bc-style) | 20 | Measuring `D(π_you ‖ π_pop)` — SAN/PGN, a log-linear policy, and per-player adaptation | synthetic players of known divergence |
 
 Each crate is checked against an oracle *someone else* published. That is the
 standard for this project: no layer is built on top of rules that have only been

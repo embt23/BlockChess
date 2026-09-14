@@ -120,6 +120,8 @@ Task-indexed. Read the row, not the whole tree.
 | planning work or an episode | `docs/atlas.md` |
 | touching the channel implementation, clocks, or settlement | `crates/bc-channel` — start at its `lib.rs` |
 | wondering why something is written oddly | `docs/build-log.md` |
+| measuring style | `docs/d20-calibration.md` + `crates/bc-style` |
+| reading a PGN or writing notation | `crates/bc-chess/src/san.rs` and `uci.rs` |
 | about to treat a design question as settled | `docs/duality.md` — check it is not HALF-SIGNED or DISPUTED |
 
 ## Where the surprises are
@@ -161,6 +163,7 @@ silently.
 | 02 signatures | `bc-sig` | RFC 8032 | ✅ |
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
+| D20 style estimator | `bc-style` | synthetic ground truth | ✅ calibrated
 | 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
 | 08 adjudication | `bc-channel::dispute` | spec/05 worked table | ⚠️ **Milestone E demonstrated, not earned** — against a stub height counter, not a chain (D21). See `docs/episode-08-gap.md` |
 | 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
