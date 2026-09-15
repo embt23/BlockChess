@@ -157,3 +157,39 @@ fn refutation_is_the_cheap_direction() {
     // A move by the wrong side refutes nothing, however legal it looks.
     assert!(!not_mate.refutes_terminal_claim(Move::normal(0, 8)));
 }
+
+/// The position the `shakmaty` differential found — `docs/build-log.md` §15.
+///
+/// Two white bishops, both on light squares, against a bare king. The old
+/// rule required exactly one bishop per side and so called this *sufficient*,
+/// which on-chain means a dead draw keeps consuming a disputing player's
+/// block budget until one of them flags.
+#[test]
+fn many_bishops_on_one_square_colour_are_still_insufficient() {
+    let found = Position::from_fen("2B5/8/K7/5Bk1/8/8/8/8 b - - 0 194").unwrap();
+    assert!(
+        found.insufficient_material(),
+        "two light bishops cannot mate"
+    );
+
+    for fen in [
+        "8/8/8/4k3/8/8/4K3/1B1B4 w - - 0 1",     // two light bishops
+        "8/8/8/4k3/8/8/4K3/2B1B1B1 w - - 0 1",   // three, all dark
+        "2b1b3/8/8/4k3/8/8/4K3/1B1B4 w - - 0 1", // four, two a side, all light
+    ] {
+        let p = Position::from_fen(fen).unwrap();
+        assert!(p.insufficient_material(), "{fen}");
+    }
+
+    // One bishop on each colour complex mates, so the count is never the
+    // thing being tested — the square colour is.
+    for fen in [
+        "8/8/8/4k3/8/8/4K3/5BB1 w - - 0 1", // adjacent files: opposite colours
+        "6b1/8/8/4k3/8/8/4K3/6B1 w - - 0 1", // one each, opposite colours
+        "8/8/8/4k3/8/8/4K3/4B1N1 w - - 0 1", // bishop and knight
+        "8/8/8/4k3/8/8/4K3/5NN1 w - - 0 1", // two knights: reachable, not forcible
+    ] {
+        let p = Position::from_fen(fen).unwrap();
+        assert!(!p.insufficient_material(), "{fen}");
+    }
+}

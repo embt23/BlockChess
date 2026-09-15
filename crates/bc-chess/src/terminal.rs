@@ -75,9 +75,27 @@ impl Position {
 
     /// Can *neither* side deliver mate, however badly the other plays?
     ///
-    /// K vs K, K+minor vs K, and K+B vs K+B with both bishops on one colour
-    /// complex. K+N+N vs K is excluded: it cannot be forced, but it can be
-    /// reached with cooperation, so it is a fifty-move draw and not this one.
+    /// FIDE's test is whether mate is *possible*, not whether it can be
+    /// forced, so the bar is low and the rule is narrower than it first
+    /// looks. With no pawns, rooks or queens on the board, exactly two
+    /// families qualify:
+    ///
+    /// - **Bishops only, all on one square colour.** Any number, split
+    ///   between the players however you like. A bishop confined to the light
+    ///   squares can never attack a dark one, so no arrangement of them
+    ///   covers a king's escape squares. This covers K vs K, K+B vs K, and
+    ///   same-colour K+B vs K+B as special cases.
+    /// - **A single knight, and no bishops.** One knight cannot mate.
+    ///
+    /// Everything else is excluded, including K+N+N vs K — it cannot be
+    /// *forced*, but a cooperative defender can walk into it, so it is a
+    /// fifty-move draw and not this one.
+    ///
+    /// This function used to require exactly one bishop per side, which made
+    /// K+2B-on-one-colour vs K read as sufficient. It was wrong for eighteen
+    /// months and no hand-written test noticed; the `shakmaty` differential
+    /// found it at ply 387 of random game 303 (`docs/build-log.md` §15). It
+    /// is why `G1` is a rule.
     pub fn insufficient_material(&self) -> bool {
         if self.piece_bb[Piece::Pawn.idx()]
             | self.piece_bb[Piece::Rook.idx()]
@@ -88,19 +106,11 @@ impl Position {
         }
         let knights = self.piece_bb[Piece::Knight.idx()];
         let bishops = self.piece_bb[Piece::Bishop.idx()];
-        let minors = (knights | bishops).count_ones();
 
-        match minors {
-            0 | 1 => true, // K vs K, K+B vs K, K+N vs K
-            2 => {
-                // Only the same-colour-bishops case draws, and only with one
-                // bishop each: two bishops of one colour mate easily.
-                knights == 0
-                    && self.pieces(Color::White, Piece::Bishop).count_ones() == 1
-                    && self.pieces(Color::Black, Piece::Bishop).count_ones() == 1
-                    && ((bishops & LIGHT_SQUARES) == bishops || (bishops & DARK_SQUARES) == bishops)
-            }
-            _ => false,
+        if knights == 0 {
+            (bishops & LIGHT_SQUARES) == bishops || (bishops & DARK_SQUARES) == bishops
+        } else {
+            bishops == 0 && knights.count_ones() == 1
         }
     }
 
