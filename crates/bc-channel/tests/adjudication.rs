@@ -7,7 +7,7 @@
 
 mod common;
 
-use bc_channel::clock::{budget_blocks, FLOOR_BLOCKS, MIN_MOVE_BLOCKS};
+use bc_adjudicator::dilation::{budget_blocks, FLOOR_BLOCKS, MIN_MOVE_BLOCKS};
 use bc_channel::dispute::{DisputeError, MoveOutcome, Refutation};
 use bc_channel::ledger::adjudicate::{Evidence, RepetitionProof};
 use bc_channel::ledger::LedgerError;

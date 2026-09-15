@@ -38,11 +38,12 @@ const EP_NONE: u16 = 8;
 #[derive(Debug, PartialEq, Eq)]
 pub struct PackError(pub &'static str);
 
-impl std::fmt::Display for PackError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for PackError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "bad packed position: {}", self.0)
     }
 }
+#[cfg(feature = "std")]
 impl std::error::Error for PackError {}
 
 /// A packed position: a fixed buffer plus a length, so that packing needs no
@@ -88,8 +89,8 @@ impl Packed {
     }
 }
 
-impl std::fmt::Debug for Packed {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for Packed {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         for b in self.as_slice() {
             write!(f, "{b:02x}")?;
         }

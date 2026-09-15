@@ -36,10 +36,10 @@ mod claim;
 pub use claim::{ClaimKind, Refutation};
 pub use PendingClaim as Claim;
 
-use crate::clock::{blocks_consumed, budget_blocks};
-use crate::offer::GameTerms;
-use crate::rules::loser_is;
+use crate::dilation::{blocks_consumed, budget_blocks};
 use crate::state::{GameState, Status};
+use crate::status::loser_is;
+use crate::terms::GameTerms;
 use bc_chess::{Color, Move, Position};
 use bc_hash::Hash;
 
@@ -59,11 +59,12 @@ pub enum DisputeError {
     NotYetDecided,
 }
 
-impl std::fmt::Display for DisputeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for DisputeError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{self:?}")
     }
 }
+#[cfg(feature = "std")]
 impl std::error::Error for DisputeError {}
 
 /// An optimistic claim, waiting out its refutation window.

@@ -5,6 +5,7 @@ members = [
     "crates/bc-chess",
     "crates/bc-sig",
     "crates/bc-merkle",
+    "crates/bc-adjudicator",
     "crates/bc-channel",
     "crates/bc-style",
 ]

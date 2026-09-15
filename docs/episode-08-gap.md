@@ -18,7 +18,7 @@ Evan's.
 | **D21** | PoW first, so Milestone E is earned | ⬜ stub `BTreeMap` height counter | low — the dispute logic is pure in `height: u64`, so a real chain substitutes underneath it |
 | **D22** | Δ, τ from a time-control class table | ✅ **done** — `crates/bc-channel/src/timecontrol.rs` | — |
 | **D23** | differential-test the terminal predicates; model-check the state machine | ⬜ spec's worked table, hand-chosen positions | low — additive |
-| **D24** | `bc-adjudicator`, `no_std`, depending only on `bc-chess` | ⬜ `bc-channel::dispute` + `ledger::adjudicate` | moderate — a move, not a rewrite |
+| **D24** | `bc-adjudicator`, `no_std`, depending only on `bc-chess` | ✅ **done** — `crates/bc-adjudicator` | — |
 | **D25** | `adjudicator_ver` = integer + ruleset hash in state | ✅ **done** — `crates/bc-channel/src/ruleset.rs` | — |
 
 **The `P3` cost bug below is also fixed** (`build-log` §12): the chain no
@@ -121,7 +121,7 @@ costing 218.
 1. ~~**D22**~~ — done.
 2. ~~**The `P3` violation**~~ — done.
 3. ~~**D25**~~ — done.
-4. **D24** — the move, with the lints, now that `GameTerms` is settled.
+4. ~~**D24**~~ — done.
 5. **D23** — the split oracle: `shakmaty` for the terminal predicates,
    `stateright` for the dispute machine. Both are on crates.io and reachable.
 6. **D21** — the PoW week, which converts "demonstrated" into "earned".

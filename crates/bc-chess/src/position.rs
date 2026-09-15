@@ -38,19 +38,23 @@ pub struct Position {
     pub fullmove: u16,
 }
 
+#[cfg(feature = "std")]
 #[derive(Debug, PartialEq, Eq)]
 pub struct FenError(pub String);
 
-impl std::fmt::Display for FenError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+#[cfg(feature = "std")]
+impl core::fmt::Display for FenError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "bad FEN: {}", self.0)
     }
 }
+#[cfg(feature = "std")]
 impl std::error::Error for FenError {}
 
 impl Position {
     pub const START_FEN: &'static str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+    #[cfg(feature = "std")]
     pub fn startpos() -> Position {
         Position::from_fen(Position::START_FEN).unwrap()
     }
@@ -220,6 +224,7 @@ impl Position {
         p
     }
 
+    #[cfg(feature = "std")]
     pub fn from_fen(fen: &str) -> Result<Position, FenError> {
         let mut parts = fen.split_whitespace();
         let board = parts.next().ok_or_else(|| FenError("empty".into()))?;
@@ -303,6 +308,7 @@ impl Position {
         Ok(p)
     }
 
+    #[cfg(feature = "std")]
     pub fn to_fen(&self) -> String {
         let mut s = String::new();
         for rank in (0..8).rev() {
@@ -360,8 +366,9 @@ impl Position {
     }
 }
 
-impl std::fmt::Display for Position {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+#[cfg(feature = "std")]
+impl core::fmt::Display for Position {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         for rank in (0..8).rev() {
             write!(f, "{} ", rank + 1)?;
             for file in 0..8 {

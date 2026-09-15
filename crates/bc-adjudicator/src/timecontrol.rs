@@ -145,7 +145,7 @@ static PARAMETERS: [Params; 5] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::clock::{budget_blocks, FLOOR_BLOCKS, MAX_BUDGET, MIN_MOVE_BLOCKS};
+    use crate::dilation::{budget_blocks, FLOOR_BLOCKS, MAX_BUDGET, MIN_MOVE_BLOCKS};
 
     /// The attack in one test: no free-form number crosses the wire, so the
     /// only thing an attacker can propose is a class — and a class that does

@@ -25,8 +25,8 @@
 //! The realistic abuse is refusal — declining to register someone else's fix —
 //! which is a much smaller thing to guard against.
 
+use alloc::collections::BTreeMap;
 use bc_hash::{tagged, Hash};
-use std::collections::BTreeMap;
 
 /// The hash of a ruleset: what the integer on the wire actually denotes.
 ///
@@ -47,11 +47,12 @@ pub enum RegistryError {
     OutOfOrder(u16),
 }
 
-impl std::fmt::Display for RegistryError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for RegistryError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "{self:?}")
     }
 }
+#[cfg(feature = "std")]
 impl std::error::Error for RegistryError {}
 
 /// Consensus state: version → the ruleset it denotes.

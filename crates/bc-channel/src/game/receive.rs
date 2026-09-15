@@ -10,7 +10,7 @@ use super::{Channel, ChannelError};
 use crate::clock::plausible;
 use crate::msg::{MoveMsg, Signed};
 use crate::rules::{clock_of, justified, loser_is, NO_MOVE};
-use crate::state::{pos_hash, rep_hash, GameState};
+use bc_adjudicator::state::{pos_hash, rep_hash, GameState};
 use bc_chess::Color;
 
 impl Channel {

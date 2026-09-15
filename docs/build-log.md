@@ -416,3 +416,46 @@ had been green since the day it was written and was the reason the cost bug
 survived review — not because anybody argued for computing the ∀, but because
 nobody was looking at cost, and the only thing watching was a test that
 preferred the expensive answer.
+
+---
+
+## 14 — `no_std` was the easy half; the dependency list was the point
+
+`D24` asked for the adjudicator as a `no_std` crate depending only on
+`bc-chess`. Two things were more interesting than expected.
+
+**`no_std` turned out to be nearly free, and that was informative.** Every
+piece of `std` in `bc-chess` was in FEN parsing, `to_uci`, SAN, `render` and
+`divide` — notation and debugging, all of it allocating, none of it on the
+consensus path. `bc-hash` needed one `hex` helper gated. Nothing in
+`make_move`, `is_move_legal`, `generate_legal`, `pack` or `unpack` allocates
+at all.
+
+That is not luck. Those functions were written to be cheap for `perft`, which
+runs them 119 million times, and the shape that makes a move generator fast is
+the same shape that makes it suitable for consensus: fixed buffers, no
+allocator, no I/O, no ambient state. The optimisation and the determinism
+requirement wanted the same thing.
+
+**The dependency list needed a test, and writing it changed what it said.**
+The obvious allow-list was `bc-chess` alone, per the decision. But a state
+needs a hash, so `bc-hash` has to be there — and once that is written down,
+the question "what else might reasonably creep in?" has an obvious answer:
+`bc-sig`, the moment somebody wants to verify a resignation inside the
+dispute machine.
+
+It should not be there, and the reason is worth keeping: **deciding whether a
+signature is good is the escrow's job; deciding what follows from it is the
+adjudicator's.** The split is not about layering neatness — it is that the
+adjudicator takes already-verified claims, so it cannot be tricked by a
+signature check it got wrong, because it does not do any. `bc-sig` being
+absent from that list is a security property, not tidiness.
+
+So `tests/dependencies.rs` asserts the list, asserts there are no
+dev-dependencies either (a dev-dependency is how a type quietly becomes
+`pub`), and greps the source for `f32`, `f64`, `HashMap` and `HashSet` —
+the two classic ways consensus stops being bit-identical.
+
+**Lesson.** A boundary enforces nothing unless something checks it. The
+comment in the manifest saying "no signatures here" would have survived
+exactly until the first person with a good reason, and they always have one.

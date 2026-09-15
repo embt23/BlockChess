@@ -25,10 +25,10 @@
 
 pub mod adjudicate;
 
-use crate::dispute::Dispute;
 use crate::msg::{draw_bytes, resign_bytes, Signed};
 use crate::offer::GameOffer;
-use crate::state::Status;
+use bc_adjudicator::dispute::Dispute;
+use bc_adjudicator::state::Status;
 use bc_hash::Hash;
 use bc_sig::{Signature, VerifyingKey};
 use std::collections::BTreeMap;
@@ -41,7 +41,7 @@ pub enum LedgerError {
     NotInDispute,
     AlreadyInDispute,
     BadPosition,
-    Dispute(crate::dispute::DisputeError),
+    Dispute(bc_adjudicator::dispute::DisputeError),
     Expired,
     InsufficientFunds,
     DuplicateChannel,
@@ -72,8 +72,8 @@ struct Escrow {
     settled: bool,
 }
 
-impl From<crate::dispute::DisputeError> for LedgerError {
-    fn from(e: crate::dispute::DisputeError) -> LedgerError {
+impl From<bc_adjudicator::dispute::DisputeError> for LedgerError {
+    fn from(e: bc_adjudicator::dispute::DisputeError) -> LedgerError {
         LedgerError::Dispute(e)
     }
 }

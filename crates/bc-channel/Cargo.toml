@@ -6,6 +6,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bc-adjudicator = { path = "../bc-adjudicator" }
 bc-chess = { path = "../bc-chess" }
 bc-hash = { path = "../bc-hash" }
 bc-sig = { path = "../bc-sig" }
+
+[dev-dependencies]
+bc-adjudicator = { path = "../bc-adjudicator" }

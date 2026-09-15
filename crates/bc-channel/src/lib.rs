@@ -42,21 +42,21 @@
 //! it is the difference between a convenient system and a trustless one.
 
 pub mod clock;
-pub mod dispute;
 pub mod game;
 pub mod ledger;
 pub mod msg;
 pub mod offer;
 pub mod rules;
-pub mod ruleset;
-pub mod state;
-pub mod timecontrol;
 
-pub use dispute::{ClaimKind, Dispute, DisputeError, MoveOutcome, Refutation};
+pub use bc_adjudicator::{dispute, state, terms, timecontrol};
+/// The adjudicator is a separate crate (`D24`) and `bc-channel` links it, so
+/// a client can simulate a whole dispute before spending gas. Re-exported so
+/// that client code reads the same way it did before the split.
+pub use bc_adjudicator::{
+    pos_hash, rep_hash, ClaimKind, Dispute, DisputeError, GameState, GameTerms, MoveOutcome,
+    Refutation, RegistryError, RulesetRegistry, Status, TimeControl,
+};
 pub use game::{Channel, ChannelError};
 pub use ledger::{Ledger, LedgerError, Payout};
 pub use msg::{MoveMsg, Signed};
-pub use offer::{GameOffer, GameTerms};
-pub use ruleset::{RegistryError, RulesetRegistry};
-pub use state::{pos_hash, rep_hash, GameState, Status};
-pub use timecontrol::TimeControl;
+pub use offer::GameOffer;

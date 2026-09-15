@@ -10,7 +10,7 @@
 //! cargo run --release --bin dispute
 //! ```
 
-use bc_channel::clock::{budget_blocks, TAU_MS};
+use bc_adjudicator::dilation::{budget_blocks, TAU_MS};
 use bc_channel::game::Channel;
 use bc_channel::offer::{GameOffer, GameTerms};
 use bc_channel::state::pos_hash;

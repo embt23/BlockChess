@@ -1,31 +1,15 @@
-//! Which status a state may claim, and when a receiver should believe it.
+//! Which terminal claims a *client* should believe.
 //!
 //! Kept apart from the state machine because this is the part with an opinion
-//! in it. Everything in `game.rs` is mechanical; everything here is policy,
-//! and policy is what changes.
+//! in it. The consensus half — `NO_MOVE`, `clock_of`, `loser_is` — moved to
+//! `bc_adjudicator::status` with the dispute machine (`D24`); they are
+//! re-exported here so client code reads the same way it did.
 
-use crate::state::{GameState, Status};
+pub use bc_adjudicator::status::{clock_of, loser_is, NO_MOVE};
+
+use bc_adjudicator::state::Status;
 use bc_chess::terminal::Outcome;
 use bc_chess::{Color, Position};
-
-/// The sentinel `mv` for a state that advances the ply without a move: a
-/// self-declared flag. Only ever terminal, and only ever against the player
-/// who sent it.
-pub const NO_MOVE: u16 = 0;
-
-pub fn clock_of(s: &GameState, c: Color) -> u32 {
-    match c {
-        Color::White => s.clock_w_ms,
-        Color::Black => s.clock_b_ms,
-    }
-}
-
-pub fn loser_is(c: Color) -> Status {
-    match c {
-        Color::White => Status::BlackWins,
-        Color::Black => Status::WhiteWins,
-    }
-}
 
 /// The status a mover may claim for the position they just reached.
 ///

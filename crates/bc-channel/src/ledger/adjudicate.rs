@@ -8,11 +8,11 @@
 //! other's vocabulary.
 
 use super::{Escrow, Ledger, LedgerError, Payout};
-use crate::dispute::{ClaimKind, Dispute, Refutation};
 use crate::msg::{draw_bytes, resign_bytes, Signed};
 use crate::offer::GameOffer;
-use crate::state::GameState;
-use crate::state::{rep_hash, Status};
+use bc_adjudicator::dispute::{ClaimKind, Dispute, Refutation};
+use bc_adjudicator::state::GameState;
+use bc_adjudicator::state::{rep_hash, Status};
 use bc_chess::{unpack, Color, Move, Position};
 use bc_hash::Hash;
 use bc_sig::{Signature, VerifyingKey};
@@ -105,9 +105,11 @@ impl Ledger {
         self.live_escrow(id)?;
         let d = self.disputes.get_mut(id).ok_or(LedgerError::NotInDispute)?;
         match d.apply_move(mover, mv, height, claim)? {
-            crate::dispute::MoveOutcome::Continues => Ok(None),
-            crate::dispute::MoveOutcome::Claimed => Ok(None),
-            crate::dispute::MoveOutcome::Ended(status) => self.conclude(id, status).map(Some),
+            bc_adjudicator::dispute::MoveOutcome::Continues => Ok(None),
+            bc_adjudicator::dispute::MoveOutcome::Claimed => Ok(None),
+            bc_adjudicator::dispute::MoveOutcome::Ended(status) => {
+                self.conclude(id, status).map(Some)
+            }
         }
     }
 
@@ -209,7 +211,7 @@ fn authorise(signed: &Signed, initiator: Color, offer: &GameOffer) -> Result<(),
 /// Unpack a claimed position and check it is the one the state names.
 fn position_matching(packed: &[u8], pos_hash: &Hash) -> Result<Position, LedgerError> {
     let pos = unpack(packed).map_err(|_| LedgerError::BadPosition)?;
-    if crate::state::pos_hash(&pos) != *pos_hash {
+    if bc_adjudicator::state::pos_hash(&pos) != *pos_hash {
         return Err(LedgerError::BadPosition);
     }
     Ok(pos)

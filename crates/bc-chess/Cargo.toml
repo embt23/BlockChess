@@ -5,4 +5,15 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["std"]
+# FEN, `render` and `divide` need an allocator. Nothing on the consensus
+# path does, which is what makes the adjudicator able to turn `std` off.
+std = []
+
 [dependencies]
+
+# The binary is a human tool: it prints boards and parses FEN.
+[[bin]]
+name = "perft"
+required-features = ["std"]
