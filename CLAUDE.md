@@ -205,15 +205,20 @@ touching `bc-channel::dispute`.
 | Decided | Shipped |
 |---|---|
 | **D21** PoW first, so Milestone E is earned rather than simulated | a stub `BTreeMap` height counter — so the claim above is **demonstrated, not earned** |
-| **D22** Δ and τ from a time-control class table | free-form `delta_blocks`/`budget_tau_ms` in `GameTerms` — and D22 says this one cannot be retrofitted after first testnet |
+| ~~**D22** Δ and τ from a time-control class table~~ | ✅ done — `timecontrol.rs`; the class is checked against the clock, so relabelling is not a valid offer |
 | **D23** split oracle: differential-test the terminal predicates, model-check the state machine | the spec's worked table and hand-chosen positions |
 | **D24** `bc-adjudicator`, a `no_std` crate depending only on `bc-chess` | inside `bc-channel::dispute` + `ledger::adjudicate` |
-| **D25** `adjudicator_ver` = integer on the wire, ruleset hash in state | integer only |
+| ~~**D25** `adjudicator_ver` = integer on the wire, ruleset hash in state~~ | ✅ done — `ruleset.rs`, append-only registry |
 
-D22 and D24 are the load-bearing ones: D22 because `GameTerms` is what signed
-channels commit to, D24 because a client that links the adjudicator can run a
-dispute locally before spending gas, which turns the griefing analysis into
-something computed rather than argued.
+**D22, D25 and the `P3` cost bug are fixed.** D24 is now the load-bearing one
+left: a client that links the adjudicator can run a dispute locally before
+spending gas, which turns the griefing analysis into something computed rather
+than argued — and the `no_std` boundary is what makes the determinism lints
+enforceable rather than remembered.
+
+**`G0` flag:** the five `(Δ, τ)` pairs in `timecontrol.rs` are a proposal. They
+are the rule, not the plumbing, and are Evan's to set. The tests check the
+properties any table must satisfy whatever the numbers are.
 
 Three directions, in the order I would take them:
 

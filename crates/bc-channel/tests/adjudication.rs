@@ -7,10 +7,11 @@
 
 mod common;
 
-use bc_channel::clock::{budget_blocks, FLOOR_BLOCKS, MIN_MOVE_BLOCKS, TAU_MS};
+use bc_channel::clock::{budget_blocks, FLOOR_BLOCKS, MIN_MOVE_BLOCKS};
 use bc_channel::dispute::{DisputeError, MoveOutcome, Refutation};
 use bc_channel::ledger::adjudicate::{Evidence, RepetitionProof};
 use bc_channel::ledger::LedgerError;
+use bc_channel::TimeControl;
 use bc_channel::{ClaimKind, Status};
 use bc_chess::{Color, Move, Position};
 use common::{table, table_capped, STAKE, START_BALANCE};
@@ -53,7 +54,9 @@ fn you_can_win_against_an_opponent_who_disconnects() {
     assert_eq!(d.side_to_move(), Color::White);
     let mv = d.pos.move_from_uci("g1f3").unwrap();
     assert_eq!(
-        t.ledger.dispute_move(&id, Color::White, mv, 1_001).unwrap(),
+        t.ledger
+            .dispute_move(&id, Color::White, mv, 1_001, None)
+            .unwrap(),
         None,
         "the game continues; now it is Black's move"
     );
@@ -160,19 +163,110 @@ fn the_game_continues_on_chain_under_the_same_rules() {
         .dispute_open(Color::White, &ev, &packed, 100)
         .unwrap();
 
-    let d = t.ledger.dispute(&t.white.channel_id).unwrap();
+    let id = t.white.channel_id;
+    let d = t.ledger.dispute(&id).unwrap();
     assert_eq!(d.side_to_move(), Color::Black);
     let mate = d.pos.move_from_uci("d8h4").unwrap();
 
     // Fool's mate, played through the adjudicator. The on-chain engine runs
-    // here and nowhere else.
-    let payout = t
+    // here and nowhere else — and it runs `is_move_legal`, not `outcome()`.
+    //
+    // `P3`: the chain does **not** look for mate. Playing the mating move
+    // without saying so leaves the game running, because noticing would cost
+    // the ∀ over ~218 moves that the invariant exists to avoid.
+    assert_eq!(
+        t.ledger
+            .dispute_move(&id, Color::Black, mate, 110, None)
+            .expect("legal on-chain move"),
+        None,
+        "the chain does not notice mate by itself"
+    );
+    assert!(t.ledger.in_dispute(&id), "still running");
+    assert!(
+        t.ledger.dispute(&id).unwrap().pos.is_checkmate(),
+        "…even though it is, in fact, mate"
+    );
+}
+
+#[test]
+fn the_mating_player_says_so_and_nobody_can_refute_it() {
+    // The same position, played the way a client actually would: the claim
+    // rides along with the move, as `spec/05`'s `DisputeMove { …, [status] }`
+    // always allowed. One transaction, and no quantifier.
+    let start = Position::from_fen("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2")
+        .unwrap();
+    let mut t = table(start);
+    let (ev, packed) = t.evidence(Color::White);
+    t.ledger
+        .dispute_open(Color::White, &ev, &packed, 100)
+        .unwrap();
+    let id = t.white.channel_id;
+
+    let mate = t
         .ledger
-        .dispute_move(&t.white.channel_id, Color::Black, mate, 110)
-        .expect("legal on-chain move")
-        .expect("and it ends the game");
+        .dispute(&id)
+        .unwrap()
+        .pos
+        .move_from_uci("d8h4")
+        .unwrap();
+    assert_eq!(
+        t.ledger
+            .dispute_move(&id, Color::Black, mate, 110, Some(ClaimKind::Checkmate))
+            .unwrap(),
+        None,
+        "optimistic: a window opens rather than settling"
+    );
+
+    // White is genuinely mated, so there is no refuting move to post.
+    for from in 0u8..64 {
+        for to in 0u8..64 {
+            assert!(t
+                .ledger
+                .dispute_refute(&id, Color::White, Move::normal(from, to), 120)
+                .is_err());
+        }
+    }
+
+    let payout = t.ledger.dispute_finalize(&id, LATER).unwrap();
     assert_eq!(payout.black, 2 * STAKE);
-    assert!(!t.ledger.in_dispute(&t.white.channel_id));
+}
+
+#[test]
+fn claiming_a_mate_that_is_not_one_is_refuted_by_a_single_move() {
+    // And the cost asymmetry, stated as a test: the claimant asserted a ∀
+    // that nobody computed, and one legal move settles it.
+    let mut t = table(Position::startpos());
+    t.play(&["e2e4"]);
+    let (ev, packed) = t.evidence(Color::Black);
+    t.ledger
+        .dispute_open(Color::Black, &ev, &packed, 100)
+        .unwrap();
+    let id = t.white.channel_id;
+
+    let mv = t
+        .ledger
+        .dispute(&id)
+        .unwrap()
+        .pos
+        .move_from_uci("e7e5")
+        .unwrap();
+    t.ledger
+        .dispute_move(&id, Color::Black, mv, 110, Some(ClaimKind::Checkmate))
+        .unwrap();
+
+    let escape = t
+        .ledger
+        .dispute(&id)
+        .unwrap()
+        .pos
+        .move_from_uci("g1f3")
+        .unwrap();
+    assert_eq!(
+        t.ledger
+            .dispute_refute(&id, Color::White, escape, 120)
+            .unwrap(),
+        Refutation::ResumedAtMove
+    );
 }
 
 #[test]
@@ -187,7 +281,8 @@ fn an_illegal_move_on_chain_costs_gas_and_time_and_nothing_else() {
     let id = t.white.channel_id;
     let before = t.ledger.dispute(&id).unwrap().pos;
     assert_eq!(
-        t.ledger.dispute_move(&id, Color::Black, Move(0xFFFF), 110),
+        t.ledger
+            .dispute_move(&id, Color::Black, Move(0xFFFF), 110, None),
         Err(LedgerError::Dispute(DisputeError::IllegalMove))
     );
     // The transaction reverted: the board did not move, and neither did the
@@ -197,12 +292,12 @@ fn an_illegal_move_on_chain_costs_gas_and_time_and_nothing_else() {
     // Nor can the wrong player move.
     let legal = before.move_from_uci("e7e5").unwrap();
     assert_eq!(
-        t.ledger.dispute_move(&id, Color::White, legal, 110),
+        t.ledger.dispute_move(&id, Color::White, legal, 110, None),
         Err(LedgerError::Dispute(DisputeError::NotYourTurn))
     );
     // And not after the deadline.
     assert_eq!(
-        t.ledger.dispute_move(&id, Color::Black, legal, LATER),
+        t.ledger.dispute_move(&id, Color::Black, legal, LATER, None),
         Err(LedgerError::Dispute(DisputeError::DeadlinePassed))
     );
 }
@@ -645,8 +740,16 @@ fn a_player_who_stalled_arrives_with_a_smaller_budget() {
         .unwrap();
     let d = t.ledger.dispute(&t.white.channel_id).unwrap();
 
-    assert_eq!(d.budget_of(Color::White), budget_blocks(12_000, TAU_MS));
-    assert_eq!(d.budget_of(Color::Black), budget_blocks(180_000, TAU_MS));
+    // τ now comes from the time-control class rather than a constant (`D22`),
+    // so the test reads it from the terms it is actually playing under.
+    let tau = t.offer.terms.budget_tau_ms();
+    assert_eq!(
+        t.offer.terms.time_control,
+        TimeControl::Blitz,
+        "3+2 is blitz"
+    );
+    assert_eq!(d.budget_of(Color::White), budget_blocks(12_000, tau));
+    assert_eq!(d.budget_of(Color::Black), budget_blocks(180_000, tau));
     assert!(d.budget_of(Color::Black) > d.budget_of(Color::White) * 10);
     // But White can still physically move, which is the point of the floor.
     assert!(d.budget_of(Color::White) > FLOOR_BLOCKS);
@@ -690,7 +793,7 @@ fn a_budget_runs_out_and_the_game_is_lost_on_time() {
         }
         let side = d.side_to_move();
         let mv = *d.pos.generate_legal().as_slice().first().unwrap();
-        if t.ledger.dispute_move(&id, side, mv, height).is_err() {
+        if t.ledger.dispute_move(&id, side, mv, height, None).is_err() {
             break;
         }
         height += 1;
@@ -718,7 +821,9 @@ fn the_ply_cap_forces_a_draw_and_bounds_the_worst_case() {
     let d = t.ledger.dispute(&id).unwrap();
     let mv = d.pos.move_from_uci("a2a3").unwrap();
     assert_eq!(
-        t.ledger.dispute_move(&id, Color::White, mv, 101).unwrap(),
+        t.ledger
+            .dispute_move(&id, Color::White, mv, 101, None)
+            .unwrap(),
         None,
         "ply 3 of 4"
     );
@@ -726,7 +831,7 @@ fn the_ply_cap_forces_a_draw_and_bounds_the_worst_case() {
     let mv = d.pos.move_from_uci("g8h8").unwrap();
     let payout = t
         .ledger
-        .dispute_move(&id, Color::Black, mv, 102)
+        .dispute_move(&id, Color::Black, mv, 102, None)
         .unwrap()
         .expect("the cap ends it");
     assert_eq!((payout.white, payout.black), (STAKE, STAKE), "a draw");
@@ -779,7 +884,7 @@ fn disputes_conserve_the_supply_like_everything_else() {
                 let d = t.ledger.dispute(&id).unwrap();
                 let side = d.side_to_move();
                 let mv = *d.pos.generate_legal().as_slice().first().unwrap();
-                t.ledger.dispute_move(&id, side, mv, 110).unwrap();
+                t.ledger.dispute_move(&id, side, mv, 110, None).unwrap();
                 t.ledger.dispute_finalize(&id, LATER).unwrap()
             }
         };
@@ -810,7 +915,7 @@ fn a_move_cannot_sidestep_a_pending_claim() {
         .unwrap();
     assert_eq!(
         t.ledger
-            .dispute_move(&id, Color::White, Move::normal(0, 1), 210),
+            .dispute_move(&id, Color::White, Move::normal(0, 1), 210, None),
         Err(LedgerError::Dispute(DisputeError::ClaimPending))
     );
     // And a second claim cannot be stacked on the first.

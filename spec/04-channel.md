@@ -100,11 +100,10 @@ GameTerms {
   base_time_ms      u32
   increment_ms      u32
   max_plies         u16       ≤ 600
-  delta_blocks      u32       Δ, ≥ 64
-  budget_tau_ms     u32       clock dilation constant, see 05
+  time_control      u8        Bullet | Blitz | Rapid | Classical | Correspondence
   rules_mask        u8        which draw rules are enabled
   adjudicator_ver   u16
-}
+}                             46 bytes
 ```
 
 **The critical property of this design:** the server assembles and submits the
@@ -125,6 +124,45 @@ second. Two friends playing a rematch is not an exotic case.
 
 A rake with `server_pk = 0` is rejected. A rake with nobody to pay it to is a
 burn, and a burn is a mint with the sign flipped (`E1`).
+
+### Δ and τ are not in here (D22)
+
+They were, as free-form `u32`s with a single `delta_blocks ≥ 64` floor, and
+that was the same mistake Lightning made with `to_self_delay`. An opponent
+proposes the minimum at open, a client that does not check accepts it, and in
+a bullet game the victim has about two minutes to get a move onto a chain or
+forfeit the pot.
+
+Consensus-enforced *bounds* cannot fix it, and this is the part worth keeping:
+**a single `[min, max]` band wide enough to serve both bullet and
+correspondence is, by construction, wide enough to contain a hostile value for
+either.** The band cannot be tight and general at the same time. `64` was that
+band, and `64` *is* the hostile value at bullet.
+
+So `GameTerms` names a **class** and consensus holds one `(Δ, τ)` pair per
+class. No number crosses the wire, so there is nothing to propose.
+
+The class is also **checked, not merely carried**: it must equal the class the
+clock actually is, by `base_time_ms + 40·increment_ms`. Otherwise the lie
+simply moves from the number to the label — declare a three-minute game
+`Correspondence`, vanish while losing, and the winner waits an hour per move.
+Carrying it as well as deriving it costs one byte and keeps the negotiated
+intent readable, which is the same trade `D25` makes for `adjudicator_ver`.
+
+Values, and the properties they must satisfy whatever they are, live in
+`crates/bc-channel/src/timecontrol.rs`. **The five pairs are Evan's to set
+(`G0`); the table currently holds a proposal.**
+
+### `adjudicator_ver` (D25)
+
+An integer on the wire, a ruleset hash in consensus state. A bare integer is a
+promise with nothing behind it — two builds can both claim version 3 and
+disagree about en passant, and the channel that trusted the number cannot
+tell. A bare hash is illegible on the wire and unwritable in a spec before the
+build exists. So both, and the registry is append-only: a channel pinned to
+version 3 is adjudicated by version 3 no matter what is registered later.
+
+`crates/bc-channel/src/ruleset.rs`.
 
 `stake_white` and `stake_black` need not be equal — see the handicap odds in
 `06-economics.md`.

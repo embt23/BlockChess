@@ -103,7 +103,10 @@ pub struct Dispute {
 pub enum MoveOutcome {
     /// The game continues; it is now the other player's turn.
     Continues,
-    /// The game ended on the board, or hit the ply cap.
+    /// The move carried an optimistic claim, and its refutation window is
+    /// open. Nothing is settled yet.
+    Claimed,
+    /// The game is over: an immediately-decidable claim, or the ply cap.
     Ended(Status),
 }
 
@@ -122,7 +125,7 @@ impl Dispute {
         if state.status != Status::Ongoing {
             return Err(DisputeError::NotOngoing);
         }
-        let tau = terms.budget_tau_ms;
+        let tau = terms.budget_tau_ms();
         let mut d = Dispute {
             channel_id: state.channel_id,
             ply: state.ply,
@@ -136,7 +139,7 @@ impl Dispute {
             claim: None,
             initiator,
             turn_started: height,
-            delta_blocks: terms.delta_blocks,
+            delta_blocks: terms.delta_blocks(),
             max_plies: terms.max_plies,
         };
         d.arm(height);
@@ -188,11 +191,28 @@ impl Dispute {
 
     /// Play a move on-chain. This is the only place the adjudicator's chess
     /// engine ever runs.
+    /// Play a move on-chain, optionally claiming the game ends with it.
+    ///
+    /// **`P3` lives here.** An earlier version detected mate and stalemate
+    /// itself, by calling `Position::outcome()` after every move — which
+    /// generates all ~218 legal moves, which is precisely the ∀ the invariant
+    /// exists to keep off the chain. It returned correct answers and every
+    /// test passed; it was the *cost* that was wrong, and on a real chain the
+    /// difference is one check test against two hundred and eighteen move
+    /// generations, per move, for every disputed game. `docs/build-log.md`
+    /// §12.
+    ///
+    /// So the chain no longer looks. A player who has just delivered mate
+    /// says so — `claim` rides along with the move, exactly as `spec/05`'s
+    /// `DisputeMove { …, [new_status] }` always allowed — and the claim is
+    /// optimistic and refutable like any other. Claiming nothing is always
+    /// allowed; the game simply continues.
     pub fn apply_move(
         &mut self,
         mover: Color,
         mv: Move,
         height: u64,
+        claim: Option<ClaimKind>,
     ) -> Result<MoveOutcome, DisputeError> {
         if self.claim.is_some() {
             return Err(DisputeError::ClaimPending);
@@ -213,26 +233,18 @@ impl Dispute {
         self.pos = self.pos.make_move(mv);
         self.ply += 1;
         self.arm(height);
-        Ok(self.settled_on_the_board())
-    }
 
-    /// Has the game ended by itself — on the board, or at the ply cap?
-    fn settled_on_the_board(&self) -> MoveOutcome {
-        use bc_chess::terminal::Outcome;
-        // The cap bounds the worst-case on-chain cost of one channel, which
-        // is the number a validator has to be able to afford.
+        // The ply cap is an integer comparison, not a search, so it stays.
+        // It is what bounds the worst case a validator must afford.
         if self.ply >= self.max_plies {
-            return MoveOutcome::Ended(Status::Draw);
+            return Ok(MoveOutcome::Ended(Status::Draw));
         }
-        match self.pos.outcome() {
-            Some(Outcome::Checkmate { winner }) => MoveOutcome::Ended(match winner {
-                Color::White => Status::WhiteWins,
-                Color::Black => Status::BlackWins,
-            }),
-            Some(Outcome::Stalemate) => MoveOutcome::Ended(Status::Draw),
-            // Fifty-move and insufficient material are *claimable*, not
-            // automatic, so a move that reaches one does not end the game.
-            _ => MoveOutcome::Continues,
+        match claim {
+            None => Ok(MoveOutcome::Continues),
+            Some(kind) => match self.claim_terminal(kind, mover, height)? {
+                Some(status) => Ok(MoveOutcome::Ended(status)),
+                None => Ok(MoveOutcome::Claimed),
+            },
         }
     }
 

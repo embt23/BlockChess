@@ -377,3 +377,42 @@ readings license the same behaviour at the client and different behaviour at
 the chain, and the code that differs sits in two crates that currently share
 a module. Boundaries that exist only in prose do not enforce anything — which
 is the argument for D24 restated as a bug.
+
+---
+
+## 13 — What the ∀ cost, once it was actually removed
+
+Follow-up to §12, which found that `Dispute::apply_move` called
+`Position::outcome()` on every on-chain move and so generated all ~218 legal
+moves to notice a mate — the quantifier `P3` exists to keep off the chain.
+
+**The fix was not "stop calling it".** Deleting the call leaves a game that
+reaches mate on-chain and then just sits there, because nothing notices. What
+was missing was the other half of the optimistic design: somebody has to
+*say* it is mate. `spec/05` had this all along —
+`DisputeMove { channel_id, ply, move, [new_status] }` — and the implementation
+had silently dropped the optional field and replaced it with a search.
+
+So the claim now rides along with the move. One transaction, no quantifier,
+and the claim is refutable like any other.
+
+**What the tests had to become, which is the instructive part.** The old test
+was `the_game_continues_on_chain_under_the_same_rules`, and it asserted that
+playing Fool's mate through the adjudicator settled the game. That assertion
+was the bug, written down as an expectation and passing. The replacement
+asserts the opposite and says why:
+
+```rust
+assert_eq!(dispute_move(…, mate, None), None, "the chain does not notice mate by itself");
+assert!(dispute(&id).unwrap().pos.is_checkmate(), "…even though it is, in fact, mate");
+```
+
+Two assertions that look contradictory and are not. The first is the
+invariant; the second is what makes the first surprising enough to need
+stating.
+
+**Lesson.** A test that encodes convenient behaviour will defend it. This one
+had been green since the day it was written and was the reason the cost bug
+survived review — not because anybody argued for computing the ∀, but because
+nobody was looking at cost, and the only thing watching was a test that
+preferred the expensive answer.

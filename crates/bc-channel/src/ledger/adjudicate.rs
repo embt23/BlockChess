@@ -88,18 +88,25 @@ impl Ledger {
         Ok(())
     }
 
-    /// Play a move on-chain. Settles immediately if the game ends on the board.
+    /// Play a move on-chain, optionally claiming the game ends with it.
+    ///
+    /// `Ok(None)` covers both "the game continues" and "an optimistic claim
+    /// is now open"; only an immediately-decidable ending pays out here. The
+    /// chain does not look for mate on its own — see [`Dispute::apply_move`]
+    /// and `P3`.
     pub fn dispute_move(
         &mut self,
         id: &Hash,
         mover: Color,
         mv: Move,
         height: u64,
+        claim: Option<ClaimKind>,
     ) -> Result<Option<Payout>, LedgerError> {
         self.live_escrow(id)?;
         let d = self.disputes.get_mut(id).ok_or(LedgerError::NotInDispute)?;
-        match d.apply_move(mover, mv, height)? {
+        match d.apply_move(mover, mv, height, claim)? {
             crate::dispute::MoveOutcome::Continues => Ok(None),
+            crate::dispute::MoveOutcome::Claimed => Ok(None),
             crate::dispute::MoveOutcome::Ended(status) => self.conclude(id, status).map(Some),
         }
     }
