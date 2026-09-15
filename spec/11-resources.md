@@ -72,6 +72,16 @@ one; this is what it has to be able to do.
 to matchmaking, and is the thing to measure `D(π_you ‖ π_pop)` on before
 committing to anything larger (`10-personality.md` §10, risk 4).
 
+**Measured, and it argues for D more strongly than the original reasoning
+did.** `D(π_you ‖ π_pop) = 0.0132` nats/move (`docs/d20-result.md`) — about a
+quarter of what §7 assumed, so a full policy model buys less than expected in
+absolute terms. But *identification* came back at 70× chance from held-out
+games using a model of exactly this kind. The useful signal for matchmaking
+and prep is comparative — "is this player like that one" — and the comparative
+result is strong while the absolute one is middling. That is the case for the
+cheap object over the expensive one, made by measurement rather than by
+guessing at "probably 80%".
+
 ### The three-part privacy stack
 
 > *"How do you share how you play without showing any information encoding the
@@ -226,6 +236,11 @@ an input.**
 
 ## Open decisions
 
-Recorded as D16–D20 in `09-open-questions.md`. The one to settle first is
-cheapest and most informative: **measure `D(π_you ‖ π_pop)` on a real corpus**
-before building anything on top of the estimate in `10-personality.md` §7.
+Recorded as D16–D20 in `09-open-questions.md`. D16, D17 and D19 are settled.
+
+**D20 is done: AMBER.** `D(π_you ‖ π_pop) = 0.0132` nats/move on 138,188
+master games. The estimate in `10-personality.md` §7 was about 4× high, so
+every timescale in this file's neighbourhood stretches by that factor — but
+the layer this file describes survives, because what it sells is identity
+against *exploitable* result, which is still a factor of ~5,000.
+`docs/d20-result.md`.

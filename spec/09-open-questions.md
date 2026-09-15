@@ -473,13 +473,14 @@ one: `D̂` (raw), `D̂ / 0.60` (the point estimate of true `D`), and
 | True `D(π_you ‖ π_pop)` | Raw `D̂` at 60% | Detection time | Verdict |
 |---|---|---|---|
 | ≥ 0.02 nats/move | ≥ 0.012 | ~9 games | thesis holds as written |
-| 0.005 – 0.02 | 0.003 – 0.012 | ~9–36 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
-| < 0.005 nats/move | < 0.003 | > 36 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
+| 0.005 – 0.02 | 0.003 – 0.012 | ~9–35 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
+| < 0.005 nats/move | < 0.003 | > 35 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
 
 *(The detection-time column read "~35–140 games" and "> 140 games" in the
 first draft. Those were computed for the wrong endpoints: at α = 0.001,
-`ln(1000)/D` over ~38 of a player's own moves per game gives 9 games at
-D = 0.02 and 36 at D = 0.005, and the 140 figure corresponds to D = 0.0013 —
+`ln(1000)/D` over ~39 of a player's own moves per game — the convention
+`06-economics.md` §5 already used — gives 9 games at D = 0.02 and 35 at
+D = 0.005, and the 140 figure corresponds to D = 0.0013 —
 which is well inside the dead band rather than at its edge. The verdict cuts
 are on nats/move and are unaffected, but the practical reading changes: the
 amber band is "a detector needs tens of games", not "hundreds".)*
@@ -664,8 +665,11 @@ Measured, against the threshold above, after it was signed. Full write-up in
 | identification | **73/150 = 48.7%**, chance 0.7% |
 
 **Act II survives; its timescales do not.** `spec/10` §7 and `spec/13` were
-written against roughly twice this figure and need rewriting. A cheat
-detector at α = 0.001 needs ~14 games, not the ~9 the estimate implied.
+written against `0.05` nats/move — §7's own midpoint — which is roughly four
+times this figure, and need rewriting. A cheat detector needs ~13 games to
+*flag* at α = 10⁻³, and ~27 to *accuse* at the α = 10⁻⁶ `06-economics.md` §5
+uses. Both are rewritten there, alongside the three engine rows, which remain
+assumptions and are now labelled as such.
 
 Three reasons the figure is a lower bound, all pushing the same way: the
 corpus is masters rather than a mixed field (flagged before the run), the

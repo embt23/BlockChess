@@ -35,7 +35,7 @@ Each episode below is: **an attack**, then **the primitive that kills it**, then
 | 10 | "I'll censor your dispute" | forced inclusion | reserved blockspace, censorship-resistance bounds | dispute gas reserve |
 | 11 | "This bet is fair, honest" | handicap odds | Elo as a **Boltzmann distribution**, Bradley–Terry, log-odds, logistic regression as energy fitting | an odds calculator |
 | 12 | "You can get rich playing even games" | Kelly criterion | `G = 1 − H₂(p)` **is channel capacity**; entropy; risk of ruin; concavity of log growth | a bankroll simulator |
-| 13 | "I'm not using an engine" | sequential hypothesis testing | likelihood ratios, KL divergence, Wald's SPRT, detection time `≈ ln(1/α)/D_KL` | a cheat detector |
+| 13 | "I'm not using an engine" | sequential hypothesis testing | likelihood ratios, KL divergence, Wald's SPRT, detection time `≈ ln(1/α)/D_KL` — **measured at 0.0132 nats/move for the identity test, so ~27 games to accuse** (`spec/06` §5) | a cheat detector |
 | 14 | "Your rating is 1200, honest" | Bayesian rating | Gaussian posteriors, Glicko-2's `RD`, TrueSkill factor graphs, Kalman analogy | a rating service |
 | 15 | "I chose the tournament bracket" | VRFs | unique + verifiable + pseudorandom; grinding resistance vs plain commitments | verifiable pairings |
 | 16 | "I can see every game you played" | stealth addresses | ECDH; `r(vG) = v(rG)` is the entire construction | unlinkable game addresses |
@@ -53,7 +53,7 @@ argument for why this is where the value actually is: `spec/10-personality.md`.
 | # | The attack / question | The primitive | The mathematics | You build |
 |---|---|---|---|---|
 | 19 | "What even *is* a playing style?" | policy models | `π: Position → Distribution`; cross-entropy; Maia and human-move prediction | a population model `π_pop` |
-| 20 | "Prove that's really how you play" | compression as measurement | `D(π_you ‖ π_pop)` = bits saved by being compressed as yourself; arithmetic coding | the divergence measurement (D20) |
+| 20 | "Prove that's really how you play" | compression as measurement | `D(π_you ‖ π_pop)` = bits saved by being compressed as yourself; arithmetic coding | ✅ **done — 0.0132 nats/move, AMBER** (`docs/d20-result.md`) |
 | 21 | "Your ranking is a lie" | non-transitivity | matchup matrices; transitive vs cyclic decomposition; why Elo is rank-one and cannot express a cycle | a style vector, not a scalar |
 | 22 | "I'll sell you my opponents too" | differential privacy | ε-indistinguishability; membership inference; DP-SGD; why DP and not FHE | a publishable fingerprint |
 | 23 | "Who played it first?" | priority without property | timestamped commitment; **non-inclusion proofs** (episode 04, reused); proof-of-play | the novelty registry |
@@ -62,6 +62,18 @@ argument for why this is where the value actually is: `spec/10-personality.md`.
 Episode 20 is the one that can be filmed **now**, before any of the protocol
 exists — it needs only a public game corpus. It is also the episode that decides
 whether Act II is real.
+
+**It has been run, and the answer is amber.** `D(π_you ‖ π_pop) = 0.0132`
+nats/move over 150 masters against the 0.02–0.10 `spec/10` §7 assumed — so
+~1.5 bits of identity per game rather than ~6. Act II survives on the claim
+that mattered (identity against *exploitable* result is still ~5,000×) and
+loses the one it did not need (identity against the raw result is now a tie).
+Every timescale downstream is ~4× longer than written. `docs/d20-result.md`.
+
+The episode is better for it: the arc is no longer "here is a number that
+confirms the thesis" but "here is a number that costs the thesis one of its
+two claims, and here is why the surviving one was the load-bearing one all
+along."
 
 ---
 

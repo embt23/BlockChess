@@ -22,7 +22,8 @@ Stable across both. The corrected estimate lands at **0.013 nats/move**,
 between the `spec/09` cuts of 0.005 (dead) and 0.02 (holds), so:
 
 > **Act II survives. Every timescale in `spec/10` and `spec/13` was written
-> against a figure roughly twice what this measures, and needs rewriting.**
+> against `0.05` nats/move — the midpoint §7 actually computes with — which is
+> roughly **four times** what this measures, and needs rewriting.**
 
 The recovery interval spans the amber/holds boundary at its top end, so the
 run flags itself as not unambiguous — a player at the best-recovered end of
@@ -98,22 +99,27 @@ threshold asks is how fast it accumulates.
 
 ## Detection time, and an error in the table
 
-`spec/13`'s detection time is `≈ ln(1/α)/D_KL`. At α = 0.001 and ~38 of a
-player's own moves per game:
+`spec/13`'s detection time is `≈ ln(1/α)/D_KL`. At α = 0.001 and ~39 of a
+player's own moves per game — the convention `spec/06` §5 already used:
 
 | `D` nats/move | own-moves | games |
 |---|---|---|
 | 0.0200 (holds cut) | 345 | 9 |
-| **0.0132 (measured)** | **523** | **14** |
-| 0.0079 (raw, uncorrected) | 874 | 23 |
-| 0.0050 (dead cut) | 1382 | 36 |
+| **0.0132 (measured)** | **523** | **13** |
+| 0.0079 (raw, uncorrected) | 874 | 22 |
+| 0.0050 (dead cut) | 1382 | 35 |
 
-**So a cheat detector needs ~14 games at α = 0.001**, not the ~35–140 the
+At the α = 10⁻⁶ that `spec/06` §5 uses to *accuse* rather than flag, the
+threshold is 13.8 nats instead of 6.9, and the measured figure gives **1,043
+moves ≈ 27 games**. Those are two different products: 13 games is what a
+flagging pipeline runs on, 27 is what a banning decision needs.
+
+**So a cheat detector needs ~13 games at α = 0.001**, not the ~35–140 the
 `spec/09` table's amber row claimed. That column was wrong: its range spans
 `D` from 0.005 down to 0.0013, and 0.0013 is *inside* the dead band, not at
 the edge of amber. Corrected in `spec/09` with the derivation shown. The
 verdict is unaffected — the cuts are on nats/move, not on the game counts —
-but the practical conclusion changes a good deal, because 14 games is a
+but the practical conclusion changes a good deal, because 13 games is a
 product and 140 is not.
 
 ## What did not work
@@ -133,6 +139,23 @@ It does mean the per-player figures are noisy and only the aggregate should
 be read. Widening to 150 players moved the mean *up* (0.0061 → 0.0079), which
 is the direction more data should move it if the negatives are noise around a
 positive mean rather than a real cluster of styleless players.
+
+## What this does to the rest of the spec
+
+`spec/06` §5 now carries the measured row beside its three assumed ones, and
+labels which is which. The consequence worth stating on its own:
+
+> **The cheat detector and the style asset are the same object, and not the
+> same speed.** "You are consulting an engine" rides ~0.10 nats/move
+> (assumed); "you are not who you say you are" rides 0.0132 (measured). Eight
+> times apart. A design that assumes account-sharing is caught as fast as
+> engine use is wrong by that factor.
+
+Only one of those two numbers has been measured, which points at the cheapest
+experiment left in this area: `bc-style` can measure the engine rows exactly
+as it measured the identity row — generate games from an engine at fixed
+depth, treat it as a player, read off `D(π_engine ‖ π_pop)`. Estimator,
+corpus and harness all exist.
 
 ## What would sharpen it
 
