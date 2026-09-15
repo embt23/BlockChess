@@ -41,3 +41,6 @@ jobs:
       - run: cargo run -p bc-channel --release --bin play
       # Milestone E. Asserts its own verdict and that the ledger conserved.
       - run: cargo run -p bc-channel --release --bin dispute
+      # The D20 calibration report, printed in the log so a regression in the
+      # personality estimator is visible and not just a red assertion.
+      - run: cargo run --release -p bc-style --bin calibrate

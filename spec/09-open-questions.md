@@ -3,6 +3,12 @@
 Every decision that meaningfully forks the project. `▶` marks my recommendation
 and the reasoning. Decisions marked **SETTLED** are already made.
 
+**Settled 2026-09-14** in one pass, and recorded here rather than left in a
+conversation: D11, D13, D14, D16, D17, D19, D20's threshold, the five new
+decisions D21–D25 that episode 08 forced and this file did not previously
+contain, and D26 on authorship. Everything with a `▶` and no **SETTLED** marker is still a
+recommendation, not a decision.
+
 ---
 
 ## D1 — Own chain, or contracts on an existing chain? **SETTLED: own chain**
@@ -155,9 +161,41 @@ is stealing money from someone whose game was open across the fork. Decide the
 governance mechanism (validator vote? a foundation key? social consensus?) later
 — but write the versioning in from day one, because retrofitting it is painful.
 
-**Open question I cannot decide for you:** who has the authority to ship an
-upgrade? This is a political question, not a technical one, and it is worth
-answering in public early.
+### Who may ship one — **SETTLED: a named key, timelocked, with a published handover condition**
+
+The question was left open here as political rather than technical. It is
+answered, and the answer is written down in public because that is the point of
+asking it.
+
+**What a version is (D25).** `adjudicator_ver` is a small integer on the wire;
+consensus holds a registry mapping each integer to the hash of the ruleset it
+denotes. The integer stays readable in specs and in negotiation; the hash makes
+"keep every version forever" a checkable claim rather than a policy. The
+registry is therefore the *only* object an upgrade authority controls.
+
+**Who may write to it.** One published key, with the effect delayed by a
+timelock counted in blocks (`P4`), so anyone who dislikes a pending change can
+close their channels before it lands. That key is Evan's. The README says so in
+those words, alongside the condition that moves it to validator control — an
+independent validator count and a chain carrying value rather than play tokens.
+
+**Why a key rather than a vote, for now.** A 2/3 validator vote on a recruited
+validator set is a mechanism that describes three friends while sounding like a
+constitution. The honest description is preferred, and it is revisable.
+
+**Why this is lower-stakes than it looks.** Because every version is kept
+forever, an upgrade is *purely additive*: a channel pinned to version 3 is
+adjudicated by version 3 no matter what is registered afterwards. Whoever holds
+the key cannot reach into an open channel, cannot change who won a finished
+game, and cannot strand money. The realistic abuse is not theft but **refusal**
+— declining to register someone else's fix. That is a much smaller thing to
+guard against, and the timelock plus the public handover condition are
+proportionate to it.
+
+There is a second reason the stakes are low and it is specific to this project:
+the state transition function models FIDE's rules, which have been externally
+stable for over a century. Nearly every upgrade this chain will ever ship is a
+bugfix, not a policy change.
 
 ---
 
@@ -183,11 +221,29 @@ reasoning about it in advance.
 
 ## D13 — Licence
 
-▶ **Apache 2.0** for the protocol and node (permissive, includes an explicit
-patent grant, which MIT lacks); **CC BY-SA 4.0** for the specification prose and
-diagrams. If you would rather force servers to open-source their modifications,
-AGPL is the tool — but it will reduce adoption, and adoption is what makes the
-anti-cheat corpus valuable.
+**SETTLED: Apache 2.0 for code, CC BY 4.0 for prose.** `LICENSE`,
+`LICENSE-DOCS` and `NOTICE` are in the repository.
+
+This was not a formality. The repository was already public with **no licence
+file at all**, which is not permissive by default but the opposite: all rights
+reserved, no legal right for anyone to fork it, run it, or contribute to it.
+
+**Apache 2.0** for everything in `crates/` — permissive, and it carries the
+explicit patent grant MIT lacks, which matters more than usual here because
+clock dilation and the refutation game are novel enough for someone else to
+attempt to patent.
+
+**CC BY 4.0** — attribution, *not* share-alike — for `spec/`, `docs/`, and the
+root Markdown. This amends the original recommendation of CC BY-SA. The reason
+is D14's corollary: **the spec files are the scripts for the series**, so the
+most important works derived from this prose are videos, and share-alike would
+hang an unresolved copyleft question over them. Attribution keeps the credit
+requirement and drops the exposure.
+
+**AGPL was considered and rejected.** It is the tool for forcing servers to
+publish their modifications, and it cuts directly against D6: the first server
+archetype is the bot arena, and the anti-cheat corpus in `06-economics.md` is
+only worth anything if many servers exist.
 
 ---
 
@@ -204,6 +260,25 @@ from one they merely watch.
 
 Corollary: **write the episode's spec section before the code.** These files are
 the scripts.
+
+### How this is actually done — **SETTLED: curated episode branches, CI-verified**
+
+The history cannot deliver the promise retroactively. `d8fb3e6` is one commit
+titled *"episodes 01-03: hashing, signatures, and the rules of chess"*, so a
+state containing hashing and nothing else never existed to be tagged.
+
+So the checkpoints are **not** historical, and are labelled as such. Each
+episode gets a branch built from the current tree containing only the crates
+that episode needs: `ep01` is `bc-hash` alone, `ep02` adds `bc-sig`, and so on.
+
+The crates are already independent, so each of these branches genuinely builds
+and tests green on its own — and **a CI job proves it does**. That proof is the
+real content of D14's claim that you cannot check in a commit which only works
+because of code from three episodes later. Tagging the existing history would
+have asserted the same thing without testing it.
+
+Cost accepted: each episode branch needs refreshing when a crate beneath it
+changes, and CI is what catches the omission.
 
 ---
 
@@ -254,7 +329,7 @@ proof-of-work before BFT (D4).
 Arising from `10-personality.md` and `11-resources.md`. None are urgent; all
 should be settled before any code in this area is written.
 
-## D16 — What makes a GAME token scarce?
+## D16 — What makes a GAME token scarce? **SETTLED: prepaid blockspace**
 
 ▶ **Prepaid blockspace.** A game costs exactly two on-chain transactions, so one
 GAME is prepaid gas for exactly one game, burned on open. The decisive argument
@@ -264,7 +339,7 @@ clean way. Alternatives and their costs are in `11-resources.md` L0.
 
 Subject to `E1` regardless of choice: GAME is never minted by playing.
 
-## D17 — What is wagered?
+## D17 — What is wagered? **SETTLED: a separate play-token**
 
 ▶ **A separate play-token with no cash value for v1, with the channel built
 asset-agnostic underneath**, so moving to real value later is configuration
@@ -274,6 +349,25 @@ Worth prototyping on one server: wagering GAME itself, so that **your winnings
 are more games**. Self-contained, no external value, no regulatory surface, and
 the loop is genuinely elegant — a strong player accumulates play-time. Needs a
 faucet or weak players get locked out.
+
+**Settled: two tokens, and the single-token loop stays a server experiment.**
+
+The single-token loop has one property worth recording, because it is a better
+argument than the one originally made for it. If GAME is burned on open *and*
+wagered, two bots playing each other are **strictly negative-sum**: the pot is
+conserved but the burn is not. Bot-farming stops being prohibited by `E1` and
+becomes unprofitable by construction — a sink instead of a rule, which is always
+the stronger defence.
+
+It was still not chosen for the base layer, for the symmetric reason. A player
+who keeps losing eventually cannot play at all, so the loop requires a faucet,
+and a faucet is a minting path that hands `E1` straight back to a sybil farm.
+Trading a structural defence for a structural hole is not an improvement.
+
+So: GAME is the consumable, a valueless play-token is the stake, and the channel
+stays asset-agnostic underneath so real value is later a configuration change
+rather than a rewrite. The GAME-wagered loop is tried on one server, where it
+can fail without taking the protocol with it.
 
 ## D18 — How is style published?
 
@@ -300,11 +394,24 @@ Both spam defences are structural rather than administrative: a claim costs a
 real game against a real opponent, and claims earn nothing unless other games
 play into them. Citation economy, not land registry.
 
-Open sub-question: do novelties bear royalties when played into
-(`11-resources.md` L3 option D), or is credit the whole reward? Credit is
-simpler and probably sufficient; royalties need the rest working first.
+**SETTLED: credit is the whole reward. No royalties.** The sub-question about
+royalties (`11-resources.md` L3 option D) is closed, not deferred.
 
-## D20 — Measure the divergence before building on it ▶ **do this first**
+This is the one decision in this file that was **not** settled by argument. It
+was marked **DISPUTED** in `docs/duality.md` — the analysis had pushed for
+attribution and the intuition had not answered — and `E3` had meanwhile been
+promoted to an invariant in `CLAUDE.md`, which meant one side of an openly
+disputed question was being enforced as law while the other side's author had
+not spoken. That is exactly the failure mode `docs/duality.md` exists to catch:
+*the analytic voice writes the documents.*
+
+Evan has now signed attribution, in his own name, having been shown the
+alternatives — including a server-layer exclusion option and a compulsory-licence
+royalty that would have honoured the original intuition. The ledger entry moves
+to **CERTIFIED** because it was signed, not because the argument was loud, and
+`E3` is legitimate law rather than a presumption.
+
+## D20 — Measure the divergence before building on it ▶ **half done**
 
 `10-personality.md` §7 estimates `D(π_you ‖ π_pop) ≈ 0.02–0.10` nats per move
 and concludes a game emits roughly four orders of magnitude more information
@@ -318,3 +425,291 @@ thesis in a real number or kills it early.
 
 **This is the highest-value-per-hour task in the project and it can be done
 today, independently of everything else.**
+
+### **SETTLED: do it now, minimally — and register the kill threshold first**
+
+**The hole in the plan as previously written.** `10-personality.md` §7 says the
+conclusion is "robust to large errors in that estimate." This file says the
+measurement can *kill* Act II. Both cannot be true unless a number is named in
+advance. Without a pre-registered threshold the result gets rationalised
+whichever way it lands, and a measurement that cannot falsify anything is not
+worth the weekend.
+
+**Minimal, not full.** `π_pop` is not the episode-19 model; it is a log-linear
+policy over `bc-chess`'s legal moves, fit on the same corpus the players are
+drawn from.
+
+*This amends the original wording, which called for a published
+rating-conditioned model (Maia) as the baseline on `G1` grounds.* The
+amendment is not a relaxation. `G1` asks for an oracle someone else published
+because a reference you wrote yourself is a second implementation with its own
+bugs — but the thing needing verification here is **the estimator's bias**, and
+for that a published model is no oracle at all: run against Maia, the true
+divergence is still unknown, so a number comes back with no way to tell what
+fraction of it is real. The calibration instead uses synthetic players whose
+policies are known in closed form, which makes the true answer *computable
+exactly*. That is a stronger check than a published baseline could give, and it
+is what produced the 60% recovery factor the threshold above now depends on.
+
+Cross-checking against Maia once a number exists remains worth doing, and is
+not a blocker. No Python enters the Rust workspace either way.
+
+**The threshold — SIGNED 2026-09-14, before the measurement ran.** Working
+from `13`'s detection time `≈ ln(1/α)/D_KL`, at α = 0.001.
+
+**The cuts are on TRUE divergence, not on the raw estimate.** This distinction
+was missing from the first draft of this table and it inverted the test. The
+estimator recovers a **mean 60% of the truth, range 23–97%**
+(`docs/d20-calibration.md`), so a true `D` of 0.02 — the low end of `spec/10`
+§7's own estimate — reads back as **0.012**, and at the bottom of the recovery
+range as **0.0046**. Against cuts applied to the raw number, *the thesis being
+exactly right would have registered as amber, or as dead.* A pre-registered
+test that fails when the hypothesis is true is worse than no test.
+
+So the estimator reports three figures and the verdict is read off the middle
+one: `D̂` (raw), `D̂ / 0.60` (the point estimate of true `D`), and
+`[D̂/0.97, D̂/0.23]` as the recovery interval.
+
+| True `D(π_you ‖ π_pop)` | Raw `D̂` at 60% | Detection time | Verdict |
+|---|---|---|---|
+| ≥ 0.02 nats/move | ≥ 0.012 | ~9 games | thesis holds as written |
+| 0.005 – 0.02 | 0.003 – 0.012 | ~9–36 games | **amber** — Act II survives, every timescale in `10` and `13` is wrong and must be rewritten |
+| < 0.005 nats/move | < 0.003 | > 36 games | **Act II is dead.** Under 1 bit of identity per game; the cheat detector and the style asset both need hundreds of games to say anything, and neither is a product |
+
+*(The detection-time column read "~35–140 games" and "> 140 games" in the
+first draft. Those were computed for the wrong endpoints: at α = 0.001,
+`ln(1000)/D` over ~38 of a player's own moves per game gives 9 games at
+D = 0.02 and 36 at D = 0.005, and the 140 figure corresponds to D = 0.0013 —
+which is well inside the dead band rather than at its edge. The verdict cuts
+are on nats/move and are unaffected, but the practical reading changes: the
+amber band is "a detector needs tens of games", not "hundreds".)*
+
+Rationale for the cut at 0.005 true: it is 4× below the low end of the existing
+0.02–0.10 estimate, so it cannot be tripped by the estimate merely being
+optimistic — only by it being wrong in kind. (On the raw scale that cut is
+0.003, which is **5× the chimera reading** of +0.0006 — the level at which the
+estimator demonstrably separates a real player from a dataset with nobody
+behind it. The two rationales agree, which is reassuring rather than
+coincidental: both are asking how far above noise the signal has to sit.)
+
+**If the recovery factor is re-measured, this table does not move.** The cuts
+are on true `D`; a better instrument changes the raw column and nothing else.
+That is the point of stating them this way round.
+
+---
+
+# Episode 08 decisions
+
+Five decisions that block the adjudicator's first line of code. None of them
+were in this file before 2026-09-14, because all five only become visible when
+`05-adjudication.md` is read against the actual crate layout rather than on its
+own. All five are **SETTLED**.
+
+---
+
+## D21 — What does episode 08 run on? **SETTLED: PoW first, then adjudicate**
+
+Episode 07 was built against `bc-channel::ledger`, a stub escrow, and that was
+right: nothing in the channel cared whether the money was real. Episode 08 is
+different in one specific way. Every deadline in `05-adjudication.md` is
+`current_height + Δ`, and `P4` counts windows in blocks precisely so that a
+halted chain cannot expire anyone's window.
+
+| Option | For | Against |
+|---|---|---|
+| **PoW first, then adjudicate** ▶ | D4 already budgets the week; Milestone E becomes demonstrable rather than simulated; you get to watch a reorg eat a dispute, which is the argument episode 06 needs | one week before episode 08 starts |
+| Stub the height oracle | fastest to a correct adjudicator; dispute logic is pure, so a driven counter tests it *better* than real blocks | Milestone E is claimed, not shown; episode 10 (censorship) stays unbuildable |
+| Full consensus first (05 + 06) | the atlas's original dependency order | 4–5 weeks, and you would design BFT before knowing what the adjudicator demands of it |
+
+The decisive argument is what Milestone E actually says: *"you can win against an
+opponent who disconnects."* Against a stub height counter that sentence has not
+been earned — it has been simulated. D4's throwaway week is spent before the
+adjudicator, not after.
+
+---
+
+## D22 — Δ and τ: constants or negotiable? **SETTLED: a time-control class table**
+
+`05-adjudication.md` marks two of its seven parameters as per-channel:
+`DELTA_BLOCKS` and `TAU_MS` carry `(GameTerms)`. The other five —
+`MIN_MOVE_BLOCKS`, `FLOOR_BLOCKS`, `MAX_BUDGET`, `MAX_PLIES`,
+`FALSE_CLAIM_PENALTY` — bound what a validator must be able to afford or brake
+griefing, and stay global. So this decision is about Δ and τ only.
+
+**The attack.** Free-form negotiable Δ is Lightning's `to_self_delay` problem
+imported wholesale: an opponent proposes Δ = 1 at open, a client that does not
+check accepts it, and the victim now has two seconds to post a move on-chain or
+forfeit the pot.
+
+**Why consensus-enforced bounds do not fix it.** A single `[min, max]` band wide
+enough to serve both bullet and correspondence is, by construction, wide enough
+to contain a hostile value for either. The band cannot be tight and general at
+the same time.
+
+▶ **`GameTerms` carries a time-control class — Bullet / Blitz / Rapid /
+Classical / Correspondence — and consensus holds one `(Δ, τ)` pair per class.**
+No free-form number ever crosses the wire, so there is no hostile value to
+propose, and a correspondence game still gets a correspondence-sized window.
+
+This is consensus-visible, so unlike D15 it cannot be deferred and retrofitted:
+whatever shape `GameTerms` has at first testnet is the shape signed channels
+commit to.
+
+---
+
+## D23 — What is episode 08's oracle? **SETTLED: differential + model check**
+
+`G1` is the rule that caught both bugs in `docs/build-log.md`, and it is the one
+rule episode 08 cannot obviously satisfy, because nobody publishes adjudicator
+test vectors. The episode splits, and only one half has an oracle available.
+
+**The half that does.** The terminal-claim table — `FiftyMove`, `Threefold`,
+`InsufficientMaterial` — is chess rules, and independent published
+implementations of exactly those predicates exist (python-chess, shakmaty) to
+differential-test against. This matters more than it looks: `perft` counts
+nodes and says nothing about game endings, so insufficient material and
+threefold are currently the thinnest-covered logic in `bc-chess` despite
+`terminal.rs` having tests. Episode 08 closes that gap as a side effect.
+
+**The half that does not.** Clock dilation, budget debits, `deadline_block`,
+override-by-higher-ply and the halving penalty have no external referent
+anywhere, because they are mechanisms this project invented. What they do have
+is properties that must hold absolutely: budgets only decrease, the pot is
+conserved, higher ply strictly wins, the process terminates.
+`05-adjudication.md` already argues termination in prose — which is a proof
+obligation written in English. Those are safety and liveness properties of a
+small state machine, so they are **exhaustively model-checked** (stateright,
+in-repo Rust).
+
+Two standards, each honest about which half it covers. Neither is described as
+an oracle where it is not one.
+
+---
+
+## D24 — Where does the adjudicator live? **SETTLED: a new `no_std` crate**
+
+`P5` says the chess rules exist exactly once and are compiled for both client
+and on-chain adjudicator. Today `bc-channel` depends on `bc-chess` and that is
+the whole story; episode 08 adds a second consumer.
+
+▶ **`bc-adjudicator`: one crate, depending only on `bc-chess`, exposing a pure
+`fn(DisputeState, DisputeTx, Height) -> Result<DisputeState>`.**
+
+The node links it as its state transition function. **`bc-channel` links it
+too**, and that is the part worth choosing deliberately rather than falling
+into: a client that links the adjudicator can run an entire dispute *locally
+before spending any gas* — simulate posting its best certified state, see the
+deadline it would get, see whether its mate claim survives refutation. That
+turns the griefing analysis in `05-adjudication.md` from an argument into
+something a client computes.
+
+The second reason is determinism. Consensus code must be bit-identical across
+every validator, so this crate wants `no_std`, no floating point, and no
+hash-map iteration order — lints that are easy to impose at a fresh crate
+boundary and painful to retrofit onto `bc-channel`, which is full of legitimate
+client-side convenience. `P5` stops being a rule people remember and becomes a
+dependency arrow.
+
+---
+
+## D25 — What is `adjudicator_ver`? **SETTLED: integer on the wire, hash in state**
+
+D11 commits to keeping every adjudicator version forever, but never says what a
+version *is*. A bare monotone integer is a promise with nothing behind it: two
+builds can both claim version 3 and disagree about en passant, and the channel
+that trusted the number cannot tell. A bare content hash is self-identifying but
+illegible on the wire, unwritable in a spec before the build exists, and makes
+reproducible builds load-bearing for consensus.
+
+▶ **Both.** Channels negotiate a small integer; consensus holds a registry
+mapping each integer to the hash of the ruleset it denotes. Readable where
+humans read it, pinned where money depends on it.
+
+The registry is also the concrete object D11's governance answer acts on — it
+reduces "who controls upgrades" to "who may add a row to one table," which is a
+much smaller question than it was.
+
+---
+
+# Working decisions
+
+## D26 — Who writes the code? **SETTLED: split by layer**
+
+Recorded in `docs/duality.md` as **HALF-SIGNED** with an empty intuition column:
+the analysis asked whether it should keep writing the implementation or hand
+over scaffolds and failing tests, on the grounds that a series about *learning*
+this material may be poorly served by code its author did not type. The entry
+sat unanswered.
+
+▶ **Split by layer.** Evan writes the code that *is* the episode's subject — the
+dilation arithmetic, the refutation check, the budget rules. Claude writes
+plumbing, tests, serialisation, and the oracle harness. Roughly: the 20% that
+gets filmed is typed by the person filming it; the 80% that does not is not.
+
+Rejected: full handover of scaffolds only (slowest path to Milestone E, and it
+risks stalling on borrow-checker fights in the exact month the project needs
+momentum), and the status quo of Claude writing everything (fastest, and the
+duality entry's objection stands).
+
+### Result — **AMBER** (2026-09-14)
+
+Measured, against the threshold above, after it was signed. Full write-up in
+[`docs/d20-result.md`](../docs/d20-result.md).
+
+| | 150 players |
+|---|---|
+| `D̂` raw, mean | 0.0079 nats/move |
+| `D` corrected | **0.0132 nats/move** |
+| recovery interval | [0.0081, 0.0343] |
+| identification | **73/150 = 48.7%**, chance 0.7% |
+
+**Act II survives; its timescales do not.** `spec/10` §7 and `spec/13` were
+written against roughly twice this figure and need rewriting. A cheat
+detector at α = 0.001 needs ~14 games, not the ~9 the estimate implied.
+
+Three reasons the figure is a lower bound, all pushing the same way: the
+corpus is masters rather than a mixed field (flagged before the run), the
+806-feature model cannot express everything a policy does, and — the one that
+is a limitation of the calibration itself — **the 0.60 recovery factor was
+measured against synthetic players drawn from the estimator's own hypothesis
+class**, so it excludes model misspecification by construction and is
+therefore an upper bound on recovery for real humans. 0.0132 is a lower bound
+on a lower bound.
+
+The strong result is identification: **70× chance** from held-out games using
+only `δ`. That is the operation both Act II products actually perform, and it
+reproduces McIlroy-Young et al. (KDD 2022). Identification being excellent
+while per-move divergence is middling is not a contradiction — identification
+is comparative and needs only distinctiveness, divergence is absolute and is
+what sets detection time.
+
+### How it was built
+
+**The instrument is built and calibrated** — `crates/bc-style`,
+`docs/d20-calibration.md`. It recovers a mean 60% of true divergence, reports
++0.0006 nats/move for a chimera (a dataset with no player behind it), and
+identifies players from held-out games at 45% against 10% chance.
+
+**The corpus.** `lichess.org` and `database.lichess.org` are both refused by
+this session's egress policy (403 at the proxy), but
+`raw.githubusercontent.com` is not, and `rozim/ChessData`'s `mega2600_part_*`
+files are 138,348 games at 2600+ with **349 players holding ≥200 games** —
+exactly the density the calibration requires. 138,188 parsed, **zero
+unparseable**, which incidentally validates the SAN reader and `bc-chess`
+against each other across a century of master play.
+
+One consequence of that substitution is worth stating before any number
+arrives, because it cuts *against* the thesis and so should not be discovered
+afterwards: these are elite over-the-board games, so `π_pop` is the **master**
+population rather than the general one. Masters resemble each other far more
+than a mixed-rating online field does, so the measured divergence should come
+out **smaller** here than `spec/10` §7 imagines. This makes the test
+conservative: clearing the threshold on this corpus is stronger evidence than
+clearing it on Lichess, and failing to clear it is weaker evidence against.
+The identification check gets harder in the same direction — 349 candidates
+puts chance at 0.29% rather than 10%.
+
+**The calibration also fixed the experiment design.** A player needs
+**hundreds** of games, not tens, before moderate style is measurable. A null
+result on a light user means "not enough data", not "no personality".
+

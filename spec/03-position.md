@@ -148,6 +148,23 @@ Move : u16
 Two bytes per move. Castling is encoded king-from/king-to (and the rook is
 implied), which handles Chess960 uniformly if we ever support it.
 
+## Notation
+
+Two readers, both in `bc-chess` beside each other:
+
+- **UCI** (`e2e4`, `e7e8q`) — what the protocol and our own game files speak.
+  Unambiguous, fixed width, no board context needed to write it.
+- **SAN** (`Nf3`, `exd5`, `O-O-O`, `Qxe7+`) — what published games and PGN
+  archives speak. It is context-dependent and states only as much of the origin
+  square as disambiguation requires.
+
+SAN is parsed as a **filter over the legal move list** rather than by rendering
+each legal move to a string and comparing. That makes a parse self-validating:
+a misread picks the wrong move, which makes the *next* move illegal, so an error
+surfaces within a ply or two instead of silently corrupting a corpus. A game
+that parses to a checkmate has validated the reader and the move generator
+against each other.
+
 ## The move function
 
 ```

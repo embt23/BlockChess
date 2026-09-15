@@ -1,0 +1,173 @@
+D20 — measuring D(pi_you || pi_pop) on humans
+
+  corpus     138188 games from 5 files
+  skipped    {"missing player name": 3, "too short": 157}
+  players    349 with >=200 games; measuring top 150
+  pi_pop     317748 decisions
+             trained in 2s
+
+  player                      games    test     D_raw    D_true    lambda
+  ------------------------------------------------------------------------
+  Nakamura,Hi                   400    3853    0.0034    0.0056      1e-2
+  Carlsen,M                     400    3967   -0.0030   -0.0049      1e-2
+  So,W                          400    3473    0.0000    0.0000      none
+  Vachier Lagrave,M             400    3984    0.0086    0.0143      3e-3
+  Caruana,F                     400    3800    0.0042    0.0069      1e-2
+  Aronian,L                     400    3619   -0.0044   -0.0073      1e-2
+  Firouzja,Alireza              400    3909    0.0000    0.0000      none
+  Nepomniachtchi,I              400    3726    0.0059    0.0099      1e-2
+  Giri,A                        400    3441    0.0011    0.0019      1e-1
+  Grischuk,A                    400    3876    0.0030    0.0050      1e-2
+  Duda,J                        400    3771    0.0039    0.0064      1e-2
+  Sarana,A                      400    4192    0.0165    0.0276      3e-3
+  Mamedyarov,S                  400    3611    0.0066    0.0110      1e-2
+  Andreikin,D                   400    3691    0.0029    0.0049      1e-2
+  Ivanchuk, Vassily             400    3134   -0.0043   -0.0072      1e-2
+  Karpov, Anatoly               400    3262    0.0117    0.0196      1e-2
+  Anand, Viswanathan            400    3293    0.0062    0.0104      1e-2
+  Xiong,Jeffery                 400    3605    0.0037    0.0061      1e-2
+  Fedoseev,Vl3                  400    4177    0.0054    0.0090      1e-2
+  Dubov,Daniil                  400    3575    0.0165    0.0275      3e-3
+  Artemiev,V                    400    3900    0.0212    0.0354      3e-3
+  Gelfand, Boris                400    3496    0.0122    0.0203      1e-2
+  Kramnik, Vladimir             400    3108    0.0165    0.0275      3e-3
+  Vidit,S                       400    3825    0.0109    0.0181      1e-2
+  Nihal,Sarin                   400    3643    0.0056    0.0093      1e-2
+  Abdusattorov,Nodirbek         400    4126   -0.0028   -0.0046      3e-3
+  Ding Liren                    400    3633    0.0015    0.0025      1e-1
+  Bluebaum,M                    400    4124    0.0323    0.0538      3e-3
+  Maghsoodloo,Parham            400    3843    0.0097    0.0162      3e-3
+  Kamsky,G                      400    3677    0.0120    0.0199      3e-3
+  Erigaisi,Arjun                400    3842    0.0011    0.0018      1e-1
+  Bortnyk,Olexandr              400    4029    0.0128    0.0213      3e-3
+  Karjakin,Sergey               400    3515   -0.0027   -0.0046      3e-3
+  Svidler, Peter                400    3181    0.0110    0.0184      3e-3
+  Yu Yangyi                     400    3600   -0.0057   -0.0095      1e-2
+  Paravyan,D                    400    4174    0.0037    0.0062      1e-2
+  Timman, Jan H                 400    3213    0.0034    0.0057      3e-3
+  Oparin,G                      400    3737    0.0000    0.0000      none
+  Van Foreest,Jorden            400    3479    0.0032    0.0054      1e-2
+  Adams, Michael                400    3445    0.0095    0.0158      3e-3
+  Deac,Bogdan-Daniel            400    3621    0.0104    0.0173      1e-2
+  Sevian,Samuel                 400    4316    0.0000    0.0000      none
+  Sjugirov,S                    400    3706   -0.0043   -0.0071      3e-3
+  Svidler,P                     400    3355    0.0041    0.0069      1e-2
+  Dominguez Perez,L             400    3945    0.0134    0.0223      1e-2
+  Short, Nigel D                400    3272    0.0212    0.0354      1e-2
+  Topalov, Veselin              400    3444   -0.0035   -0.0058      3e-3
+  Martinez Alcantara,Jose Eduardo    400    4525    0.0058    0.0097      1e-2
+  Rapport,R                     400    3837    0.0048    0.0080      1e-2
+  Matlakov,M                    400    3277    0.0031    0.0052      1e-1
+  Praggnanandhaa,R              400    4025    0.0000    0.0000      none
+  Leko, Peter                   400    3215    0.0046    0.0077      3e-3
+  Niemann,Hans Moke             400    3996    0.0022    0.0036      3e-2
+  Kasparov, Gary                400    2886    0.0104    0.0173      3e-3
+  Mamedov,Rau                   400    3824    0.0065    0.0109      1e-2
+  Korobov,A                     400    3273    0.0373    0.0622      3e-3
+  Van Wely, Loek                400    3649    0.0205    0.0341      1e-2
+  Anton Guijarro,D              400    3633    0.0034    0.0056      1e-2
+  Anand,V                       400    3219    0.0123    0.0204      3e-3
+  Naroditsky,D                  400    3870    0.0133    0.0222      1e-2
+  Navara,D                      400    3848    0.0000    0.0000      none
+  Ivanchuk Vassily (UKR)        400    3207   -0.0018   -0.0030      1e-2
+  Wei Yi                        400    3513    0.0000    0.0000      none
+  Grischuk, Alexander           400    3310    0.0074    0.0123      1e-2
+  Esipenko,Andrey               400    3841    0.0015    0.0024      1e-1
+  Shirov, Alexei                400    3154    0.0210    0.0350      1e-2
+  Harikrishna,P                 400    3682    0.0001    0.0002      1e-2
+  Chigaev,M                     400    3733    0.0161    0.0269      1e-2
+  Tabatabaei,M                  400    3866    0.0000    0.0000      none
+  Beliavsky, Alexander G        400    3325    0.0106    0.0176      1e-2
+  Grischuk Alexander (RUS)      400    3699    0.0000    0.0000      none
+  Indjic,A                      400    3694    0.0029    0.0048      1e-2
+  Svidler Peter (RUS)           400    3011    0.0079    0.0132      3e-3
+  Svane,R                       400    3980    0.0096    0.0160      1e-2
+  Polgar, Judit                 400    3524    0.0120    0.0200      3e-3
+  Korchnoi, Viktor L            400    3327    0.0108    0.0180      3e-3
+  Carlsen, Magnus               400    3586    0.0072    0.0119      1e-2
+  Kamsky, Gata                  400    4009    0.0038    0.0063      1e-2
+  Shankland,S                   400    3526    0.0011    0.0018      1e-1
+  Kramnik,V                     400    3751    0.0066    0.0110      3e-2
+  Keymer,Vincent                400    3973    0.0113    0.0188      1e-2
+  Sadhwani,Raunak               400    3829    0.0023    0.0039      1e-2
+  Gelfand,B                     400    3405    0.0202    0.0337      3e-3
+  Radjabov,T                    400    3659   -0.0032   -0.0054      3e-3
+  Aronian Levon (ARM)           400    3943    0.0039    0.0065      1e-2
+  Aronian, Levon                400    3405    0.0100    0.0167      1e-2
+  Ponomariov, Ruslan            400    3415    0.0106    0.0177      1e-2
+  Gelfand Boris (ISR)           400    3429    0.0307    0.0511      1e-2
+  Morozevich, Alexander         400    3327    0.0091    0.0152      1e-2
+  Demchenko,A                   400    3986    0.0283    0.0471      3e-3
+  Bacrot,E                      400    3768    0.0033    0.0054      1e-2
+  Mamedyarov Shakhriyar (AZE)    400    3476    0.0023    0.0039      1e-1
+  Anand Viswanathan (IND)       400    3407    0.0123    0.0205      1e-2
+  Tari,A                        400    3674    0.0106    0.0176      1e-2
+  Nikolic, Predrag              400    3193    0.0181    0.0302      1e-2
+  Pichot,A                      400    3967    0.0049    0.0082      3e-3
+  Lautier, Joel                 400    3293    0.0175    0.0292      1e-2
+  Karjakin, Sergey              400    4011    0.0256    0.0427      3e-3
+  Gukesh,D                      400    3809    0.0031    0.0051      3e-2
+  Grandelius,N                  400    3343    0.0080    0.0134      3e-2
+  Martirosyan,Haik M.           400    4030    0.0060    0.0100      1e-2
+  Radjabov Teimour (AZE)        400    3500    0.0000    0.0000      none
+  Shirov, Alexei D              400    3388    0.0104    0.0173      1e-2
+  Leko Peter (HUN)              400    3602    0.0168    0.0281      3e-3
+  Alekseenko,K                  400    3913    0.0165    0.0276      1e-2
+  Kovalev,Vl                    400    3703    0.0028    0.0046      3e-3
+  Jones,G                       400    4452    0.0096    0.0160      3e-3
+  Morozevich Alexander (RUS)    400    3763    0.0034    0.0057      1e-2
+  Movsesian, Sergei             400    3344    0.0140    0.0233      3e-3
+  Karjakin Sergey (RUS)         400    3832    0.0015    0.0025      3e-3
+  Kuzubov,Y                     400    3636    0.0103    0.0172      1e-2
+  Donchenko,Alexa               400    3748    0.0069    0.0115      1e-2
+  Salem,AR                      400    3693    0.0167    0.0279      1e-2
+  Ivanchuk,V                    400    3288    0.0085    0.0142      1e-2
+  Wang Hao                      400    3849    0.0001    0.0002      1e-2
+  Narayanan,SL                  400    3897    0.0051    0.0086      1e-2
+  Eljanov,P                     400    3538    0.0000    0.0000      none
+  Wojtaszek,R                   400    3375    0.0220    0.0367      3e-3
+  Bacrot Etienne (FRA)          400    3646    0.0059    0.0099      1e-2
+  Nakamura Hikaru (USA)         400    4018    0.0032    0.0053      1e-2
+  Kramnik Vladimir (RUS)        400    3710    0.0029    0.0049      3e-2
+  Piket, Jeroen                 400    3168    0.0056    0.0093      1e-2
+  Hansen,Eric                   400    3805    0.0044    0.0073      3e-3
+  Carlsen Magnus (NOR)          400    3898    0.0000    0.0000      none
+  Portisch, Lajos               400    2996    0.0106    0.0176      3e-3
+  Le Quang Liem                 400    3721    0.0003    0.0005      1e-1
+  Sokolov, Ivan                 400    3478    0.0032    0.0053      3e-3
+  Saric,Iv                      400    3445    0.0059    0.0099      1e-2
+  Bacrot, Etienne               400    3152    0.0008    0.0013      1e-2
+  Topalov Veselin (BUL)         400    3584    0.0054    0.0091      1e-2
+  Amin,B                        400    3418    0.0456    0.0760      3e-3
+  Jobava,Ba                     400    3688    0.0176    0.0293      3e-3
+  Vachier-Lagrave Maxime (FRA)    400    3587    0.0104    0.0173      1e-2
+  Cheparinov,I                  400    3670    0.0102    0.0170      1e-2
+  Ponkratov,P                   400    3886    0.0067    0.0111      3e-2
+  Ljubojevic, Ljubomir          400    3211    0.0040    0.0067      3e-3
+  Bok,B                         400    3674    0.0122    0.0203      3e-3
+  Mamedyarov, Shakhriyar        400    3357    0.0087    0.0144      3e-3
+  Caruana Fabiano (ITA)         400    3826    0.0006    0.0010      1e-1
+  Ter Sahakyan,S                400    3655   -0.0040   -0.0066      3e-2
+  Dreev,A                       400    3643    0.0485    0.0809      3e-3
+  Robson,R                      400    3636    0.0001    0.0002      1e-2
+  Hakobyan,Aram                 400    3621   -0.0017   -0.0028      1e-2
+  Andersson, Ulf                400    2826    0.0546    0.0910      3e-3
+  Vitiugov,N                    400    3593   -0.0018   -0.0030      1e-2
+  Shirov,A                      400    3524    0.0144    0.0240      3e-3
+  Ponomariov Ruslan (UKR)       400    3467    0.0000    0.0000      none
+  Giri Anish (NED)              400    3918   -0.0017   -0.0029      1e-2
+  Caruana, Fabiano              400    3877    0.0001    0.0001      1e-2
+  Nepomniachtchi Ian (RUS)      400    3780    0.0064    0.0106      1e-2
+
+  players measured   150
+  D_raw    mean 0.0079   median 0.0058   min -0.0057   max 0.0546 nats/move
+  D_true   0.0132 nats/move   (recovery-corrected point estimate)
+           [0.0081, 0.0343]   (calibration recovery interval)
+  identification     73/150 = 48.7%   (chance 0.7%)
+
+  ================================================
+  VERDICT: AMBER
+  ================================================
+  Cuts are on true D: holds >= 0.020, dead < 0.005 (spec/09 D20).
+  NOTE: the recovery interval spans a threshold — this verdict
+  depends on where in the calibrated range these players sit.

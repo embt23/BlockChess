@@ -6,6 +6,7 @@ members = [
     "crates/bc-sig",
     "crates/bc-merkle",
     "crates/bc-channel",
+    "crates/bc-style",
 ]
 
 [workspace.package]

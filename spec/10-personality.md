@@ -229,21 +229,47 @@ the population mean is smaller — call it `0.02–0.10` nats/move. Over ~80 pli
     0.05 nats/move × 80 plies  ≈  4 nats  ≈  5.8 bits of identity per game
 ```
 
-| Channel | Bits per game |
-|---|---|
-| Who you are | ~6 |
-| Who won | ~1.4 |
-| Who won, *exploitable* at +7 Elo | ~0.0003 |
+| Channel | Bits per game, as estimated | **Measured** |
+|---|---|---|
+| Who you are | ~6 | **~1.5** |
+| Who won | ~1.4 | ~1.4 |
+| Who won, *exploitable* at +7 Elo | ~0.0003 | ~0.0003 |
 
-These are not fungible bits and the comparison is not a price. But the
-structural fact survives any plausible revision of the estimates:
+> **The measured column is `D = 0.0132` nats/move** over 150 masters
+> (`docs/d20-result.md`), carried through this section's own arithmetic. It is
+> a lower bound for three reasons given there. What it does to the argument is
+> set out immediately below, because it does not do the same thing to both
+> halves of it.
+
+These are not fungible bits and the comparison is not a price.
+
+**One half of the comparison survived the measurement and one half did not.**
+
+- **Identity versus *exploitable* result: survives, and comfortably.** 1.5
+  bits against 0.0003 is a factor of **5,000** — still three to four orders of
+  magnitude, still the whole argument of this file. This was the load-bearing
+  claim and a 4× revision does not reach it.
+- **Identity versus the raw result: gone.** At ~6 bits, identity dwarfed the
+  1.4 bits of win/draw/loss. At ~1.5 it *ties* them. Any sentence anywhere in
+  this project that leans on a game telling you much more about who played it
+  than about who won is now false as stated, and should lean on the
+  exploitable comparison instead — which is the honest one, because
+  unexploitable bits about the result are not worth anything to anybody.
+
+The structural fact, restated so that it is the surviving claim rather than
+the dead one:
 
 > **A chess game emits roughly four orders of magnitude more information about
-> the players than about the result.**
+> the players than about the *exploitable* result.**
 
-The project has so far been built entirely around the 0.0003. The 6 is sitting
-there untouched. That is the argument for the personality layer, and it is the
-author's intuition made quantitative.
+The qualifier is load-bearing and was added after the measurement. Against the
+raw result the factor is now 1, not 10⁴; against the part of the result you
+can actually bet on, it is ~5,000.
+
+The project has so far been built entirely around the 0.0003. The 1.5 is
+sitting there untouched. That is the argument for the personality layer, and
+it is the author's intuition made quantitative — smaller than first
+quantified, and still the largest unexploited quantity in the system.
 
 ---
 
@@ -302,9 +328,23 @@ standing rule is that every layer is checked against work someone else did.
 3. **Information is copyable.** Sell a model and the buyer can resell it. This
    is the fundamental defect of information markets and it needs a mechanism,
    not a hope. See `11-resources.md` §4.
-4. **The estimate in §7 is an estimate.** `D(π_you ‖ π_pop)` for real humans
-   should be *measured* on real game corpora before anything is built on the
-   number. That measurement is cheap and should happen early.
+4. **The estimate in §7 has been measured, and it was about 4× high.**
+   `D(π_you ‖ π_pop)` over 150 masters comes back at **0.0132 nats/move**
+   corrected, against the 0.02–0.10 assumed here — carrying through to ~1.5
+   bits of identity per game rather than ~6. `spec/09` D20 scores this
+   **AMBER**: Act II survives, its timescales do not. Detection at α = 0.001
+   takes ~14 games, not ~9.
+
+   §7 said the conclusion was "robust to large errors in that estimate." Half
+   of it was. Identity against *exploitable* result is still a factor of
+   5,000; identity against the raw result is now a tie. The table above marks
+   which is which.
+
+   Three reasons the figure is a lower bound — a master-only corpus, a
+   feature set that cannot express everything a policy does, and a recovery
+   factor calibrated against synthetic players drawn from the estimator's own
+   hypothesis class — are in `docs/d20-result.md`. Identification is the
+   strong result: **70× chance** over 150 candidates from held-out games.
 
 ---
 
