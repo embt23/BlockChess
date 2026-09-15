@@ -755,3 +755,116 @@ function is a very effective assertion.**
 matter. Replacing it is worth doing even when you expect nothing to change,
 because the value is not in confirming the behaviour — it is in finding out
 which of your assumptions were being supplied by the stub.
+
+---
+
+## 18 — The deadline you are billed 8 blocks for and given 5 to meet
+
+Episode 10 started as censorship work and found something a censor never
+needed. Two functions in the adjudicator disagreed about what a move
+costs.
+
+```rust
+// what a move is CHARGED
+blocks_consumed(started, now) = max(now - started, MIN_MOVE_BLOCKS)   // ≥ 8
+
+// what a move is GIVEN
+arm() → window = min(Δ, budget)                                       // no floor
+```
+
+A budget falls by at least 8 per move, so it walks down in steps of 8 from
+wherever it started — and where it started is `clock/τ + 32`, which is
+whatever the clock happened to be. A budget of 41 goes 41 → 33 → 25 → 17 →
+9 → **1**. A budget of 45 bottoms out at 5.
+
+So the last window before a player flags is routinely smaller than the
+minimum a move is billed for, and at a budget of 1 it is **one block**.
+Two seconds, at a two-second block time, to get a transaction from a
+laptop through a mempool and into a block. Nobody has to censor anything;
+the deadline was simply not meetable.
+
+A sweep of clocks from 0 to 6000 ms found the worst case at 7 ms and
+288 ms, both of which give windows of 1.
+
+### Why the model check had agreed this was fine
+
+`bc-conformance`'s dispute model has a property called *"no player is given
+a deadline they cannot meet"*, and it had been passing since episode 08.
+It read:
+
+```rust
+window <= budget && (budget == 0 || window > 0)
+```
+
+A one-block window is greater than zero. The property was satisfied,
+exhaustively, over every reachable state, and it was **wrong** — it
+encoded "you get *a* window" when what matters is "you get a window you
+can use". `build-log` §16 already said a model check cannot tell you your
+properties are wrong. This is the second time that has cost something, and
+the first time the property in question was one I had written two episodes
+earlier while fixing a different instance of the same mistake.
+
+It now reads: no budget → no window; budget → at least `MIN_MOVE_BLOCKS`
+and at most Δ. The `window <= budget` clause is gone, deliberately, because
+the fix breaks it and nothing is lost — budgets decreasing monotonically is
+a separate property already checked.
+
+### The fix gives nothing back
+
+The obvious worry with raising a floor on the window is that it hands a
+flagging player time they had spent. It does not, and the reason is worth
+keeping: **the budget still falls by at least `MIN_MOVE_BLOCKS` per move.**
+The number of on-chain moves a side gets is `ceil(budget / 8)` either way.
+All the floor changes is whether the last of those moves is physically
+possible. That is the same argument `FLOOR_BLOCKS` already makes once for
+the whole game, applied per move — and `FLOOR_BLOCKS` exists in the code
+with the comment *"so that even a flagging player can physically move"*,
+which turns out to have been half-implemented for as long as it has
+existed.
+
+### And then the censorship consequence, which is the episode
+
+With the floor in place, the smallest window any dispute can produce is
+`MIN_MOVE_BLOCKS`. Minimise the arm expression over every live budget:
+
+```text
+    inf over budget ≥ 1 of  max( min(Δ, budget), MIN_MOVE_BLOCKS )
+  = max( min(Δ, 1), MIN_MOVE_BLOCKS )
+  = MIN_MOVE_BLOCKS
+```
+
+**Δ cancels.** The challenge window a channel negotiates is the *maximum*
+it will ever get, and censorship safety is a question about the *minimum*.
+A channel that agreed Δ = 2048 is defended, in its last few moves, by
+exactly the same 8 blocks as one that agreed 64.
+
+That inverts what `spec/02`'s third defence claims. "Generous Δ" reads as
+the tunable knob for censorship resistance, and it is not a knob at all —
+the binding quantity is a protocol constant that no channel negotiates.
+The rotation bound has to be applied to the floor, which is why
+`bc_bft::censorship::smallest_window` takes Δ as an argument and then
+visibly discards it.
+
+### A footnote, from making exactly the same mistake again
+
+The first version of `smallest_window` guarded the Δ ≥ floor case with a
+`debug_assert!` and a `#[should_panic]` test. The suite was green. The
+**release** suite was not: `debug_assert!` compiles out, so the panic never
+came and the test that demanded one failed.
+
+That is the third instance of the pattern in this entry. Two descriptions of
+one fact, and the disagreement invisible from either side alone — here, a
+test that says "this input is rejected" and a check that only exists in one
+build profile. The fix was to stop asserting and make both functions
+**total**: `arm` floors the window at `min(Δ, move cost)` rather than at the
+move cost, so it can never hand out more than the channel signed, and
+`smallest_window` returns the same expression. No assertion, no profile
+dependence, and the two now agree by construction rather than by a test
+noticing.
+
+**Lesson.** Two functions describing the same quantity — what a move costs
+in blocks — from two directions, written weeks apart, and never compared.
+The bug was not in either of them. It was in the absence of any place where
+both appear, which is also why it survived a model check: the property was
+written from the same side as the bug. The general fix is not a better
+assertion, it is one expression that both sides call.

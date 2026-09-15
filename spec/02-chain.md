@@ -217,28 +217,74 @@ blocks means no expiry. The window measures *opportunities to be included*,
 which is the resource you actually need, rather than time, which is only a proxy
 for it.
 
-### 2. Reserved dispute gas
+### 2. Reserved dispute gas — **built**
 
-`Payload::is_dispute` is the membership test, and it is deliberately narrow:
-the five `Dispute*` variants and nothing else. `CloseGame` is excluded
-although it settles a game, because it is the cooperative path — both
-players signed it, nobody is under a deadline, and delaying it robs nobody.
-`Block::dispute_gas` reports what a block's dispute family claimed.
+Every block reserves a fixed fraction of its gas limit (25%) that only
+dispute-family transactions may consume. `bc_block::gas::GasSchedule` is the
+rule and both engines enforce it, so a block that breaks it is rejected
+rather than frowned at.
 
-Enforcement of the reserve itself is **episode 10** and is not built.
+```text
+    non-dispute gas  ≤  limit − reserve
+```
 
-Every block reserves a fixed fraction of its gas limit (proposal: 25%) that only
-dispute-family transactions may consume. A proposer stuffing the block with
-ordinary transactions cannot squeeze disputes out; they must *explicitly* omit
-them, which is detectable.
+Note which side is capped. The reserve is a **floor for disputes, not a
+ceiling** — a block may be entirely dispute traffic, and on a busy dispute
+day it should be. Capping disputes at 25% would be the same bug with the
+sign flipped.
 
-### 3. Generous Δ
+`Payload::is_dispute` is the membership test and is deliberately narrow: the
+five `Dispute*` variants and nothing else. `CloseGame` is excluded although
+it settles a game, because it is the cooperative path — both players signed
+it, nobody is under a deadline, and delaying it robs nobody.
 
-Δ defaults to **256 blocks ≈ 8.5 minutes** for a single response, with the
-per-game budget described in `05-adjudication.md`. Δ must exceed the worst
-plausible censorship window, and censorship of a specific transaction by a BFT
-set requires sustained coordination by more than ⅓ of stake — visible, and
-slashable if it can be proven.
+The reserve earns its keep in the **builder**, not only in validation: a
+validity rule nothing exercises is decoration, and it is
+`bc_node::build::select` that has to stop taking ordinary traffic at the
+cap. `cargo run -p bc-node --bin censor` shows a flood starving a dispute
+without the reserve and failing to with it.
+
+What it does not do: stop a proposer **deliberately omitting** you. A block
+containing nothing satisfies the rule perfectly. That half is defence 3,
+which is not what this file used to say it was.
+
+### 3. ~~Generous Δ~~ → the rotation bound
+
+**This section used to say the wrong thing.** It read: *"Δ must exceed the
+worst plausible censorship window"*, as though Δ were the knob. It is not a
+knob at all.
+
+`Dispute::arm` hands the responder `min(Δ, budget)` blocks, floored at
+`MIN_MOVE_BLOCKS`, and a budget runs down over a dispute. Minimising over
+every live budget:
+
+```text
+    inf  =  max( min(Δ, 1), MIN_MOVE_BLOCKS )  =  MIN_MOVE_BLOCKS
+```
+
+**Δ cancels.** It is the *maximum* window a channel will ever get, and
+censorship safety is a question about the *minimum*. A channel that
+negotiated Δ = 2048 is defended, in its last few moves, by exactly the same
+8 blocks as one that negotiated 64. `docs/build-log.md` §18.
+
+What actually defends is proposer rotation. Round-robin over the set means
+any `w` consecutive blocks contain `min(w, n)` distinct proposers, at most
+`f` Byzantine — and an adversary choosing keys can make those `f`
+consecutive, so the worst case is a *run*. An honest proposer is reached
+iff the window outlasts the run:
+
+```text
+    smallest window  >  f
+```
+
+`bc_bft::censorship` is that bound and is `G0`, episode 10's filmed
+subject. `bc_node::admission` refuses a channel whose terms the live set
+cannot secure (`D28`).
+
+The consequence is sharp and is not yet solved: with an 8-block floor this
+secures a validator set only up to the size at which `f` reaches 8. Larger
+sets need a higher floor, a weighted rotation, or a forced-inclusion queue.
+`D27` defers that choice rather than making it.
 
 ## Transactions
 

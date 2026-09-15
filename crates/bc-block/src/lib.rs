@@ -22,11 +22,13 @@
 pub mod block;
 pub mod chain;
 pub mod consensus;
+pub mod gas;
 pub mod header;
 pub mod tx;
 
 pub use block::Block;
 pub use chain::{Chain, ChainError};
 pub use consensus::{Consensus, Finality};
+pub use gas::{GasError, GasSchedule};
 pub use header::{BlockHeader, HEADER_LEN};
 pub use tx::{Payload, Tx};

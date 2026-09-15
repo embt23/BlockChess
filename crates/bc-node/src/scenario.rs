@@ -88,6 +88,26 @@ pub fn certified(parent: &BlockHeader, keys: &[SigningKey], txs: Vec<Tx>) -> Blo
     }
 }
 
+/// A flood of ordinary traffic, sized to fill a block on its own.
+///
+/// `Transfer` rather than `CloseGame` or anything dispute-shaped: this is
+/// the honest-looking traffic a censor hides behind, and it must be the
+/// kind the reserve actually caps.
+pub fn flood(n: u64, gas_each: u32) -> Vec<Tx> {
+    (0..n)
+        .map(|i| Tx {
+            version: 1,
+            nonce: i,
+            sender: [0x5a; 32],
+            fee: 1,
+            gas_limit: gas_each,
+            payload: bc_block::Payload::Transfer,
+            body: vec![i as u8],
+            signature: [0u8; 64],
+        })
+        .collect()
+}
+
 /// Four validators with equal stake, so `f = 1`.
 pub fn validators() -> (Vec<SigningKey>, ValidatorSet) {
     let keys: Vec<SigningKey> = (0..4u8)

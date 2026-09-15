@@ -717,3 +717,58 @@ puts chance at 0.29% rather than 10%.
 **hundreds** of games, not tens, before moderate style is measurable. A null
 result on a light user means "not enough data", not "no personality".
 
+
+---
+
+## D27 — How far does episode 10 go? **SETTLED: reserve as a rule, plus the bound**
+
+`spec/02` lists three censorship defences and implements none of them as a
+rule. The question is which of them episode 10 turns into code, and whether
+the answer amounts to a guarantee or a deterrent.
+
+| Option | For | Against |
+|---|---|---|
+| Gas reserve only | one comparison; matches what `spec/02` already says | stops a squeeze-out and nothing else; a block containing no disputes is valid, so a deliberate censor walks through it |
+| **Reserve as a validity rule, plus the rotation bound** ▶ | the two halves compose into an actual guarantee: the reserve gives *room*, the bound gives a *turn*; both computable, both testable | the bound holds only for validator sets below a size the floor decides |
+| Add a forced-inclusion queue | a guarantee that does not depend on proposer rotation at all | chicken-and-egg — censor the enqueue and the queue never sees you — which needs the inclusion right minted at channel open; roughly doubles the episode |
+
+▶ **Reserve plus bound.** Neither half is worth anything alone: room with no
+honest turn is censorship anyway, and an honest turn with no room is a
+squeeze-out anyway. Together they say *"within `f+1` proposer turns somebody
+honest holds the pen, and when they do there is space for you"*, which is a
+statement with a proof rather than a hope.
+
+The queue is the right eventual answer and is deferred rather than rejected.
+It is what covers the case the bound does not, below.
+
+### Consequence, recorded because it is load-bearing
+
+The bound applies to the **smallest** window a dispute can produce, not to Δ.
+`Dispute::arm` shrinks the window toward `MIN_MOVE_BLOCKS` as a budget runs
+down, and minimising over live budgets makes Δ cancel entirely
+(`docs/build-log.md` §18). So:
+
+> **`spec/02`'s third defence, "generous Δ", does not defend against
+> censorship at all.** It is the maximum window; the minimum is a protocol
+> constant no channel negotiates.
+
+With an 8-block floor this scheme secures a validator set only up to the
+size at which `f` reaches 8. Larger sets need a higher floor, a weighted
+rotation, or the queue — an open question and the natural D28.
+
+## D28 — Refusing a channel the set cannot secure **SETTLED: refuse at open**
+
+Given D27's bound, a channel can be proposed whose deadlines the chain
+cannot honour. Three options: refuse it, open it but suspend the deadline
+while the set is degraded, or warn and let clients decide.
+
+▶ **Refuse at open.** `bc_node::admission` assesses the terms against the
+live validator set and declines what it cannot secure. This is `D22`'s
+instinct — an offer naming terms the chain cannot honour is not a valid
+offer — applied to censorship instead of to time controls.
+
+Warning-only was rejected for the reason D22 rejected a single wide band: a
+client that does not check accepts hostile terms, and the player who is
+robbed is the one who trusted their software. Suspending deadlines on a
+degraded set was rejected because it hands a griefing lever to anyone who
+can degrade the set.

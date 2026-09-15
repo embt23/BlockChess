@@ -38,6 +38,7 @@
 //! commits blocks with that file untouched; the moment a round fails, the
 //! node calls into it and it says whose job that is.
 
+pub mod censorship;
 pub mod commit;
 pub mod locking;
 pub mod msg;
@@ -46,9 +47,10 @@ pub mod tally;
 pub mod validators;
 pub mod vote;
 
-use bc_block::{Block, Chain, ChainError, Consensus, Finality};
+use bc_block::{Block, Chain, ChainError, Consensus, Finality, GasError, GasSchedule};
 use bc_hash::Hash;
 
+pub use censorship::Assessment;
 pub use commit::Commit;
 pub use locking::Lock;
 pub use msg::{Committed, Msg};
@@ -66,6 +68,14 @@ pub enum BftError {
     /// The block would displace one that is already final. Under
     /// deterministic finality this is not a fork choice, it is an attack.
     WouldReorganiseFinality,
+    /// The block breaks the gas schedule (episode 10).
+    Gas(GasError),
+}
+
+impl From<GasError> for BftError {
+    fn from(e: GasError) -> BftError {
+        BftError::Gas(e)
+    }
 }
 
 impl From<ChainError> for BftError {
@@ -85,6 +95,7 @@ impl std::error::Error for BftError {}
 pub struct Bft {
     chain: Chain,
     set: ValidatorSet,
+    gas: GasSchedule,
     /// Every block at or below this height is beyond reorganisation.
     final_height: u64,
 }
@@ -94,8 +105,21 @@ impl Bft {
         Bft {
             chain: Chain::new(genesis),
             set,
+            gas: GasSchedule::default(),
             final_height: 0,
         }
+    }
+
+    /// Run with a different gas schedule. See [`ProofOfWork::with_gas`].
+    ///
+    /// [`ProofOfWork::with_gas`]: https://docs.rs/bc-pow
+    pub fn with_gas(mut self, gas: GasSchedule) -> Bft {
+        self.gas = gas;
+        self
+    }
+
+    pub fn gas(&self) -> GasSchedule {
+        self.gas
     }
 
     pub fn chain(&self) -> &Chain {
@@ -136,6 +160,7 @@ impl Consensus for Bft {
     /// deadline exactly as under episode 05.
     fn submit(&mut self, block: Block) -> Result<(), BftError> {
         let hash = block.hash();
+        self.gas.admits(&block)?;
         let commit = Commit::decode(&block.seal).ok_or(BftError::NoCommitCertificate)?;
         if !commit.verifies(&self.set, block.header.height, &hash) {
             return Err(BftError::NoCommitCertificate);

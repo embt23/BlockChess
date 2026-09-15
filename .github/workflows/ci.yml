@@ -58,6 +58,10 @@ jobs:
       # made in time and BFT does not. Asserts its own verdicts and that
       # nothing was minted.
       - run: cargo run --release -p bc-node --bin reorg
+      # Episode 10: a flood starving a dispute without the reserve, failing
+      # to with it, and a proposer who omits you beating it anyway. Asserts
+      # all three verdicts and that nothing was minted.
+      - run: cargo run --release -p bc-node --bin censor
 
   # The `G0` holes: code that is an episode's *subject*, which `spec/09` D26
   # says the person filming types. The tests are written and complete; they
@@ -81,12 +85,14 @@ jobs:
           open=0
           echo "### episode 05 — difficulty as a control loop"
           cargo test -p bc-pow -- --ignored --nocapture || open=1
-          echo "### episode 06 — the locking rules"
+          echo "### episodes 06 and 10 — locking rules, censorship bound"
           cargo test -p bc-bft -- --ignored --nocapture || open=1
+          echo "### episode 10 — the admission check that uses the bound"
+          cargo test -p bc-node -- --ignored --nocapture || open=1
           if [ "$open" = "1" ]; then
             echo "::warning title=G0 holes open::An episode's subject is still \
           unwritten. See docs/g0-holes.md for the list and what each test catches."
           else
-            echo "::notice title=G0 holes closed::Both are implemented. Remove \
+            echo "::notice title=G0 holes closed::All are implemented. Remove \
           the #[ignore] attributes and delete this job."
           fi

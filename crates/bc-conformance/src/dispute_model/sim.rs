@@ -10,6 +10,7 @@
 //! one. Every transition evaluates the property and ands the answer in; a
 //! `false` is a counterexample the checker reconstructs a path to.
 
+use bc_adjudicator::dilation::MIN_MOVE_BLOCKS;
 use bc_adjudicator::dispute::{ClaimKind, Dispute};
 use bc_adjudicator::state::Status;
 use bc_chess::Color;
@@ -155,23 +156,37 @@ impl Sim {
             last.rank_strictly_fell && (self.settled.is_some() || self.rank() < last.rank());
 
         // Whoever must respond now must be able to, *if they have anything
-        // left to respond with*. Two halves:
+        // left to respond with*.
         //
-        // - The window never exceeds the budget that pays for it. A longer
-        //   one would let a player sit past their own dilated clock, which
-        //   is the free-time escape dilation exists to close.
-        // - A player with budget remaining always gets a nonzero window. A
-        //   zero window with budget left would take the game from someone
-        //   who had time on the clock and did nothing wrong.
+        // This property used to read `window <= budget && window > 0`, and
+        // it was too weak in the way that mattered: a one-block window is
+        // nonzero and satisfies it, and a one-block window is two seconds
+        // to get a transaction mined. It is what `build-log` §18 was, and
+        // the model agreed with the bug for as long as the property allowed
+        // it to. A model check cannot tell you your properties are wrong.
         //
-        // A player at zero budget getting a zero window is not a violation:
-        // they have spent their whole dilated clock, and losing on time is
-        // the right answer, not a deadline they were cheated by.
+        // What is actually required:
+        //
+        // - No budget left → no window. That is a loss on time, correctly.
+        // - Budget left → a window a move can physically be made in, which
+        //   means at least what a move is *charged*: `MIN_MOVE_BLOCKS`.
+        // - And never more than Δ, except where the floor above raises it,
+        //   or a player could sit past a window their terms never agreed.
+        //
+        // The old `window <= budget` clause is gone on purpose: the floor
+        // deliberately breaks it, and nothing is lost, because budgets
+        // decreasing monotonically is a separate property already checked.
         let side = self.d.side_to_move();
         let window = self.d.deadline_block.saturating_sub(self.d.turn_started);
         let budget = self.d.budget_of(side) as u64;
-        self.deadline_was_meetable = last.deadline_was_meetable
-            && (self.settled.is_some() || (window <= budget && (budget == 0 || window > 0)));
+        let delta = self.d.delta_blocks() as u64;
+        let meetable = if budget == 0 {
+            window == 0
+        } else {
+            window >= MIN_MOVE_BLOCKS && window <= delta.max(MIN_MOVE_BLOCKS)
+        };
+        self.deadline_was_meetable =
+            last.deadline_was_meetable && (self.settled.is_some() || meetable);
     }
 
     fn key(&self) -> Key {

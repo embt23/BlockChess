@@ -48,6 +48,17 @@ impl Block {
         self.txs.iter().map(|t| t.gas_limit as u64).sum()
     }
 
+    /// Gas claimed by everything that is *not* the dispute family. What
+    /// [`crate::gas::GasSchedule`] caps, and the only quantity the reserve
+    /// rule looks at.
+    pub fn non_dispute_gas(&self) -> u64 {
+        self.txs
+            .iter()
+            .filter(|t| !t.is_dispute())
+            .map(|t| t.gas_limit as u64)
+            .sum()
+    }
+
     /// Gas claimed by the dispute family, which is what the reserve protects.
     pub fn dispute_gas(&self) -> u64 {
         self.txs

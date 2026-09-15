@@ -123,6 +123,7 @@ Task-indexed. Read the row, not the whole tree.
 | touching blocks, headers, transactions, fork choice | `crates/bc-block` — both engines implement its `Consensus` trait |
 | touching consensus | `crates/bc-pow` (episode 05), `crates/bc-bft` (episode 06), `crates/bc-net` (the simulated network) |
 | wiring consensus to the escrow, or asking what a reorg costs | `crates/bc-node` — start at `bin/reorg.rs` |
+| touching gas, blockspace or censorship | `crates/bc-block/src/gas.rs`, `crates/bc-bft/src/censorship.rs`, `crates/bc-node/src/build.rs` |
 | about to type an episode's subject | [`docs/g0-holes.md`](docs/g0-holes.md) — the list, and what each test is for |
 | adding an oracle, or wondering why one is not one | `crates/bc-conformance` |
 | wondering why something is written oddly | `docs/build-log.md` |
@@ -175,9 +176,9 @@ silently.
 | 08 adjudication | `bc-adjudicator` | D23 split oracle | ✅ **Milestone E, earned** — against a real chain (`bc-node`) |
 | D20 style estimator | `bc-style` | synthetic ground truth | ✅ **measured: AMBER** — `docs/d20-result.md` |
 | D23 split oracle | `bc-conformance` | shakmaty + stateright | ✅ found two real bugs — `build-log` §15, §16 |
-| 10 forced inclusion | — | — | not started — **the nearest real hole** |
+| **10 reserved blockspace** | **`bc-block::gas`** + `bc-node` | its own censoring proposer | ✅ ⚠️ **`G0`: the rotation bound is Evan's** |
 
-286 tests, clippy and fmt clean. Two `#[ignore]`d suites are red on purpose
+313 tests, clippy and fmt clean. Three `#[ignore]`d suites are red on purpose
 and are listed in [`docs/g0-holes.md`](docs/g0-holes.md).
 
 ```sh
@@ -191,7 +192,8 @@ cargo run --release -p bc-style --bin measure -- <pgn-dir>   # D20, on humans
 cargo run --release -p bc-node --bin reorg      # the same dispute on two chains
 cargo test -p bc-conformance --release -- --ignored  # ~1M positions vs shakmaty
 cargo test -p bc-pow -- --ignored               # G0: episode 05's subject
-cargo test -p bc-bft -- --ignored               # G0: episode 06's subject
+cargo test -p bc-bft -- --ignored               # G0: episodes 06 and 10
+cargo run --release -p bc-node --bin censor     # a flood, a reserve, a censor
 ```
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
@@ -199,53 +201,58 @@ time; it exists to be read. The node links `ed25519-dalek`.
 
 ## Next
 
-**Milestone E is earned, and the sentence had to change to survive it.**
-
-Episode 08 won a wagered game against an opponent who stopped answering,
-against a `BTreeMap` height counter. D21 said that was simulated rather
-than earned and that a real chain would fix it. Half right. A real chain
-does earn it — and a real *proof-of-work* chain then breaks it, because a
-counter only goes up and a chain reorganises. A reorg landing after a
-deadline converts a defence made correctly into a forfeit.
-
-So the claim is now:
+**Episodes 01–10 are built.** Everything below the channel that the atlas
+names now exists, and the two claims that sounded strongest turned out to
+need correcting rather than confirming.
 
 > You can win against an opponent who disconnects, **on a chain with
-> deterministic finality.** On one without, you can defend correctly and
-> lose anyway.
+> deterministic finality** — and only while the validator set is small
+> enough that a proposer run cannot span your smallest response window.
 
-`cargo run --release -p bc-node --bin reorg` is that sentence, run twice
-with only the engine swapped. It is also why `spec/02` chose BFT, and the
-first time that choice has been demonstrated rather than argued.
+Both halves of that sentence were discovered by building the thing under
+the adjudicator rather than by reasoning about it. `docs/build-log.md` §17
+and §18.
 
-`spec/09` D21–D25 are all closed. `docs/episode-08-gap.md` is kept because
-the reasoning transfers.
+### What episode 10 actually found
 
-### The two open `G0` holes
+The censorship work turned up a bug a censor never needed. A move is
+**charged** at least `MIN_MOVE_BLOCKS`; the window was handed out as
+`min(Δ, budget)` with no floor. A budget of 41 walks 41 → 33 → 25 → 17 → 9
+→ **1**, so a player was routinely given fewer blocks to move than the move
+would cost them, and at the bottom, one block. Two seconds. No adversary
+required.
 
-Episodes 05 and 06 are built except for the one function each is *about*
-(`G0`, D26). Both have complete `#[ignore]`d test suites and a CI job that
-runs them so they stay visible. [`docs/g0-holes.md`](docs/g0-holes.md).
+The model check had been passing a property that said *"you get a window"*
+when what matters is *"you get a window you can use"* — the second time a
+property of mine has been wrong in that direction (`§16`, `§18`).
 
-- **`bc_pow::retarget::next_target`** — difficulty as a control loop. The
-  closed-loop hashrate-step test is the episode.
-- **`bc_bft::locking`** — what a validator must remember across a failed
-  round. A single round needs none of it, which is exactly why the seam is
-  there.
+And the consequence is the episode: with the floor in place, minimising the
+window over a dispute's life makes **Δ cancel**. `spec/02`'s third defence
+was "generous Δ", and Δ is not a censorship knob at all — it is the
+maximum window, and safety is about the minimum, which is a protocol
+constant no channel negotiates.
+
+### The three open `G0` holes
+
+Each is the one function its episode is *about* (`G0`, D26), each has a
+complete `#[ignore]`d suite, and CI reports them on every push.
+[`docs/g0-holes.md`](docs/g0-holes.md).
+
+- **`bc_pow::retarget::next_target`** — difficulty as a control loop.
+- **`bc_bft::locking`** — what a validator remembers across a failed round.
+- **`bc_bft::censorship`** — the rotation bound, and the validator-set size
+  it implies.
 
 ### Where the next real work is
 
-1. **Episode 10, forced inclusion.** The nearest real hole and now the
-   *only* structural one below the channel. Deadlines assume your
-   transaction gets in; `Payload::is_dispute` marks which transactions the
-   reserve is for and **nothing enforces the reserve**. A validator who
-   censors `DisputeMove` for Δ blocks wins the game for your opponent, on
-   either engine. Neither episode 05 nor 06 helps: BFT stops a committed
-   block being un-included, and does nothing about one that never arrives.
-2. **The P2P layer.** `spec/04`'s message set over Noise is entirely
+1. **The P2P layer.** `spec/04`'s message set over Noise is entirely
    unbuilt — the two players are in-process objects and validators talk
-   over `bc-net`, which is a simulator. This is the largest unwritten
-   layer in the project.
+   over `bc-net`, which is a simulator. This is now by a distance the
+   largest unwritten layer, and nothing above it is real until it exists.
+2. **D28's open tail: securing a large validator set.** The rotation bound
+   caps the set at whatever size makes `f` reach the window floor. Raising
+   the floor, weighting the rotation, or a forced-inclusion queue are the
+   three ways out; `spec/09` D27 deferred the choice rather than making it.
 3. **Everything downstream of D20.** `spec/10` §7's timescales are wrong by
    ~4× and the rewrite is unclaimed. The three *assumed* engine rows in
    `spec/06` §5 could be measured with `bc-style` and an engine as a player.

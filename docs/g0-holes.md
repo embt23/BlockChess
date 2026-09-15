@@ -5,13 +5,14 @@ episode is about.** Evan writes the episode's subject — the arithmetic, the
 rule, the check. Claude writes plumbing, tests, serialisation and oracle
 harnesses.
 
-This file is the list. Two functions are open, both the filmed subject of an
-episode. Everything around them is finished, and the tests that specify them
-are written.
+This file is the list. Four functions are open across three episodes, each
+the filmed subject of one. Everything around them is finished, and the tests
+that specify them are written.
 
 ```sh
 cargo test -p bc-pow -- --ignored     # episode 05
-cargo test -p bc-bft -- --ignored     # episode 06
+cargo test -p bc-bft -- --ignored     # episodes 06 and 10
+cargo test -p bc-node -- --ignored    # episode 10's consumer
 ```
 
 Both suites are red and are supposed to be. CI runs them in a
@@ -117,6 +118,66 @@ from a round **strictly later** than the one the validator locked in.
 - `Lock` and `Proposal`, their shapes and what they carry.
 - That the proposer re-proposes its own locked value (`Node::start` does).
 - That a released lock is *replaced*, never merely cleared.
+
+---
+
+## Episode 10 — the censorship bound
+
+**File:** `crates/bc-bft/src/censorship.rs`
+**Functions:** `max_byzantine_run` and `window_is_safe`
+**Tests:** 7 here, plus 3 in `crates/bc-node/src/admission.rs`
+
+### The two halves
+
+```text
+    the gas reserve  →  when an honest proposer arrives, there is ROOM
+    this file        →  an honest proposer ARRIVES IN TIME
+```
+
+Neither is worth anything alone, and the reserve half is built: it is a
+block-validity rule in `bc-block::gas`, enforced by both engines, and
+`cargo run -p bc-node --bin censor` shows it defeating a flood that would
+otherwise starve a dispute. It also shows, in run 3, that it does nothing
+against a proposer who simply omits you — a block containing no disputes
+breaks no rule. That is the half this file closes.
+
+### The argument
+
+Proposers rotate round-robin over the set. In any `w` consecutive blocks
+you see `min(w, n)` distinct proposers, at most `f` of them Byzantine — and
+an adversary choosing their own keys can make those `f` land
+**consecutively**, so the worst case is a run, not a scatter. An honest
+proposer is reached iff the window outlasts the longest run.
+
+### The part that is the episode
+
+**The window is not Δ.** `Dispute::arm` gives `min(Δ, budget)` floored at
+`MIN_MOVE_BLOCKS`, and a budget runs down, so the infimum over a dispute's
+life is the floor itself — Δ cancels (`build-log` §18). A channel that
+negotiated Δ = 2048 is defended, in its last moves, by 8 blocks.
+
+The consequence is sharp: with an 8-block floor, this scheme secures a
+validator set only up to the size at which `f` reaches 8, and **no time
+control rescues a larger one**. Raising the floor, weighting the rotation,
+or a forced-inclusion queue are the ways out. None is built, and choosing
+between them is a decision, not a cleanup.
+
+### The two tests that matter most
+
+- `a_window_equal_to_the_run_is_not_safe` — the off-by-one. A window of
+  exactly `f` is spanned by `f` consecutive Byzantine proposers. This is
+  the whole difference between a guarantee and a coin flip.
+- `the_floor_and_not_delta_is_what_bounds_the_validator_set` — the result
+  above, asserted rather than claimed.
+
+### Already decided, so not in the hole
+
+- `smallest_window`, and the derivation that makes Δ cancel.
+- `Assessment` and `assess`, which compose the hole with the plumbing.
+- `bc_node::admission`, which refuses a channel the set cannot secure —
+  the `D22` instinct applied to censorship. It panics until the hole is
+  filled, on purpose: a check that returns "safe" while the bound is
+  unwritten is worse than no check.
 
 ---
 

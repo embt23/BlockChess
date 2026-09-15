@@ -32,13 +32,13 @@
 //! (`spec/08`).
 
 mod claim;
+mod verdict;
 
 pub use claim::{ClaimKind, Refutation};
 pub use PendingClaim as Claim;
 
-use crate::dilation::{blocks_consumed, budget_blocks};
+use crate::dilation::{blocks_consumed, budget_blocks, MIN_MOVE_BLOCKS};
 use crate::state::{GameState, Status};
-use crate::status::loser_is;
 use crate::terms::GameTerms;
 use bc_chess::{Color, Move, Position};
 use bc_hash::Hash;
@@ -187,11 +187,41 @@ impl Dispute {
         self.max_plies
     }
 
-    /// Set the deadline for whoever must respond now: bounded both per-move
-    /// by Δ and in total by what is left of their budget.
+    /// Set the deadline for whoever must respond now: bounded per-move by
+    /// Δ, in total by what is left of their budget, and **never shorter
+    /// than a move costs**.
+    ///
+    /// That last clause is not a nicety. [`blocks_consumed`] charges at
+    /// least [`MIN_MOVE_BLOCKS`] for any move, and this function used to
+    /// hand out `min(Δ, budget)` with no floor — so a player with 5 blocks
+    /// of budget got 5 blocks to make a move they would be billed 8 for,
+    /// and a budget of 1 (reachable, and not rare) got one block. At
+    /// two-second blocks that is two seconds to reach a miner. No adversary
+    /// is required; the deadline was simply not meetable.
+    /// `docs/build-log.md` §18.
+    ///
+    /// Raising the floor gives nothing back: the budget still falls by at
+    /// least [`MIN_MOVE_BLOCKS`] per move, so a side still gets
+    /// `ceil(budget / MIN_MOVE_BLOCKS)` moves and still flags in the same
+    /// place. It only stops the last one being a forfeit dressed as a
+    /// deadline — the argument [`crate::dilation::FLOOR_BLOCKS`] already
+    /// makes once for the whole game, applied per move.
     fn arm(&mut self, height: u64) {
         let side = self.pos.side;
-        let window = self.delta_blocks.min(self.budget[side as usize]) as u64;
+        let budget = self.budget[side as usize];
+        // The floor is itself capped by Δ, so the window can never exceed
+        // what the channel signed. Real terms always have Δ far above the
+        // move cost (the smallest class is 64), so this only matters for
+        // incoherent terms — but "only matters for bad input" is exactly
+        // where an undefined case would sit.
+        let floor = self.delta_blocks.min(MIN_MOVE_BLOCKS as u32);
+        let window = if budget == 0 {
+            // Nothing left to spend. The next block settles it, and that is
+            // a loss on time rather than an unmeetable deadline.
+            0
+        } else {
+            self.delta_blocks.min(budget).max(floor) as u64
+        };
         self.deadline_block = height + window;
         self.turn_started = height;
     }
@@ -258,36 +288,6 @@ impl Dispute {
                 Some(status) => Ok(MoveOutcome::Ended(status)),
                 None => Ok(MoveOutcome::Claimed),
             },
-        }
-    }
-
-    /// The verdict, if the clock has run out on somebody.
-    ///
-    /// Callable by anyone — there is no reason to restrict it, since it only
-    /// reports what the heights already imply.
-    pub fn verdict(&self, height: u64) -> Result<Status, DisputeError> {
-        // The cap is checked here and not only where plies are added,
-        // because `refute` adds one too and used not to look — see
-        // `docs/build-log.md` §16. A bound that each caller has to remember
-        // to apply is not a bound.
-        if self.ply >= self.max_plies {
-            return Ok(Status::Draw);
-        }
-        if let Some(c) = self.claim {
-            return if height > c.refutable_until {
-                // Unrefuted within the window, so it stands.
-                Ok(c.kind.uncontested_status(c.claimant))
-            } else {
-                Err(DisputeError::NotYetDecided)
-            };
-        }
-        if height > self.deadline_block {
-            // The side to move did not move. That is a loss on time, and it
-            // is the same rule whether they crashed or chose to vanish — the
-            // chain cannot tell the difference and does not need to.
-            Ok(loser_is(self.pos.side))
-        } else {
-            Err(DisputeError::NotYetDecided)
         }
     }
 }

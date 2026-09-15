@@ -39,7 +39,7 @@ pub mod miner;
 pub mod retarget;
 pub mod target;
 
-use bc_block::{Block, Chain, ChainError, Consensus, Finality};
+use bc_block::{Block, Chain, ChainError, Consensus, Finality, GasError, GasSchedule};
 use bc_hash::Hash;
 
 pub use bc_block::chain::Reorg;
@@ -67,6 +67,15 @@ pub enum PowError {
     Chain(ChainError),
     /// The seal is missing, malformed, or does not satisfy the target.
     InsufficientWork,
+    /// The block breaks the gas schedule — over the limit, or ordinary
+    /// traffic eating into the dispute reserve (episode 10).
+    Gas(GasError),
+}
+
+impl From<GasError> for PowError {
+    fn from(e: GasError) -> PowError {
+        PowError::Gas(e)
+    }
 }
 
 impl From<ChainError> for PowError {
@@ -91,6 +100,7 @@ pub const CONVENTIONAL_CONFIRMATIONS: u64 = 6;
 pub struct ProofOfWork {
     chain: Chain,
     difficulty: Difficulty,
+    gas: GasSchedule,
     /// Reported by [`ProofOfWork::last_reorg`] so a caller can see what a
     /// submission did to history without diffing the chain themselves.
     last_reorg: Reorg,
@@ -103,8 +113,22 @@ impl ProofOfWork {
         ProofOfWork {
             chain: Chain::new(genesis),
             difficulty,
+            gas: GasSchedule::default(),
             last_reorg: Reorg::default(),
         }
+    }
+
+    /// Run with a different gas schedule — in particular
+    /// [`GasSchedule::unprotected`], which is the chain as it was before
+    /// episode 10 and which the censorship demonstration needs in order to
+    /// show what the reserve is worth.
+    pub fn with_gas(mut self, gas: GasSchedule) -> ProofOfWork {
+        self.gas = gas;
+        self
+    }
+
+    pub fn gas(&self) -> GasSchedule {
+        self.gas
     }
 
     pub fn chain(&self) -> &Chain {
@@ -211,6 +235,7 @@ impl Consensus for ProofOfWork {
         if !miner::seal_is_valid(&block, target) {
             return Err(PowError::InsufficientWork);
         }
+        self.gas.admits(&block)?;
         let parent_score = self
             .chain
             .score_of(&block.header.parent_hash)

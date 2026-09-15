@@ -22,9 +22,13 @@
 //! [`Node::apply`] knows that a reorg happened or treats one specially.
 
 pub mod action;
+pub mod admission;
+pub mod build;
 pub mod exec;
 pub mod scenario;
 
 pub use action::Action;
+pub use admission::{admits, Admission};
+pub use build::{select, Proposer};
 pub use exec::{Node, Seed};
 pub use scenario::Scene;

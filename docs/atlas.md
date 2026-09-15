@@ -262,8 +262,8 @@ The plan above is a plan. What exists:
 | E | you can win against an opponent who quits | ✅ **and the sentence changed** — see below |
 | F | bot arena running unattended | not started |
 
-Episodes built: 01, 02, 03, 04, **05**, **06**, 07, 08, and D20. Episode 10
-is not, and it is the nearest real hole.
+Episodes built: 01, 02, 03, 04, 05, 06, 07, 08, **10**, and D20. That is
+everything the spine names below the channel.
 
 **Milestone E's sentence acquired a clause.** Building the chain underneath
 the adjudicator did not confirm episode 08, it broke it: a proof-of-work
@@ -281,9 +281,17 @@ satisfied one unstated assumption of a real chain (*height is monotone*)
 and every deadline in `spec/05` rests on it. A test double that satisfies
 an unstated invariant will never tell you the invariant exists.
 
-Two episodes are built except for the one function each is *about* (`G0`,
-D26): the difficulty control loop and the BFT locking rules.
-[`g0-holes.md`](g0-holes.md).
+**Episode 10 found a bug a censor never needed**, and then inverted one of
+`spec/02`'s three defences. A move is charged at least `MIN_MOVE_BLOCKS`
+and the response window had no floor, so a player could be given one block
+— two seconds — to make a move billed at eight. With that fixed, the
+window's infimum is the floor, which makes **Δ cancel** out of the
+censorship argument entirely: "generous Δ" was never a knob.
+`build-log.md` §18.
+
+Three episodes are built except for the one function each is *about*
+(`G0`, D26): the difficulty control loop, the BFT locking rules, and the
+censorship bound. [`g0-holes.md`](g0-holes.md).
 
 ---
 
