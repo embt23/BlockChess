@@ -169,8 +169,8 @@ silently.
 | 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
 | 10 forced inclusion | — | — | not started — see **Next**, the nearest real hole |
 
-139 tests, clippy and fmt clean. CI runs the suite, the slow exact perft runs,
-and both demos.
+158 tests, clippy and fmt clean. CI runs the suite, the slow exact perft runs,
+both demos, and the D20 calibration.
 
 ```sh
 cargo test --workspace                          # fast suite
@@ -178,6 +178,8 @@ cargo test --workspace --release -- --ignored   # perft(6), Kiwipete perft(5)
 cargo run --release --bin perft -- 6
 cargo run --release --bin play                  # a whole wagered game
 cargo run --release --bin dispute               # …won against someone who left
+cargo run --release -p bc-style --bin calibrate # the estimator's own bias
+cargo run --release -p bc-style --bin measure -- <pgn-dir>   # D20, on humans
 ```
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
