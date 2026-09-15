@@ -165,6 +165,22 @@ It also collapses two layers that looked separate:
 Build one and you have built the other. `06-economics.md` §5 and this file are
 describing one piece of software.
 
+**One qualifier, added after the measurement.** Same object does not mean same
+speed, and the difference is large enough to matter to anyone designing
+against it. A detector's sensitivity is set by the divergence it rides, and
+the two questions ride different ones:
+
+| Question | Divergence | Games to accuse (α = 10⁻⁶) |
+|---|---|---|
+| "You are consulting an engine" | ~0.10, *assumed* | 3–4 |
+| "You are not who you say you are" | **0.0132, measured** | ~27 |
+
+An engine plays unlike any human, so that test is fast. Telling one human
+from another rides `D(π_you ‖ π_pop)` — the quantity §4 defines and D20
+measured — and is roughly **eight times slower**. The software is shared; the
+timescales are not, and a design that assumes account-sharing is caught as
+fast as engine use is wrong by that factor.
+
 ---
 
 ## 6. Elo is the transitive part. Style is the rest.
@@ -224,6 +240,12 @@ exploitable* part at near-even odds is the Kelly growth from §5 — at +7 Elo,
 **What a game reveals about who you are.** `06-economics.md` §5 uses
 `D_KL ≈ 0.10` nats/move for a full engine substitution. A human's divergence from
 the population mean is smaller — call it `0.02–0.10` nats/move. Over ~80 plies:
+
+> *Worth noticing in hindsight: that `0.10` is itself an assumption, not a
+> measurement (`06-economics.md` §5 now labels it as one). So this range was
+> derived by analogy from an unmeasured anchor, and the conclusion below was
+> two inferential steps from any data at all. D20 measured the bottom step.
+> The top one is still unmeasured and is the cheapest experiment remaining.*
 
 ```
     0.05 nats/move × 80 plies  ≈  4 nats  ≈  5.8 bits of identity per game
@@ -333,7 +355,7 @@ standing rule is that every layer is checked against work someone else did.
    corrected, against the 0.02–0.10 assumed here — carrying through to ~1.5
    bits of identity per game rather than ~6. `spec/09` D20 scores this
    **AMBER**: Act II survives, its timescales do not. Detection at α = 0.001
-   takes ~14 games, not ~9.
+   takes ~13 games, not ~9, and accusing at α = 10⁻⁶ takes ~27.
 
    §7 said the conclusion was "robust to large errors in that estimate." Half
    of it was. Identity against *exploitable* result is still a factor of

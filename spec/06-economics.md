@@ -238,16 +238,52 @@ divergence `D_KL(P₁ ‖ P₀)` per move. Accuse when `Λ` crosses
 With `α = 10⁻⁶` (one false accusation per million clean players) and `β = 0.05`:
 threshold `≈ 13.8` nats.
 
-| Cheating behaviour | `D_KL` per move | Moves to detect | ≈ games |
-|---|---|---|---|
-| Engine every move | 0.10 | 138 | 3–4 |
-| Engine 20% of moves | 0.020 | 690 | ~17 |
-| Engine on 3 critical moves per game | 0.004 | 3 450 | ~86 |
+| Hypothesis under test | `D_KL` per move | Moves to detect | ≈ games | source |
+|---|---|---|---|---|
+| Engine every move | 0.10 | 138 | 3–4 | assumed |
+| Engine 20% of moves | 0.020 | 690 | ~17 | assumed |
+| **"This is not the player it claims to be"** | **0.0132** | **1 043** | **~27** | **measured** |
+| Engine on 3 critical moves per game | 0.004 | 3 450 | ~86 | assumed |
 
 > **Detection time scales as 1/D_KL.** A cheater who uses the engine on a
 > fraction `f` of moves takes roughly `1/f` times longer to catch. This is why
 > selective cheating is the hard case, and why any platform claiming to reliably
 > catch occasional cheaters is overstating.
+
+### Which of those numbers is a measurement
+
+One. The three engine rows are **assumptions** — nobody here has run the test
+against engine-assisted games, and `0.10` entered this file as a plausible
+figure rather than a result. The identity row is measured:
+`D(π_you ‖ π_pop) = 0.0132` nats/move over 150 masters, `docs/d20-result.md`.
+
+That single measured row changes how `10-personality.md` §5's claim should be
+read. It says the cheat detector and the style asset are the same
+mathematical object, which remains true — but the two hypotheses this table
+now contains are **not the same test at the same speed**:
+
+- *"You are consulting an engine"* rides a large divergence, because an engine
+  plays unlike any human. Days.
+- *"You are not who you say you are"* rides the divergence between one human
+  and the population, which is the quantity D20 measured, and it is roughly
+  **eight times smaller**. Weeks.
+
+Same software, same equation, an order of magnitude apart in sensitivity. Any
+design that assumes account-sharing and engine use are caught on the same
+timescale is wrong by that factor.
+
+At a screening threshold rather than an accusation threshold — `α = 10⁻³`
+instead of `10⁻⁶`, so 6.9 nats instead of 13.8 — the identity test needs ~523
+moves, about **13 games**. That is the number to design a *flagging* pipeline
+around; 27 games is the number to design a *banning* one around.
+
+**The obvious next experiment, and it is cheap.** `crates/bc-style` can
+measure the engine rows the same way it measured the identity row: generate
+games from an engine at fixed depth, treat it as a player, and read off
+`D(π_engine ‖ π_pop)`. The estimator, the corpus and the harness all exist.
+Until that is run, three rows of this table remain plausible numbers, and by
+`G1` they should be labelled as such — which is what the source column is
+for.
 
 The signal is not only move choice. **Time per move is at least as informative**:
 honest players think longer in complex positions, and the correlation between
