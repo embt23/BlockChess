@@ -1,0 +1,17 @@
+[package]
+name = "bc-node"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Where consensus, the escrow and the adjudicator meet — and where the difference between the two engines becomes money."
+
+[dependencies]
+bc-adjudicator = { path = "../bc-adjudicator" }
+bc-bft = { path = "../bc-bft" }
+bc-block = { path = "../bc-block" }
+bc-chess = { path = "../bc-chess" }
+bc-channel = { path = "../bc-channel" }
+bc-hash = { path = "../bc-hash" }
+bc-pow = { path = "../bc-pow" }
+bc-sig = { path = "../bc-sig" }

@@ -1,0 +1,17 @@
+[package]
+name = "bc-bft"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Episode 06 — Tendermint-style BFT. Money under a deadline requires deterministic finality."
+
+[dependencies]
+bc-block = { path = "../bc-block" }
+bc-hash = { path = "../bc-hash" }
+bc-net = { path = "../bc-net" }
+# Votes are signed. `bc-sig` is the project's own Ed25519 — read-only by
+# design and not constant time, which is fine here for the same reason it is
+# fine in `bc-channel`'s demos: these are test keys on a simulated network.
+# A real validator links `ed25519-dalek`, as `CLAUDE.md` says.
+bc-sig = { path = "../bc-sig" }

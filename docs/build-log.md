@@ -459,3 +459,299 @@ the two classic ways consensus stops being bit-identical.
 **Lesson.** A boundary enforces nothing unless something checks it. The
 comment in the manifest saying "no signatures here" would have survived
 exactly until the first person with a good reason, and they always have one.
+
+---
+
+## 15 — Eighteen months of a wrong draw rule, found on the first oracle run
+
+`D23` said to differential-test the terminal predicates against an
+independent implementation, on the grounds that `perft` — the oracle episode
+03 was verified against — counts nodes and **never asks how a game ends**. A
+bug in `insufficient_material` cannot change a perft count, because perft
+does not call it.
+
+The first sweep against `shakmaty` disagreed at ply 387 of random game 303:
+
+```
+2B5/8/K7/5Bk1/8/8/8/8 b - - 0 194
+  bc-chess: sufficient material     shakmaty: insufficient
+```
+
+Two white bishops, on c8 and f5, both light squares, against a bare king.
+They cannot mate — a bishop confined to one square colour can never attack
+the other — and the game is a dead draw the moment that material is reached.
+`bc-chess` said play on.
+
+The rule it was applying:
+
+```rust
+2 => knights == 0
+    && white_bishops.count_ones() == 1
+    && black_bishops.count_ones() == 1
+    && (all bishops light || all bishops dark),
+_ => false,
+```
+
+which is the same-colour-bishops case and nothing else. The comment above it
+read *"two bishops of one colour mate easily"*, meaning two bishops on
+opposite square colours — and the code then used `count_ones()` on the
+*piece* count while the comment was about the *square* colour. The sentence
+and the code were each half right about different things.
+
+The correct rule has no counting in it at all:
+
+```rust
+if knights == 0 {
+    (bishops & LIGHT) == bishops || (bishops & DARK) == bishops
+} else {
+    bishops == 0 && knights.count_ones() == 1
+}
+```
+
+Any number of bishops, split between the players however you like, all on one
+square colour. K vs K, K+B vs K and same-colour K+B vs K+B fall out as
+special cases rather than being enumerated.
+
+### Why this one costs money
+
+An insufficient-material draw is not cosmetic here. `spec/05` gives each
+disputing player a **block budget**, dilated once from their game clock. A
+position the adjudicator wrongly believes is still playable keeps consuming
+that budget, move after move, in a game neither side can win. Whoever runs
+out first loses a pot they were entitled to split. The wrong answer is not
+"the draw is declared late" — it is "the draw is declared for the other guy".
+
+### What actually caught it
+
+Not the eight hand-written tests in `tests/terminal.rs`, which include a test
+named `bishops_on_one_complex_is_about_the_squares_not_the_colours` and which
+passed before and after the fix. It tested one bishop each, because that is
+the position its author pictured. Random play reached four-bishop endgames;
+no human writing test cases reaches for those.
+
+### The thing that made the test itself unsafe
+
+While writing the case list, **four of the hand-written mate positions in it
+were not mate.** `7k/8/8/8/8/8/8/R5K1 b` leaves the king g8, g7 and h7.
+`7k/5Q2/6K1/8/8/8/8/8 b` is stalemate, not mate. `R5k1/8/6K1/…` *is* mate,
+and had been written down as the counter-example. That is now five wrong mate
+FENs across the project's history (`§03` has the others), from someone who
+has been staring at chess positions for months.
+
+So the case list was restructured: every row carries its expected `Outcome`
+as data, `bc-chess` is asserted against the label, and only then is
+`shakmaty` asked whether both of us are right. A label that is a comment can
+be wrong forever. A label that is an assertion cannot.
+
+**Lesson.** `G1` says an oracle must be published by someone else. The
+sharper version, after this: an oracle must also be *reached* by inputs you
+did not choose. A second implementation you only ever query with your own
+hand-picked positions is a second implementation of your own blind spots.
+1,075,744 random positions found in four seconds what eight careful tests
+missed for eighteen months.
+
+---
+
+## 16 — The model check found the bound that only half existed
+
+`D23`'s second half: the dispute machine has no oracle, because clock
+dilation, block budgets and override-by-ply are mechanisms this project
+invented and nobody else implements. So the properties `spec/05` argues in
+prose get checked instead — exhaustively, over every reachable state, by
+`stateright`.
+
+The model drives the **real `Dispute`**. Every transition is an actual call
+to `apply_move`, `refute` or `verdict`; what is abstracted is only the
+environment — which of the legal moves gets tried, and at which of three
+heights (as early as possible, exactly on the deadline, one block late).
+A hand-written abstract model would have proved things about the
+abstraction, and the abstraction is precisely where a re-derivation drifts
+from the shipped code.
+
+It failed on the first run, and it failed on the property that looked most
+like a formality.
+
+### The counterexample
+
+```
+Move   { when: OnTheDeadline,      claim: Some(Checkmate) }
+Refute { when: OnTheDeadline }
+Move   { when: AsEarlyAsPossible,  claim: Some(Checkmate) }
+Refute { when: OnTheDeadline }
+LetTheClockRun
+→ ply: 4, max_plies: 4, budget: [0, 0]
+```
+
+Four plies against a cap of four, and the game had not ended at the cap. The
+reason is one line long:
+
+```rust
+// apply_move
+if self.ply >= self.max_plies { return Ok(MoveOutcome::Ended(Status::Draw)); }
+
+// refute, ClaimKind::Checkmate
+self.pos = self.pos.make_move(mv);
+self.ply += 1;          // ← and nothing else
+self.arm(height);
+```
+
+**Two code paths add a ply. One of them checked the cap.** A player
+alternating false mate claims with their opponent's refutations advances the
+ply indefinitely and never meets the bound.
+
+### Why it is not "just a bound"
+
+`max_plies` is not a sanity limit. It is in the signed `GameTerms`, it is
+what bounds the worst-case replay a validator must be able to afford, and
+`spec/02` sizes reserved dispute gas against it. A path that exceeds it is a
+path where the chain does more work than the terms it committed to — and in
+`bc-channel` it also means a `GameState` at a ply the channel signed a cap
+below.
+
+It is self-limiting in money terms: a false claim costs the claimant half
+their remaining budget, so the cycle bankrupts the attacker after about five
+turns. That is why nothing visibly broke, and it is exactly the shape of bug
+that survives a test suite. The invariant was false; the exploit was merely
+expensive.
+
+### The fix is where the check belongs, not where it was missing
+
+The tempting fix is to copy the `if` into `refute`. That gets this bug and
+leaves the next one, because the property is *about states*, not about the
+two functions that currently produce them. So the authoritative check moved
+into `verdict`, which every path must pass through to settle:
+
+```rust
+pub fn verdict(&self, height: u64) -> Result<Status, DisputeError> {
+    if self.ply >= self.max_plies { return Ok(Status::Draw); }
+    ...
+```
+
+`refute` also reports it eagerly, as `Refutation::CapReached`, so a caller
+learns at once rather than on the next block. But the eager checks are now
+an optimisation. The total one is in `verdict`.
+
+### The property that was wrong was mine, not the code's
+
+The other first-run failure was my own. I wrote *"no player is ever given a
+deadline they cannot meet"* and the checker produced a player at zero budget
+with a zero-block window. That is not a bug — a player who has spent their
+entire dilated clock is supposed to lose on time. The property had to be
+restated as two weaker true ones:
+
+- the window never exceeds the budget that pays for it, and
+- a player with budget remaining always gets a nonzero window.
+
+Which is the honest limitation of this whole technique, and worth writing
+down next to the success: **a model check cannot tell you your properties
+are wrong.** It agreed enthusiastically with a false one until it found a
+state where it mattered. `G1` wants an oracle someone else published, and
+this half of episode 08 does not have one; the model check is the best
+available substitute and it is not the same thing.
+
+### The measure
+
+Termination is checked as a ranking function — a quantity that strictly
+decreases on every non-settling transition and is bounded below:
+
+```
+2·(max_plies − ply) + budget_white + budget_black + (a claim is pending)
+```
+
+The weight of 2 on the ply term is load-bearing and was not obvious. A move
+that *opens* a claim spends a ply (down one) and adds a pending claim (up
+one); at weight 1 those cancel exactly, the measure stalls, and the checker
+says so. Two plies are worth more than one claim because a claim can only be
+opened by spending a ply and the ply is never refunded.
+
+`spec/05` says "budgets only ever decrease, so the process terminates".
+That sentence is true and it is not the proof, because budgets are not the
+only thing moving.
+
+**Lesson.** Writing the termination argument as an expression rather than a
+sentence is most of the value. The English version had been read many times
+by both authors and neither noticed it quantified over the wrong thing.
+9,432 states, four seconds.
+
+---
+
+## 17 — The real chain did not confirm episode 08, it broke it
+
+`D21` said Milestone E was *simulated* rather than earned, because the
+adjudicator ran against a `BTreeMap` height counter, and that building a
+real chain would fix that. The expectation was a confirmation: same
+behaviour, better provenance.
+
+The first run of `bc-node`'s reorg scenario gave the opposite.
+
+A `BTreeMap` height counter has exactly one interesting property: **it only
+goes up**. Every deadline argument in `spec/05` is written against a
+monotone height, and against a monotone height every one of them is
+correct. A real proof-of-work chain is not monotone. It reorganises, and
+the blocks that leave the canonical chain take their transactions with
+them.
+
+So:
+
+```
+block 3   White moves on-chain; Black must reply by block 67
+block 4   Black replies — 63 blocks early
+block 10  Black's reply is 7 deep — settled, by convention
+          …White publishes 65 blocks mined in private
+published — reorg 7 blocks deep
+block 68  Black's reply is GONE
+verdict   WhiteWins — Black lost a game they defended
+```
+
+Black did everything the protocol asked, inside the window, and lost the
+pot. The counter-intuitive part is the one worth saying out loud: **waiting
+for more confirmations would not have helped.** The usual advice for
+probabilistic finality is "wait longer for larger amounts", and it fails
+here because the deadline is not waiting with you. By the time the reorg
+arrived, block 67 had passed.
+
+### The stub was not a weaker test, it was a different one
+
+This is the part worth generalising. The gap document defended the stub on
+the grounds that a driven counter tests the dispute machine *more*
+thoroughly than a real chain — every deadline can be stepped over exactly,
+which no real chain lets you do. That is still true.
+
+But it tests the machine under an assumption it never states. The
+assumption is "height is monotone", it is load-bearing for every deadline
+in `spec/05`, and a stub that satisfies it perfectly can never surface it.
+The substitute was not *less* faithful in degree; it was faithful in a
+different shape, and the shape was where the bug lived.
+
+The generalisable form: **a test double that satisfies an unstated
+invariant of the real thing will never tell you the invariant exists.**
+
+### What actually changed
+
+Not the adjudicator. Not one line of it. The sentence:
+
+> ~~You can win against an opponent who disconnects.~~
+> You can win against an opponent who disconnects, **on a chain with
+> deterministic finality.**
+
+`spec/02` already argued for BFT on exactly these grounds, in prose, under
+the heading *"Money under a deadline requires deterministic finality"*.
+That argument was correct and had never been run. `Finality::Probabilistic`
+and `ProofOfWork::is_final` returning `false` at every depth are that
+paragraph turned into two lines a caller can branch on.
+
+### A smaller one, from the BFT side
+
+A node that heard a ⅔ prevote quorum **before** the proposal reached it —
+the network reorders, and 24 of 24 seeds eventually produce this —
+precommitted, acquired a lock, and then tried to prevote when the proposal
+finally arrived. Steps only go forwards, and the missing guard was one
+line. What is worth keeping is how it showed up: as a `todo!()` panic from
+the `G0` hole, because the only path that reaches the locking rules at
+round 0 is a node in a state round 0 should not have. **An unimplemented
+function is a very effective assertion.**
+
+**Lesson.** A stub is a hypothesis about which properties of the real thing
+matter. Replacing it is worth doing even when you expect nothing to change,
+because the value is not in confirming the behaviour — it is in finding out
+which of your assumptions were being supplied by the stub.

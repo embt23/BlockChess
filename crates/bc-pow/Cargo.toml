@@ -1,0 +1,11 @@
+[package]
+name = "bc-pow"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Episode 05 — proof of work. Built to be replaced, and kept so the replacement's argument stays runnable."
+
+[dependencies]
+bc-block = { path = "../bc-block" }
+bc-hash = { path = "../bc-hash" }

@@ -8,6 +8,12 @@ members = [
     "crates/bc-adjudicator",
     "crates/bc-channel",
     "crates/bc-style",
+    "crates/bc-block",
+    "crates/bc-pow",
+    "crates/bc-net",
+    "crates/bc-bft",
+    "crates/bc-node",
+    "crates/bc-conformance",
 ]
 
 [workspace.package]

@@ -120,6 +120,11 @@ Task-indexed. Read the row, not the whole tree.
 | planning work or an episode | `docs/atlas.md` |
 | touching the channel implementation, clocks, or settlement | `crates/bc-channel` — start at its `lib.rs` |
 | **touching anything a validator runs** | **`crates/bc-adjudicator`** — `no_std`, and its dependency list is a test |
+| touching blocks, headers, transactions, fork choice | `crates/bc-block` — both engines implement its `Consensus` trait |
+| touching consensus | `crates/bc-pow` (episode 05), `crates/bc-bft` (episode 06), `crates/bc-net` (the simulated network) |
+| wiring consensus to the escrow, or asking what a reorg costs | `crates/bc-node` — start at `bin/reorg.rs` |
+| about to type an episode's subject | [`docs/g0-holes.md`](docs/g0-holes.md) — the list, and what each test is for |
+| adding an oracle, or wondering why one is not one | `crates/bc-conformance` |
 | wondering why something is written oddly | `docs/build-log.md` |
 | measuring style | `docs/d20-calibration.md` + `crates/bc-style` |
 | reading a PGN or writing notation | `crates/bc-chess/src/san.rs` and `uci.rs` |
@@ -164,14 +169,16 @@ silently.
 | 02 signatures | `bc-sig` | RFC 8032 | ✅ |
 | 03 chess rules | `bc-chess` | perft counts | ✅ `perft(6) = 119,060,324` |
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
-| D20 style estimator | `bc-style` | synthetic ground truth | ✅ **measured: AMBER** — `docs/d20-result.md` |
+| **05 proof of work** | **`bc-pow`** + `bc-block` | its own reorg | ✅ ⚠️ **`G0`: the control loop is Evan's** |
+| **06 BFT** | **`bc-bft`** + `bc-net` | partition & equivocation tests | ✅ ⚠️ **`G0`: the locking rules are Evan's** |
 | 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
-| 08 adjudication | `bc-adjudicator` | spec/05 worked table | ⚠️ **Milestone E demonstrated, not earned** — against a stub height counter, not a chain (D21). See `docs/episode-08-gap.md` |
-| 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
-| 10 forced inclusion | — | — | not started — see **Next**, the nearest real hole |
+| 08 adjudication | `bc-adjudicator` | D23 split oracle | ✅ **Milestone E, earned** — against a real chain (`bc-node`) |
+| D20 style estimator | `bc-style` | synthetic ground truth | ✅ **measured: AMBER** — `docs/d20-result.md` |
+| D23 split oracle | `bc-conformance` | shakmaty + stateright | ✅ found two real bugs — `build-log` §15, §16 |
+| 10 forced inclusion | — | — | not started — **the nearest real hole** |
 
-180 tests, clippy and fmt clean. CI runs the suite, the slow exact perft
-runs, both demos, the D20 calibration, and the `no_std` builds.
+286 tests, clippy and fmt clean. Two `#[ignore]`d suites are red on purpose
+and are listed in [`docs/g0-holes.md`](docs/g0-holes.md).
 
 ```sh
 cargo test --workspace                          # fast suite
@@ -181,6 +188,10 @@ cargo run --release --bin play                  # a whole wagered game
 cargo run --release --bin dispute               # …won against someone who left
 cargo run --release -p bc-style --bin calibrate # the estimator's own bias
 cargo run --release -p bc-style --bin measure -- <pgn-dir>   # D20, on humans
+cargo run --release -p bc-node --bin reorg      # the same dispute on two chains
+cargo test -p bc-conformance --release -- --ignored  # ~1M positions vs shakmaty
+cargo test -p bc-pow -- --ignored               # G0: episode 05's subject
+cargo test -p bc-bft -- --ignored               # G0: episode 06's subject
 ```
 
 **`bc-sig` must not sign with real keys.** `Point::mul_scalar` is not constant
@@ -188,65 +199,59 @@ time; it exists to be read. The node links `ed25519-dalek`.
 
 ## Next
 
-Episode 07 is done and it was built against a stub ledger (`bc-channel::ledger`)
-rather than waiting for consensus, exactly as planned: consensus slides
-underneath later without the channel noticing.
+**Milestone E is earned, and the sentence had to change to survive it.**
 
-**Milestone E is reached.** `cargo run --bin dispute` wins a wagered game
-against an opponent who stopped answering — no cooperation, no third party.
-That sentence was the project; what follows is expansion, and for the first
-time the question "what next" has more than one defensible answer.
+Episode 08 won a wagered game against an opponent who stopped answering,
+against a `BTreeMap` height counter. D21 said that was simulated rather
+than earned and that a real chain would fix it. Half right. A real chain
+does earn it — and a real *proof-of-work* chain then breaks it, because a
+counter only goes up and a chain reorganises. A reorg landing after a
+deadline converts a defence made correctly into a forfeit.
 
-**But five decisions arrived after it shipped, and the shipped code does not
-yet meet four of them** (`spec/09` D21–D25, settled 2026-09-14). They are not
-re-litigable from the code; the code is what has to move. The gap is written
-out in [`docs/episode-08-gap.md`](docs/episode-08-gap.md) — read it before
-touching `bc-channel::dispute`.
+So the claim is now:
 
-| Decided | Shipped |
-|---|---|
-| **D21** PoW first, so Milestone E is earned rather than simulated | a stub `BTreeMap` height counter — so the claim above is **demonstrated, not earned** |
-| ~~**D22** Δ and τ from a time-control class table~~ | ✅ done — `timecontrol.rs`; the class is checked against the clock, so relabelling is not a valid offer |
-| **D23** split oracle: differential-test the terminal predicates, model-check the state machine | the spec's worked table and hand-chosen positions |
-| ~~**D24** `bc-adjudicator`, a `no_std` crate depending only on `bc-chess`~~ | ✅ done — and `tests/dependencies.rs` fails if the list grows |
-| ~~**D25** `adjudicator_ver` = integer on the wire, ruleset hash in state~~ | ✅ done — `ruleset.rs`, append-only registry |
+> You can win against an opponent who disconnects, **on a chain with
+> deterministic finality.** On one without, you can defend correctly and
+> lose anyway.
 
-**D22, D24, D25 and the `P3` cost bug are fixed.** D23 and D21 remain.
+`cargo run --release -p bc-node --bin reorg` is that sentence, run twice
+with only the engine swapped. It is also why `spec/02` chose BFT, and the
+first time that choice has been demonstrated rather than argued.
 
-`bc-adjudicator` is the consensus state transition function: `no_std`,
-depending on `bc-chess` and `bc-hash` and nothing else — no signatures, because
-deciding whether a signature is good is the escrow's job and deciding what
-follows from it is the adjudicator's. Three tests hold the line: the
-dependency list, the absence of dev-dependencies, and a grep for floats and
-hash maps. `bc-chess` and `bc-hash` gained `std` features (default on) so the
-consensus path can compile without an allocator; FEN, SAN, UCI, `render` and
-`divide` are all behind it, and none of them are on that path.
+`spec/09` D21–D25 are all closed. `docs/episode-08-gap.md` is kept because
+the reasoning transfers.
 
-**`G0` flag:** the five `(Δ, τ)` pairs in `timecontrol.rs` are a proposal. They
-are the rule, not the plumbing, and are Evan's to set. The tests check the
-properties any table must satisfy whatever the numbers are.
+### The two open `G0` holes
 
-Three directions, in the order I would take them:
+Episodes 05 and 06 are built except for the one function each is *about*
+(`G0`, D26). Both have complete `#[ignore]`d test suites and a CI job that
+runs them so they stay visible. [`docs/g0-holes.md`](docs/g0-holes.md).
 
-1. ~~**D20**~~ — **done, and the answer is AMBER.** `D = 0.013` nats/move over
-   150 masters against the 0.02–0.10 `spec/10` assumed, so ~1.5 bits of
-   identity per game rather than ~6. Act II survives because the claim that
-   mattered was identity against *exploitable* result (still 5,000×); what
-   died is identity against the raw result, which is now a tie. Every
-   timescale downstream of `spec/10` §7 is wrong by ~4× and needs rewriting —
-   that rewrite is unclaimed work. `docs/d20-result.md`.
-2. **Episodes 05–06, consensus.** The adjudicator runs against
-   `bc-channel::ledger`, which is a `BTreeMap` with no blocks, no consensus
-   and no censorship resistance. Everything above it is written not to care,
-   which was the point of building in this order — but "not custodial" is
-   only true once nobody owns that map.
-3. **Episode 10, forced inclusion.** The dispute deadlines assume your
-   transaction gets in. A validator who censors `DisputeMove` for Δ blocks
-   wins the game for your opponent, and nothing in episode 08 stops them.
-   This is the nearest real hole in what now exists.
+- **`bc_pow::retarget::next_target`** — difficulty as a control loop. The
+  closed-loop hashrate-step test is the episode.
+- **`bc_bft::locking`** — what a validator must remember across a failed
+  round. A single round needs none of it, which is exactly why the seam is
+  there.
 
-The invariant to keep asking: which task most shortens the path to something
-a stranger would trust with money.
+### Where the next real work is
+
+1. **Episode 10, forced inclusion.** The nearest real hole and now the
+   *only* structural one below the channel. Deadlines assume your
+   transaction gets in; `Payload::is_dispute` marks which transactions the
+   reserve is for and **nothing enforces the reserve**. A validator who
+   censors `DisputeMove` for Δ blocks wins the game for your opponent, on
+   either engine. Neither episode 05 nor 06 helps: BFT stops a committed
+   block being un-included, and does nothing about one that never arrives.
+2. **The P2P layer.** `spec/04`'s message set over Noise is entirely
+   unbuilt — the two players are in-process objects and validators talk
+   over `bc-net`, which is a simulator. This is the largest unwritten
+   layer in the project.
+3. **Everything downstream of D20.** `spec/10` §7's timescales are wrong by
+   ~4× and the rewrite is unclaimed. The three *assumed* engine rows in
+   `spec/06` §5 could be measured with `bc-style` and an engine as a player.
+
+The invariant to keep asking: which task most shortens the path to
+something a stranger would trust with money.
 
 ---
 

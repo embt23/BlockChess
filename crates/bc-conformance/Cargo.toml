@@ -1,0 +1,26 @@
+[package]
+name = "bc-conformance"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "D23: the split oracle. Differential tests and a model check for code that has no published vectors."
+publish = false
+
+# Nothing depends on this crate. It depends on everything it checks, plus the
+# independent implementations it checks them against — which is exactly why it
+# is a crate of its own rather than a `tests/` directory inside one of them.
+# `bc-adjudicator` is forbidden dev-dependencies (D24, `tests/dependencies.rs`)
+# and the oracle harness must not be the reason that rule is relaxed.
+[dependencies]
+bc-chess = { path = "../bc-chess" }
+bc-adjudicator = { path = "../bc-adjudicator" }
+bc-hash = { path = "../bc-hash" }
+# The model lives in `src/` rather than `tests/`, because it drives the real
+# `Dispute` and is meant to be read as much as run (`G2`: the test file that
+# held it was 527 lines).
+stateright = "0.31"
+
+[dev-dependencies]
+# Only the differential tests reach for a second chess engine.
+shakmaty = "0.30"

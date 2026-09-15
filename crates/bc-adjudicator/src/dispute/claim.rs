@@ -97,6 +97,13 @@ pub enum Refutation {
     /// **not** played: it belongs to the claimant, and letting their opponent
     /// pick it would be absurd. They must now actually move.
     ClaimStruck,
+    /// The refuting move was legal and was played, and it was the move that
+    /// reached the ply cap. The game is a draw.
+    ///
+    /// This variant exists because a refutation advances the ply, which for
+    /// a while meant the cap could be walked straight past — the model check
+    /// found it on its first run (`docs/build-log.md` §16).
+    CapReached,
 }
 
 impl Dispute {
@@ -174,6 +181,9 @@ impl Dispute {
                 self.pos = self.pos.make_move(mv);
                 self.ply += 1;
                 self.arm(height);
+                if self.ply >= self.max_plies() {
+                    return Ok(Refutation::CapReached);
+                }
                 Ok(Refutation::ResumedAtMove)
             }
             _ => {

@@ -175,6 +175,18 @@ impl Dispute {
         self.budget[c as usize]
     }
 
+    /// Δ for this channel, in blocks. Read-only: it comes from the signed
+    /// terms and nothing may change it mid-dispute.
+    pub fn delta_blocks(&self) -> u32 {
+        self.delta_blocks
+    }
+
+    /// The ply cap from the signed terms. What bounds the worst case a
+    /// validator must be able to afford.
+    pub fn max_plies(&self) -> u16 {
+        self.max_plies
+    }
+
     /// Set the deadline for whoever must respond now: bounded both per-move
     /// by Δ and in total by what is left of their budget.
     fn arm(&mut self, height: u64) {
@@ -254,6 +266,13 @@ impl Dispute {
     /// Callable by anyone — there is no reason to restrict it, since it only
     /// reports what the heights already imply.
     pub fn verdict(&self, height: u64) -> Result<Status, DisputeError> {
+        // The cap is checked here and not only where plies are added,
+        // because `refute` adds one too and used not to look — see
+        // `docs/build-log.md` §16. A bound that each caller has to remember
+        // to apply is not a bound.
+        if self.ply >= self.max_plies {
+            return Ok(Status::Draw);
+        }
         if let Some(c) = self.claim {
             return if height > c.refutable_until {
                 // Unrefuted within the window, so it stands.

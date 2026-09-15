@@ -1,13 +1,14 @@
 # Episode 08: what was decided, and what shipped
 
 `spec/09` D21–D25 were settled on 2026-09-14. Episode 08 was written and
-merged on the same day, without them. Four of the five decisions are not met
-by the code on `main`.
+merged on the same day, without them, and four of the five were not met by
+the code.
 
-This file exists so that the disagreement is written down somewhere rather
-than discovered by whoever next opens `bc-channel::dispute`. **No code has
-been changed to resolve it** — that is a decision, not a cleanup, and it is
-Evan's.
+**All five are now closed.** This file is kept rather than deleted, because
+the reasoning is the transferable part and because closing D21 changed what
+the Milestone E claim says — see the bottom of the page. The table records
+where each decision landed; the sections below record what each one cost
+and what it turned out to be about.
 
 ---
 
@@ -15,11 +16,11 @@ Evan's.
 
 | | Decided | Status | Cost of fixing later |
 |---|---|---|---|
-| **D21** | PoW first, so Milestone E is earned | ⬜ stub `BTreeMap` height counter | low — the dispute logic is pure in `height: u64`, so a real chain substitutes underneath it |
-| **D22** | Δ, τ from a time-control class table | ✅ **done** — `crates/bc-channel/src/timecontrol.rs` | — |
-| **D23** | differential-test the terminal predicates; model-check the state machine | ⬜ spec's worked table, hand-chosen positions | low — additive |
+| **D21** | PoW first, so Milestone E is earned | ✅ **done** — `crates/bc-pow`, and `bc-node` runs the adjudicator on it | — |
+| **D22** | Δ, τ from a time-control class table | ✅ **done** — `crates/bc-adjudicator/src/timecontrol.rs` | — |
+| **D23** | differential-test the terminal predicates; model-check the state machine | ✅ **done** — `crates/bc-conformance`; found two real bugs | — |
 | **D24** | `bc-adjudicator`, `no_std`, depending only on `bc-chess` | ✅ **done** — `crates/bc-adjudicator` | — |
-| **D25** | `adjudicator_ver` = integer + ruleset hash in state | ✅ **done** — `crates/bc-channel/src/ruleset.rs` | — |
+| **D25** | `adjudicator_ver` = integer + ruleset hash in state | ✅ **done** — `crates/bc-adjudicator/src/ruleset.rs` | — |
 
 **The `P3` cost bug below is also fixed** (`build-log` §12): the chain no
 longer calls `Position::outcome()` on every on-chain move. Mate and stalemate
@@ -71,7 +72,8 @@ proposal awaiting Evan under `G0`.
 
 ## D21 and the Milestone E claim
 
-D21's argument is correct and the status table has been changed to match:
+Kept because the argument is what mattered, and because what it predicted
+was only half of what happened. D21 said:
 
 > Milestone E says *"you can win against an opponent who disconnects."*
 > Against a stub height counter that sentence has not been earned — it has
@@ -82,8 +84,8 @@ block heights to a `BTreeMap`. Nothing produces those heights, nothing can
 reorg them, and nothing can censor a transaction at them. The dispute logic
 is right; the thing it is right *about* is a driven counter.
 
-`CLAUDE.md` now reads **"Milestone E demonstrated, not earned"**. That is the
-only change made in response to this gap.
+That was right, and the fix was to build the chain. What the chain then
+showed is at the bottom of this page.
 
 Worth keeping, because it is the counter-argument D21 weighed and rejected:
 the dispute state machine is pure in its `height` parameter, so a driven
@@ -122,6 +124,39 @@ costing 218.
 2. ~~**The `P3` violation**~~ — done.
 3. ~~**D25**~~ — done.
 4. ~~**D24**~~ — done.
-5. **D23** — the split oracle: `shakmaty` for the terminal predicates,
-   `stateright` for the dispute machine. Both are on crates.io and reachable.
-6. **D21** — the PoW week, which converts "demonstrated" into "earned".
+5. ~~**D23**~~ — done, and it found two real bugs: a wrong
+   insufficient-material rule that had survived eighteen months and eight
+   hand-written tests (`build-log` §15), and a ply cap enforced on one of
+   the two code paths that add a ply (`build-log` §16).
+6. ~~**D21**~~ — done. `bc-pow` is a real chain with real mining, and
+   `bc-node` runs the adjudicator against it.
+
+Everything on this list is now closed. What the closure of D21 actually
+revealed is written up below.
+
+## What D21 turned out to be about
+
+D21's argument was that Milestone E is *simulated* against a stub height
+counter, and that a real chain would earn it. Both halves are true, and the
+second half was not the interesting one.
+
+Running the adjudicator on a real chain does not merely confirm episode 08 —
+it **breaks it**, and in a way no stub could have shown. A `BTreeMap` height
+counter only goes up. A real proof-of-work chain reorganises, and a reorg
+after a deadline has passed converts a defence that was made correctly into
+a forfeit. `bc-node`'s `reorg` demo is that, run end to end.
+
+So the honest revision to the Milestone E claim is not "demonstrated →
+earned". It is:
+
+> Milestone E is **earned on a chain with deterministic finality**, and
+> false on one without.
+
+That sentence is episode 06, and it was not visible from inside episode 08.
+
+## What remains unearned
+
+Episode 10. The dispute deadlines assume your transaction gets *in*.
+`Payload::is_dispute` marks which transactions the reserve is for, and
+nothing enforces the reserve. A validator who censors `DisputeMove` for Δ
+blocks still wins the game for your opponent, on either engine.
