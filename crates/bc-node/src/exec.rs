@@ -144,10 +144,7 @@ impl<C: Consensus> Node<C> {
     fn canonical_blocks(&self) -> Vec<(u64, Block)> {
         let mut out = Vec::new();
         let mut hash = self.consensus.head();
-        loop {
-            let Some(b) = self.consensus.block(&hash).cloned() else {
-                break;
-            };
+        while let Some(b) = self.consensus.block(&hash).cloned() {
             let height = b.header.height;
             let parent = b.header.parent_hash;
             out.push((height, b));

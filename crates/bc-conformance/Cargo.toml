@@ -23,4 +23,4 @@ stateright = "0.31"
 
 [dev-dependencies]
 # Only the differential tests reach for a second chess engine.
-shakmaty = "0.29"
+shakmaty = "0.30"

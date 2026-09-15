@@ -65,17 +65,28 @@ jobs:
   # this job runs them anyway so the open work is visible on every push
   # instead of living in somebody's memory.
   #
-  # Red here is the expected state. It goes green when Evan types the
-  # control loop and the locking rules, and at that point the `#[ignore]`
-  # attributes come off and this job is deleted.
+  # It reports rather than fails. A check that is red on purpose, on every
+  # pull request, for weeks, teaches everyone to ignore red — which is the
+  # opposite of what a CI signal is for. The failures are in the log and in
+  # a workflow annotation; the job itself is green because nothing is
+  # broken. When both holes close, the annotation says so and this job goes.
   g0-holes:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: episode 05 — difficulty as a control loop
-        run: cargo test -p bc-pow -- --ignored --nocapture
-      - name: episode 06 — the locking rules
-        run: cargo test -p bc-bft -- --ignored --nocapture
+      - name: what is still Evan's to type
+        run: |
+          open=0
+          echo "### episode 05 — difficulty as a control loop"
+          cargo test -p bc-pow -- --ignored --nocapture || open=1
+          echo "### episode 06 — the locking rules"
+          cargo test -p bc-bft -- --ignored --nocapture || open=1
+          if [ "$open" = "1" ]; then
+            echo "::warning title=G0 holes open::An episode's subject is still \
+          unwritten. See docs/g0-holes.md for the list and what each test catches."
+          else
+            echo "::notice title=G0 holes closed::Both are implemented. Remove \
+          the #[ignore] attributes and delete this job."
+          fi
