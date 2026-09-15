@@ -223,6 +223,10 @@ impl Consensus for ProofOfWork {
         Ok(())
     }
 
+    fn block(&self, hash: &Hash) -> Option<&Block> {
+        self.chain.block(hash)
+    }
+
     fn is_canonical(&self, hash: &Hash) -> bool {
         self.chain.is_canonical(hash)
     }

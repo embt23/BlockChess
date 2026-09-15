@@ -60,6 +60,46 @@ impl GameOffer {
         b
     }
 
+    /// The inverse of [`GameOffer::encode`]. See [`GameTerms::decode`] for
+    /// why neither existed until blocks did.
+    pub fn decode(b: &[u8]) -> Option<GameOffer> {
+        if b.len() != OFFER_LEN {
+            return None;
+        }
+        let mut n = 0;
+        let mut take = |len: usize| {
+            let s = &b[n..n + len];
+            n += len;
+            s
+        };
+        let key = |s: &[u8]| -> VerifyingKey {
+            let mut k = [0u8; 32];
+            k.copy_from_slice(s);
+            VerifyingKey(k)
+        };
+        let white_pk = key(take(32));
+        let black_pk = key(take(32));
+        let stake_white = u128::from_le_bytes(take(16).try_into().ok()?);
+        let stake_black = u128::from_le_bytes(take(16).try_into().ok()?);
+        let terms = GameTerms::decode(take(TERMS_LEN))?;
+        let server_pk = key(take(32));
+        let mut open_nonce = [0u8; 32];
+        open_nonce.copy_from_slice(take(32));
+        let rake_bps = u16::from_le_bytes(take(2).try_into().ok()?);
+        let expiry_block = u64::from_le_bytes(take(8).try_into().ok()?);
+        Some(GameOffer {
+            white_pk,
+            black_pk,
+            stake_white,
+            stake_black,
+            terms,
+            server_pk,
+            open_nonce,
+            rake_bps,
+            expiry_block,
+        })
+    }
+
     /// The bytes a player signs to accept. Tagged `BC/offer/v1`: an offer
     /// signature must never be replayable as a signature over anything else.
     pub fn signing_bytes(&self) -> Hash {

@@ -53,6 +53,32 @@ impl GameTerms {
         b
     }
 
+    /// The inverse of [`GameTerms::encode`].
+    ///
+    /// Did not exist until transactions started travelling in blocks,
+    /// which is the honest reason: until episode 05 the only thing that
+    /// ever encoded terms was a hash, and a hash needs no inverse.
+    ///
+    /// Rejects an unknown time-control class rather than defaulting to
+    /// one. A default here would mean two nodes with different builds
+    /// silently agreeing on different deadlines for the same channel.
+    pub fn decode(b: &[u8]) -> Option<GameTerms> {
+        if b.len() != TERMS_LEN {
+            return None;
+        }
+        let mut start_pos_hash = [0u8; 32];
+        start_pos_hash.copy_from_slice(&b[0..32]);
+        Some(GameTerms {
+            start_pos_hash,
+            base_time_ms: u32::from_le_bytes(b[32..36].try_into().ok()?),
+            increment_ms: u32::from_le_bytes(b[36..40].try_into().ok()?),
+            max_plies: u16::from_le_bytes(b[40..42].try_into().ok()?),
+            time_control: TimeControl::from_u8(b[42])?,
+            rules_mask: b[43],
+            adjudicator_ver: u16::from_le_bytes(b[44..46].try_into().ok()?),
+        })
+    }
+
     /// Δ, the challenge window, in **blocks**. Never seconds (`P4`).
     pub fn delta_blocks(&self) -> u32 {
         self.time_control.delta_blocks()

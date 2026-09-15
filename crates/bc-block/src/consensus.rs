@@ -63,6 +63,13 @@ pub trait Consensus {
     /// Offer a block. Engines differ entirely in what makes one acceptable.
     fn submit(&mut self, block: Block) -> Result<(), Self::Error>;
 
+    /// A block the engine has accepted, canonical or not.
+    ///
+    /// Orphans are returned too, and must be: a reorg does not erase
+    /// history, it changes which history is believed, and a node that
+    /// threw away the losing branch could not serve a peer still on it.
+    fn block(&self, hash: &Hash) -> Option<&Block>;
+
     /// Is `hash` on the chain the engine currently believes in?
     ///
     /// Distinct from "have I seen this block", and the distinction is the

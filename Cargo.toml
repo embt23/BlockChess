@@ -12,6 +12,7 @@ members = [
     "crates/bc-pow",
     "crates/bc-net",
     "crates/bc-bft",
+    "crates/bc-node",
     "crates/bc-conformance",
 ]
 
