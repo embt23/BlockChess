@@ -10,6 +10,8 @@ members = [
     "crates/bc-style",
     "crates/bc-block",
     "crates/bc-pow",
+    "crates/bc-net",
+    "crates/bc-bft",
     "crates/bc-conformance",
 ]
 

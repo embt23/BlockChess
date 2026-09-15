@@ -1,0 +1,9 @@
+[package]
+name = "bc-net"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "A deterministic simulated network: partitions, delays and reordering you can reproduce from a seed."
+
+[dependencies]
