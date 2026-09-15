@@ -8,11 +8,11 @@
 //! other's vocabulary.
 
 use super::{Escrow, Ledger, LedgerError, Payout};
-use crate::dispute::{ClaimKind, Dispute, Refutation};
 use crate::msg::{draw_bytes, resign_bytes, Signed};
 use crate::offer::GameOffer;
-use crate::state::GameState;
-use crate::state::{rep_hash, Status};
+use bc_adjudicator::dispute::{ClaimKind, Dispute, Refutation};
+use bc_adjudicator::state::GameState;
+use bc_adjudicator::state::{rep_hash, Status};
 use bc_chess::{unpack, Color, Move, Position};
 use bc_hash::Hash;
 use bc_sig::{Signature, VerifyingKey};
@@ -88,19 +88,28 @@ impl Ledger {
         Ok(())
     }
 
-    /// Play a move on-chain. Settles immediately if the game ends on the board.
+    /// Play a move on-chain, optionally claiming the game ends with it.
+    ///
+    /// `Ok(None)` covers both "the game continues" and "an optimistic claim
+    /// is now open"; only an immediately-decidable ending pays out here. The
+    /// chain does not look for mate on its own — see [`Dispute::apply_move`]
+    /// and `P3`.
     pub fn dispute_move(
         &mut self,
         id: &Hash,
         mover: Color,
         mv: Move,
         height: u64,
+        claim: Option<ClaimKind>,
     ) -> Result<Option<Payout>, LedgerError> {
         self.live_escrow(id)?;
         let d = self.disputes.get_mut(id).ok_or(LedgerError::NotInDispute)?;
-        match d.apply_move(mover, mv, height)? {
-            crate::dispute::MoveOutcome::Continues => Ok(None),
-            crate::dispute::MoveOutcome::Ended(status) => self.conclude(id, status).map(Some),
+        match d.apply_move(mover, mv, height, claim)? {
+            bc_adjudicator::dispute::MoveOutcome::Continues => Ok(None),
+            bc_adjudicator::dispute::MoveOutcome::Claimed => Ok(None),
+            bc_adjudicator::dispute::MoveOutcome::Ended(status) => {
+                self.conclude(id, status).map(Some)
+            }
         }
     }
 
@@ -202,7 +211,7 @@ fn authorise(signed: &Signed, initiator: Color, offer: &GameOffer) -> Result<(),
 /// Unpack a claimed position and check it is the one the state names.
 fn position_matching(packed: &[u8], pos_hash: &Hash) -> Result<Position, LedgerError> {
     let pos = unpack(packed).map_err(|_| LedgerError::BadPosition)?;
-    if crate::state::pos_hash(&pos) != *pos_hash {
+    if bc_adjudicator::state::pos_hash(&pos) != *pos_hash {
         return Err(LedgerError::BadPosition);
     }
     Ok(pos)

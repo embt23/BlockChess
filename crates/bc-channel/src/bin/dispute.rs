@@ -10,7 +10,7 @@
 //! cargo run --release --bin dispute
 //! ```
 
-use bc_channel::clock::{budget_blocks, TAU_MS};
+use bc_adjudicator::dilation::{budget_blocks, TAU_MS};
 use bc_channel::game::Channel;
 use bc_channel::offer::{GameOffer, GameTerms};
 use bc_channel::state::pos_hash;
@@ -37,16 +37,7 @@ fn main() {
         black_pk,
         stake_white: 100,
         stake_black: 100,
-        terms: GameTerms {
-            start_pos_hash: pos_hash(&start),
-            base_time_ms: 180_000,
-            increment_ms: 2_000,
-            max_plies: 600,
-            delta_blocks: 256,
-            budget_tau_ms: TAU_MS,
-            rules_mask: 0xFF,
-            adjudicator_ver: 1,
-        },
+        terms: GameTerms::for_clock(pos_hash(&start), 180_000, 2_000),
         server_pk: bc_sig::VerifyingKey([0u8; 32]),
         open_nonce: [11u8; 32],
         rake_bps: 0,
@@ -66,7 +57,8 @@ fn main() {
     println!("BlockChess — episode 08, the adjudicator\n");
     println!(
         "  stakes   {} each, Δ = {} blocks\n",
-        offer.stake_white, offer.terms.delta_blocks
+        offer.stake_white,
+        offer.terms.delta_blocks()
     );
 
     // --- a normal game, off-chain -----------------------------------------
@@ -127,7 +119,7 @@ fn main() {
         .move_from_uci("g1f3")
         .unwrap();
     ledger
-        .dispute_move(&id, Color::White, mv, height)
+        .dispute_move(&id, Color::White, mv, height, None)
         .expect("White moves on-chain");
     let d = ledger.dispute(&id).unwrap();
     println!("\n    ply {}          White plays g1f3 on-chain", d.ply);

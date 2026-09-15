@@ -8,58 +8,14 @@
 //! dominant failure mode of real money-gaming platforms structurally rather
 //! than by promising to behave.
 
+pub use bc_adjudicator::terms::{GameTerms, ADJUDICATOR_VER, TERMS_LEN};
 use bc_hash::{tagged, tagged_parts, Hash};
 use bc_sig::{Signature, VerifyingKey};
 
-pub const TERMS_LEN: usize = 53;
 pub const OFFER_LEN: usize = 32 + 32 + 16 + 16 + TERMS_LEN + 32 + 32 + 2 + 8;
 
 /// Largest rake a server may take, in basis points.
 pub const MAX_RAKE_BPS: u16 = 500;
-
-/// Smallest challenge window the protocol will accept, in blocks. Below this
-/// a chain hiccup starts costing people games (`P4`).
-pub const MIN_DELTA_BLOCKS: u32 = 64;
-
-/// Longest game the channel will carry. 600 plies is well past any real game
-/// and bounds the worst-case dispute replay.
-pub const MAX_PLIES_LIMIT: u16 = 600;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct GameTerms {
-    pub start_pos_hash: Hash,
-    pub base_time_ms: u32,
-    pub increment_ms: u32,
-    pub max_plies: u16,
-    /// Δ, the challenge window, in **blocks**. Never seconds (`P4`).
-    pub delta_blocks: u32,
-    /// Clock dilation constant — see `spec/05-adjudication.md`.
-    pub budget_tau_ms: u32,
-    pub rules_mask: u8,
-    pub adjudicator_ver: u16,
-}
-
-impl GameTerms {
-    pub fn encode(&self) -> [u8; TERMS_LEN] {
-        let mut b = [0u8; TERMS_LEN];
-        b[0..32].copy_from_slice(&self.start_pos_hash);
-        b[32..36].copy_from_slice(&self.base_time_ms.to_le_bytes());
-        b[36..40].copy_from_slice(&self.increment_ms.to_le_bytes());
-        b[40..42].copy_from_slice(&self.max_plies.to_le_bytes());
-        b[42..46].copy_from_slice(&self.delta_blocks.to_le_bytes());
-        b[46..50].copy_from_slice(&self.budget_tau_ms.to_le_bytes());
-        b[50] = self.rules_mask;
-        b[51..53].copy_from_slice(&self.adjudicator_ver.to_le_bytes());
-        b
-    }
-
-    pub fn valid(&self) -> bool {
-        self.delta_blocks >= MIN_DELTA_BLOCKS
-            && self.max_plies > 0
-            && self.max_plies <= MAX_PLIES_LIMIT
-            && self.base_time_ms > 0
-    }
-}
 
 /// What both players sign before a channel exists.
 ///

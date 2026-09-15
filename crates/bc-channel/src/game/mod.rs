@@ -13,7 +13,7 @@ use crate::clock::{debit, DEFAULT_GRACE_MS};
 use crate::msg::{MoveMsg, Signed};
 use crate::offer::GameOffer;
 use crate::rules::{claimable_status, clock_of, loser_is, NO_MOVE};
-use crate::state::{pos_hash, rep_hash, GameState, Status};
+use bc_adjudicator::state::{pos_hash, rep_hash, GameState, Status};
 use bc_chess::{Color, Move, Position};
 use bc_hash::Hash;
 use bc_sig::{Signature, SigningKey, VerifyingKey};

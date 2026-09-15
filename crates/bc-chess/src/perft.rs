@@ -10,7 +10,9 @@
 //! where correctness is cheap to verify exactly, so we verify it exactly.
 
 use crate::position::Position;
-use crate::types::{Move, MoveList};
+#[cfg(feature = "std")]
+use crate::types::Move;
+use crate::types::MoveList;
 
 /// Count leaf nodes at `depth`.
 pub fn perft(pos: &Position, depth: u32) -> u64 {
@@ -46,6 +48,7 @@ pub fn perft(pos: &Position, depth: u32) -> u64 {
 /// your divide against a known-good engine's, find the one move whose subtree
 /// count differs, descend into it, and repeat. A few rounds of that localises
 /// any bug to a single position, however deep.
+#[cfg(feature = "std")]
 pub fn divide(pos: &Position, depth: u32) -> Vec<(Move, u64)> {
     let mut out = Vec::new();
     let mut moves = MoveList::new();

@@ -119,6 +119,7 @@ Task-indexed. Read the row, not the whole tree.
 | about to make a design decision | `spec/09-open-questions.md` — check it is not already decided |
 | planning work or an episode | `docs/atlas.md` |
 | touching the channel implementation, clocks, or settlement | `crates/bc-channel` — start at its `lib.rs` |
+| **touching anything a validator runs** | **`crates/bc-adjudicator`** — `no_std`, and its dependency list is a test |
 | wondering why something is written oddly | `docs/build-log.md` |
 | measuring style | `docs/d20-calibration.md` + `crates/bc-style` |
 | reading a PGN or writing notation | `crates/bc-chess/src/san.rs` and `uci.rs` |
@@ -165,12 +166,12 @@ silently.
 | 04 Merkle trees | `bc-merkle` | CT vectors | ✅ |
 | D20 style estimator | `bc-style` | synthetic ground truth | ✅ **measured: AMBER** — `docs/d20-result.md` |
 | 07 state channel | `bc-channel` | Morphy 1858 | ✅ **Milestone D** — a whole wagered game, signed and settled |
-| 08 adjudication | `bc-channel::dispute` | spec/05 worked table | ⚠️ **Milestone E demonstrated, not earned** — against a stub height counter, not a chain (D21). See `docs/episode-08-gap.md` |
+| 08 adjudication | `bc-adjudicator` | spec/05 worked table | ⚠️ **Milestone E demonstrated, not earned** — against a stub height counter, not a chain (D21). See `docs/episode-08-gap.md` |
 | 05–06 consensus | — | — | not started — the ledger is still a `BTreeMap` |
 | 10 forced inclusion | — | — | not started — see **Next**, the nearest real hole |
 
-158 tests, clippy and fmt clean. CI runs the suite, the slow exact perft runs,
-both demos, and the D20 calibration.
+180 tests, clippy and fmt clean. CI runs the suite, the slow exact perft
+runs, both demos, the D20 calibration, and the `no_std` builds.
 
 ```sh
 cargo test --workspace                          # fast suite
@@ -205,15 +206,25 @@ touching `bc-channel::dispute`.
 | Decided | Shipped |
 |---|---|
 | **D21** PoW first, so Milestone E is earned rather than simulated | a stub `BTreeMap` height counter — so the claim above is **demonstrated, not earned** |
-| **D22** Δ and τ from a time-control class table | free-form `delta_blocks`/`budget_tau_ms` in `GameTerms` — and D22 says this one cannot be retrofitted after first testnet |
+| ~~**D22** Δ and τ from a time-control class table~~ | ✅ done — `timecontrol.rs`; the class is checked against the clock, so relabelling is not a valid offer |
 | **D23** split oracle: differential-test the terminal predicates, model-check the state machine | the spec's worked table and hand-chosen positions |
-| **D24** `bc-adjudicator`, a `no_std` crate depending only on `bc-chess` | inside `bc-channel::dispute` + `ledger::adjudicate` |
-| **D25** `adjudicator_ver` = integer on the wire, ruleset hash in state | integer only |
+| ~~**D24** `bc-adjudicator`, a `no_std` crate depending only on `bc-chess`~~ | ✅ done — and `tests/dependencies.rs` fails if the list grows |
+| ~~**D25** `adjudicator_ver` = integer on the wire, ruleset hash in state~~ | ✅ done — `ruleset.rs`, append-only registry |
 
-D22 and D24 are the load-bearing ones: D22 because `GameTerms` is what signed
-channels commit to, D24 because a client that links the adjudicator can run a
-dispute locally before spending gas, which turns the griefing analysis into
-something computed rather than argued.
+**D22, D24, D25 and the `P3` cost bug are fixed.** D23 and D21 remain.
+
+`bc-adjudicator` is the consensus state transition function: `no_std`,
+depending on `bc-chess` and `bc-hash` and nothing else — no signatures, because
+deciding whether a signature is good is the escrow's job and deciding what
+follows from it is the adjudicator's. Three tests hold the line: the
+dependency list, the absence of dev-dependencies, and a grep for floats and
+hash maps. `bc-chess` and `bc-hash` gained `std` features (default on) so the
+consensus path can compile without an allocator; FEN, SAN, UCI, `render` and
+`divide` are all behind it, and none of them are on that path.
+
+**`G0` flag:** the five `(Δ, τ)` pairs in `timecontrol.rs` are a proposal. They
+are the rule, not the plumbing, and are Evan's to set. The tests check the
+properties any table must satisfy whatever the numbers are.
 
 Three directions, in the order I would take them:
 

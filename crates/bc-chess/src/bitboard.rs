@@ -63,6 +63,7 @@ impl Iterator for Squares {
 }
 
 /// Debug helper: print a bitboard as a board, rank 8 at the top.
+#[cfg(feature = "std")]
 pub fn render(b: Bitboard) -> String {
     let mut s = String::new();
     for rank in (0..8).rev() {

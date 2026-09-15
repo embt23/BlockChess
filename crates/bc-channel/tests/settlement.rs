@@ -366,3 +366,80 @@ fn settling_a_channel_the_ledger_never_opened_is_refused() {
         LedgerError::UnknownChannel
     );
 }
+
+// ---------------------------------------------------------------------------
+// D22 — no hostile window can cross the wire
+// ---------------------------------------------------------------------------
+
+#[test]
+fn a_bullet_game_cannot_be_dressed_as_correspondence() {
+    // The attack the class table exists to close. Before `D22`, `GameTerms`
+    // carried a free-form Δ and the only guard was a single minimum — which
+    // is the band that cannot be tight and general at once.
+    //
+    // Now the only thing left to propose is a label, and a label that does
+    // not match the clock it accompanies is not a valid offer.
+    let (_, _, ssk) = keys();
+    let start = Position::startpos();
+    let mut offer = offer_for(&start, 0, &ssk);
+
+    // 2+1 is bullet, and honest terms say so.
+    offer.terms = bc_channel::GameTerms::for_clock(offer.terms.start_pos_hash, 120_000, 1_000);
+    assert_eq!(offer.terms.time_control, bc_channel::TimeControl::Bullet);
+    assert!(offer.valid());
+
+    // Relabelling it buys a window sixteen times longer — and is refused.
+    offer.terms.time_control = bc_channel::TimeControl::Correspondence;
+    assert!(
+        offer.terms.delta_blocks() > 16 * bc_channel::TimeControl::Bullet.delta_blocks(),
+        "the lie would be worth telling"
+    );
+    assert!(!offer.valid(), "and it is refused");
+}
+
+#[test]
+fn a_relabelled_offer_never_opens_a_channel() {
+    let (wsk, bsk, ssk) = keys();
+    let start = Position::startpos();
+    let mut offer = offer_for(&start, 0, &ssk);
+    offer.terms.time_control = bc_channel::TimeControl::Correspondence;
+
+    let mut ledger = Ledger::new();
+    ledger.credit(&offer.white_pk, START_BALANCE);
+    ledger.credit(&offer.black_pk, START_BALANCE);
+    assert_eq!(
+        ledger
+            .open_game(
+                &offer,
+                &wsk.sign(&offer.signing_bytes()),
+                &bsk.sign(&offer.signing_bytes()),
+            )
+            .unwrap_err(),
+        LedgerError::BadOffer
+    );
+}
+
+#[test]
+fn the_terms_encoding_is_46_bytes_and_covers_the_class() {
+    let start = Position::startpos();
+    let bullet = bc_channel::GameTerms::for_clock(bc_channel::pos_hash(&start), 120_000, 1_000);
+    assert_eq!(bullet.encode().len(), bc_channel::offer::TERMS_LEN);
+    assert_eq!(bc_channel::offer::TERMS_LEN, 46);
+
+    // The class is inside the bytes both players sign, so it is inside
+    // `channel_id`, so it cannot be changed after the fact.
+    let mut relabelled = bullet;
+    relabelled.time_control = bc_channel::TimeControl::Blitz;
+    assert_ne!(bullet.encode(), relabelled.encode());
+}
+
+#[test]
+fn an_adjudicator_version_this_build_does_not_know_is_refused() {
+    // `D25`: the integer is negotiated, but a channel cannot pin itself to a
+    // ruleset nobody has.
+    let (_, _, ssk) = keys();
+    let start = Position::startpos();
+    let mut offer = offer_for(&start, 0, &ssk);
+    offer.terms.adjudicator_ver = bc_channel::offer::ADJUDICATOR_VER + 1;
+    assert!(!offer.valid());
+}

@@ -1,3 +1,4 @@
+#![cfg_attr(not(feature = "std"), no_std)]
 //! Episode 01 — hashing, domain separation, and hash chains.
 //!
 //! The attack this defeats: *"I moved first, actually."* Without a way to bind
@@ -123,6 +124,7 @@ impl HashChain {
 }
 
 /// Render a digest as lowercase hex.
+#[cfg(feature = "std")]
 pub fn hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for b in bytes {

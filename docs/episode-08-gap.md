@@ -13,15 +13,24 @@ Evan's.
 
 ## The gap
 
-| | Decided | Shipped | Cost of fixing later |
+| | Decided | Status | Cost of fixing later |
 |---|---|---|---|
-| **D21** | PoW first, so Milestone E is earned | stub `BTreeMap` height counter | low — the dispute logic is pure in `height: u64`, so a real chain substitutes underneath it |
-| **D22** | Δ, τ from a time-control class table | free-form `u32`s in `GameTerms` | **high, and rising** — see below |
-| **D23** | differential-test the terminal predicates; model-check the state machine | spec's worked table, hand-chosen positions | low — additive |
-| **D24** | `bc-adjudicator`, `no_std`, depending only on `bc-chess` | `bc-channel::dispute` + `ledger::adjudicate` | moderate — a move, not a rewrite |
-| **D25** | `adjudicator_ver` = integer + ruleset hash in state | integer only | low — the registry does not exist yet either way |
+| **D21** | PoW first, so Milestone E is earned | ⬜ stub `BTreeMap` height counter | low — the dispute logic is pure in `height: u64`, so a real chain substitutes underneath it |
+| **D22** | Δ, τ from a time-control class table | ✅ **done** — `crates/bc-channel/src/timecontrol.rs` | — |
+| **D23** | differential-test the terminal predicates; model-check the state machine | ⬜ spec's worked table, hand-chosen positions | low — additive |
+| **D24** | `bc-adjudicator`, `no_std`, depending only on `bc-chess` | ✅ **done** — `crates/bc-adjudicator` | — |
+| **D25** | `adjudicator_ver` = integer + ruleset hash in state | ✅ **done** — `crates/bc-channel/src/ruleset.rs` | — |
 
-## D22 is the one with a clock on it
+**The `P3` cost bug below is also fixed** (`build-log` §12): the chain no
+longer calls `Position::outcome()` on every on-chain move. Mate and stalemate
+are claimed by the mover, optimistically and refutably, with the claim riding
+along on `DisputeMove` exactly as `spec/05` always allowed.
+
+## D22 — done
+
+Kept because the reasoning is the transferable part.
+
+
 
 Every other row can be fixed whenever. D22 cannot, and D22's own text says so:
 
@@ -48,10 +57,17 @@ pub struct GameTerms {
 which is exactly the single-band defence D22 rejects: a band wide enough for
 correspondence contains hostile values for bullet.
 
-The attack is live in the current code. An opponent proposes Δ = 64 for a
-bullet game, a client that does not check accepts it, and the victim has ~2
-minutes to get a move on-chain or forfeit the pot. `MIN_DELTA_BLOCKS` does
-not help — 64 *is* the minimum, and it is hostile at bullet time controls.
+The attack *was* live: an opponent proposes Δ = 64 for a bullet game, a client
+that does not check accepts it, and the victim has ~2 minutes to get a move
+on-chain or forfeit the pot. `MIN_DELTA_BLOCKS` did not help — 64 *was* the
+minimum, and it is hostile at bullet time controls.
+
+Closed by `TimeControl`: the class is named on the wire and checked against
+`base_time_ms + 40·increment_ms`, so relabelling a bullet game as
+correspondence is not a valid offer. Tests
+`a_bullet_game_cannot_be_dressed_as_correspondence` and
+`a_relabelled_offer_never_opens_a_channel`. The five `(Δ, τ)` pairs are a
+proposal awaiting Evan under `G0`.
 
 ## D21 and the Milestone E claim
 
@@ -100,11 +116,12 @@ exists to avoid.** It is correct, it is just not cheap, and on a real chain
 it is the difference between a dispute move costing one check test and
 costing 218.
 
-## Suggested order, if the answer is "fix it"
+## Remaining order
 
-1. **D22** — before any testnet, for the reason above.
-2. **The `P3` violation** — independent of D24, and it is a correctness-of-
-   cost bug rather than a preference.
-3. **D24** — the move, with the lints, once the shape of `GameTerms` is settled.
-4. **D21** — the PoW week, which converts "demonstrated" into "earned".
-5. **D23, D25** — additive, whenever.
+1. ~~**D22**~~ — done.
+2. ~~**The `P3` violation**~~ — done.
+3. ~~**D25**~~ — done.
+4. ~~**D24**~~ — done.
+5. **D23** — the split oracle: `shakmaty` for the terminal predicates,
+   `stateright` for the dispute machine. Both are on crates.io and reachable.
+6. **D21** — the PoW week, which converts "demonstrated" into "earned".

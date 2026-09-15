@@ -5,7 +5,7 @@
 //! That distinction is the whole of the protocol's evidence model, and it is
 //! the same rule `docs/duality.md` applies to the design itself.
 
-use crate::state::GameState;
+use bc_adjudicator::state::GameState;
 use bc_chess::{Color, Move};
 use bc_hash::{tagged_parts, Hash};
 use bc_sig::{Signature, VerifyingKey};

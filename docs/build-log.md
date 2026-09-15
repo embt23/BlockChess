@@ -377,3 +377,85 @@ readings license the same behaviour at the client and different behaviour at
 the chain, and the code that differs sits in two crates that currently share
 a module. Boundaries that exist only in prose do not enforce anything — which
 is the argument for D24 restated as a bug.
+
+---
+
+## 13 — What the ∀ cost, once it was actually removed
+
+Follow-up to §12, which found that `Dispute::apply_move` called
+`Position::outcome()` on every on-chain move and so generated all ~218 legal
+moves to notice a mate — the quantifier `P3` exists to keep off the chain.
+
+**The fix was not "stop calling it".** Deleting the call leaves a game that
+reaches mate on-chain and then just sits there, because nothing notices. What
+was missing was the other half of the optimistic design: somebody has to
+*say* it is mate. `spec/05` had this all along —
+`DisputeMove { channel_id, ply, move, [new_status] }` — and the implementation
+had silently dropped the optional field and replaced it with a search.
+
+So the claim now rides along with the move. One transaction, no quantifier,
+and the claim is refutable like any other.
+
+**What the tests had to become, which is the instructive part.** The old test
+was `the_game_continues_on_chain_under_the_same_rules`, and it asserted that
+playing Fool's mate through the adjudicator settled the game. That assertion
+was the bug, written down as an expectation and passing. The replacement
+asserts the opposite and says why:
+
+```rust
+assert_eq!(dispute_move(…, mate, None), None, "the chain does not notice mate by itself");
+assert!(dispute(&id).unwrap().pos.is_checkmate(), "…even though it is, in fact, mate");
+```
+
+Two assertions that look contradictory and are not. The first is the
+invariant; the second is what makes the first surprising enough to need
+stating.
+
+**Lesson.** A test that encodes convenient behaviour will defend it. This one
+had been green since the day it was written and was the reason the cost bug
+survived review — not because anybody argued for computing the ∀, but because
+nobody was looking at cost, and the only thing watching was a test that
+preferred the expensive answer.
+
+---
+
+## 14 — `no_std` was the easy half; the dependency list was the point
+
+`D24` asked for the adjudicator as a `no_std` crate depending only on
+`bc-chess`. Two things were more interesting than expected.
+
+**`no_std` turned out to be nearly free, and that was informative.** Every
+piece of `std` in `bc-chess` was in FEN parsing, `to_uci`, SAN, `render` and
+`divide` — notation and debugging, all of it allocating, none of it on the
+consensus path. `bc-hash` needed one `hex` helper gated. Nothing in
+`make_move`, `is_move_legal`, `generate_legal`, `pack` or `unpack` allocates
+at all.
+
+That is not luck. Those functions were written to be cheap for `perft`, which
+runs them 119 million times, and the shape that makes a move generator fast is
+the same shape that makes it suitable for consensus: fixed buffers, no
+allocator, no I/O, no ambient state. The optimisation and the determinism
+requirement wanted the same thing.
+
+**The dependency list needed a test, and writing it changed what it said.**
+The obvious allow-list was `bc-chess` alone, per the decision. But a state
+needs a hash, so `bc-hash` has to be there — and once that is written down,
+the question "what else might reasonably creep in?" has an obvious answer:
+`bc-sig`, the moment somebody wants to verify a resignation inside the
+dispute machine.
+
+It should not be there, and the reason is worth keeping: **deciding whether a
+signature is good is the escrow's job; deciding what follows from it is the
+adjudicator's.** The split is not about layering neatness — it is that the
+adjudicator takes already-verified claims, so it cannot be tricked by a
+signature check it got wrong, because it does not do any. `bc-sig` being
+absent from that list is a security property, not tidiness.
+
+So `tests/dependencies.rs` asserts the list, asserts there are no
+dev-dependencies either (a dev-dependency is how a type quietly becomes
+`pub`), and greps the source for `f32`, `f64`, `HashMap` and `HashSet` —
+the two classic ways consensus stops being bit-identical.
+
+**Lesson.** A boundary enforces nothing unless something checks it. The
+comment in the manifest saying "no signatures here" would have survived
+exactly until the first person with a good reason, and they always have one.

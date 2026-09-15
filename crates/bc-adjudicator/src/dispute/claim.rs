@@ -29,9 +29,9 @@
 //! If no, the optimism costs nothing.
 
 use super::{Dispute, DisputeError, PendingClaim};
-use crate::clock::FALSE_CLAIM_PENALTY_DIVISOR;
-use crate::rules::loser_is;
+use crate::dilation::FALSE_CLAIM_PENALTY_DIVISOR;
 use crate::state::Status;
+use crate::status::loser_is;
 use bc_chess::{Color, Move};
 
 /// How a game is claimed to have ended.

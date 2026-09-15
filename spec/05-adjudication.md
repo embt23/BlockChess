@@ -86,7 +86,7 @@ to **change the time base while preserving the ratio**.
 budget_blocks(player) = min( MAX_BUDGET,
                              ceil(clock_ms / τ) + FLOOR_BLOCKS )
 
-τ            = 50 ms per block of budget   (GameTerms.budget_tau_ms)
+τ            = ms per block of budget, from the time-control class (D22)
 FLOOR_BLOCKS = 32                          (≈ 64 s, enough to physically respond)
 MAX_BUDGET   = 5400 blocks                 (≈ 3 hours)
 ```
@@ -268,7 +268,8 @@ mitigation is that the cost is small and bounded, and servers can insure it.
 ## Parameter summary
 
 ```
-DELTA_BLOCKS         256     per-response window        (GameTerms, min 64)
+DELTA_BLOCKS         per class   per-response window    (D22; see spec/04)
+TAU_MS               per class   ms of clock per block  (D22; see spec/04)
 MIN_MOVE_BLOCKS        8     floor on per-move consumption
 FLOOR_BLOCKS          32     added to every budget
 TAU_MS                50     ms of game clock per block of budget

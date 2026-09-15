@@ -1,0 +1,20 @@
+[package]
+name = "bc-adjudicator"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["std"]
+std = ["bc-chess/std", "bc-hash/std"]
+
+# D24: the consensus state transition function depends on the rules (`P5`)
+# and on hashing, and on nothing else. No signatures — claims arrive here
+# already verified. No clock, no I/O, no allocator beyond the registry.
+#
+# If this list ever grows, something client-side has leaked into consensus.
+# `tests/dependencies.rs` fails if it does.
+[dependencies]
+bc-chess = { path = "../bc-chess", default-features = false }
+bc-hash = { path = "../bc-hash", default-features = false }

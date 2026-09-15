@@ -121,6 +121,7 @@ impl Move {
     }
 
     /// Long algebraic notation, e.g. `e2e4`, `e7e8q`.
+    #[cfg(feature = "std")]
     pub fn to_uci(self) -> String {
         let name = |s: Square| {
             format!(
