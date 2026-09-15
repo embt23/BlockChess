@@ -25,6 +25,7 @@ jobs:
       # operating system. If this breaks, something client-side has leaked in.
       - run: cargo build -p bc-adjudicator --no-default-features
       - run: cargo build -p bc-chess --no-default-features
+      - run: cargo build -p bc-hash --no-default-features
 
   # The exact tests. perft(6) and Kiwipete perft(5) are ~310M nodes and only
   # tractable in release; RFC 8032 and the FIPS vectors are the equivalent
@@ -38,6 +39,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --workspace --release
       - run: cargo test -p bc-chess --release -- --ignored --nocapture
+      # D23, the half that has an oracle: ~1M random positions against
+      # shakmaty. This is the job that found the insufficient-material bug
+      # eight hand-written tests had missed (build-log §15).
+      - run: cargo test -p bc-conformance --release -- --ignored --nocapture
       # Milestone D, end to end: a published game played over the channel,
       # signed at every ply and settled. The binary asserts its own result
       # and that the ledger conserved, so a red run here means the channel
@@ -48,3 +53,29 @@ jobs:
       # The D20 calibration report, printed in the log so a regression in the
       # personality estimator is visible and not just a red assertion.
       - run: cargo run --release -p bc-style --bin calibrate
+      # Episode 06's argument, run rather than recalled: the same dispute
+      # on both engines, where proof-of-work reorgs away a defence that was
+      # made in time and BFT does not. Asserts its own verdicts and that
+      # nothing was minted.
+      - run: cargo run --release -p bc-node --bin reorg
+
+  # The `G0` holes: code that is an episode's *subject*, which `spec/09` D26
+  # says the person filming types. The tests are written and complete; they
+  # are `#[ignore]`d so the suite stays green while the hole is open, and
+  # this job runs them anyway so the open work is visible on every push
+  # instead of living in somebody's memory.
+  #
+  # Red here is the expected state. It goes green when Evan types the
+  # control loop and the locking rules, and at that point the `#[ignore]`
+  # attributes come off and this job is deleted.
+  g0-holes:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: episode 05 — difficulty as a control loop
+        run: cargo test -p bc-pow -- --ignored --nocapture
+      - name: episode 06 — the locking rules
+        run: cargo test -p bc-bft -- --ignored --nocapture

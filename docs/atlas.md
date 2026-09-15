@@ -249,6 +249,42 @@ after it is expansion. If you are ever unsure what to work on, ask which task
 most directly shortens the path to "I can win against an opponent who
 disconnects".
 
+### Where this actually is
+
+The plan above is a plan. What exists:
+
+| | Milestone | State |
+|---|---|---|
+| A | perft passes, the rules are correct | ✅ `perft(6) = 119,060,324` |
+| B | you can sign and verify a state | ✅ RFC 8032 vectors |
+| C | two nodes agree on a block | ✅ four validators agree on one, over a network that reorders and partitions |
+| D | a full game off-chain, signed, settled | ✅ `cargo run --bin play` |
+| E | you can win against an opponent who quits | ✅ **and the sentence changed** — see below |
+| F | bot arena running unattended | not started |
+
+Episodes built: 01, 02, 03, 04, **05**, **06**, 07, 08, and D20. Episode 10
+is not, and it is the nearest real hole.
+
+**Milestone E's sentence acquired a clause.** Building the chain underneath
+the adjudicator did not confirm episode 08, it broke it: a proof-of-work
+reorg landing after a deadline turns a defence made correctly into a
+forfeit, and waiting for more confirmations does not help because the
+deadline is not waiting with you. The claim now reads *"…on a chain with
+deterministic finality"*, which is episode 06, and
+`cargo run -p bc-node --bin reorg` is it run twice with only the engine
+swapped. `docs/build-log.md` §17.
+
+The order also came out differently from the plan, and better. The chain
+track was supposed to precede the channel; it followed it, because episode
+07 was built against a stub ledger. That was the right call — but the stub
+satisfied one unstated assumption of a real chain (*height is monotone*)
+and every deadline in `spec/05` rests on it. A test double that satisfies
+an unstated invariant will never tell you the invariant exists.
+
+Two episodes are built except for the one function each is *about* (`G0`,
+D26): the difficulty control loop and the BFT locking rules.
+[`g0-holes.md`](g0-holes.md).
+
 ---
 
 ## Reading list, by episode

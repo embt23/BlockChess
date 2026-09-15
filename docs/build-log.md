@@ -672,3 +672,86 @@ only thing moving.
 sentence is most of the value. The English version had been read many times
 by both authors and neither noticed it quantified over the wrong thing.
 9,432 states, four seconds.
+
+---
+
+## 17 — The real chain did not confirm episode 08, it broke it
+
+`D21` said Milestone E was *simulated* rather than earned, because the
+adjudicator ran against a `BTreeMap` height counter, and that building a
+real chain would fix that. The expectation was a confirmation: same
+behaviour, better provenance.
+
+The first run of `bc-node`'s reorg scenario gave the opposite.
+
+A `BTreeMap` height counter has exactly one interesting property: **it only
+goes up**. Every deadline argument in `spec/05` is written against a
+monotone height, and against a monotone height every one of them is
+correct. A real proof-of-work chain is not monotone. It reorganises, and
+the blocks that leave the canonical chain take their transactions with
+them.
+
+So:
+
+```
+block 3   White moves on-chain; Black must reply by block 67
+block 4   Black replies — 63 blocks early
+block 10  Black's reply is 7 deep — settled, by convention
+          …White publishes 65 blocks mined in private
+published — reorg 7 blocks deep
+block 68  Black's reply is GONE
+verdict   WhiteWins — Black lost a game they defended
+```
+
+Black did everything the protocol asked, inside the window, and lost the
+pot. The counter-intuitive part is the one worth saying out loud: **waiting
+for more confirmations would not have helped.** The usual advice for
+probabilistic finality is "wait longer for larger amounts", and it fails
+here because the deadline is not waiting with you. By the time the reorg
+arrived, block 67 had passed.
+
+### The stub was not a weaker test, it was a different one
+
+This is the part worth generalising. The gap document defended the stub on
+the grounds that a driven counter tests the dispute machine *more*
+thoroughly than a real chain — every deadline can be stepped over exactly,
+which no real chain lets you do. That is still true.
+
+But it tests the machine under an assumption it never states. The
+assumption is "height is monotone", it is load-bearing for every deadline
+in `spec/05`, and a stub that satisfies it perfectly can never surface it.
+The substitute was not *less* faithful in degree; it was faithful in a
+different shape, and the shape was where the bug lived.
+
+The generalisable form: **a test double that satisfies an unstated
+invariant of the real thing will never tell you the invariant exists.**
+
+### What actually changed
+
+Not the adjudicator. Not one line of it. The sentence:
+
+> ~~You can win against an opponent who disconnects.~~
+> You can win against an opponent who disconnects, **on a chain with
+> deterministic finality.**
+
+`spec/02` already argued for BFT on exactly these grounds, in prose, under
+the heading *"Money under a deadline requires deterministic finality"*.
+That argument was correct and had never been run. `Finality::Probabilistic`
+and `ProofOfWork::is_final` returning `false` at every depth are that
+paragraph turned into two lines a caller can branch on.
+
+### A smaller one, from the BFT side
+
+A node that heard a ⅔ prevote quorum **before** the proposal reached it —
+the network reorders, and 24 of 24 seeds eventually produce this —
+precommitted, acquired a lock, and then tried to prevote when the proposal
+finally arrived. Steps only go forwards, and the missing guard was one
+line. What is worth keeping is how it showed up: as a `todo!()` panic from
+the `G0` hole, because the only path that reaches the locking rules at
+round 0 is a node in a state round 0 should not have. **An unimplemented
+function is a very effective assertion.**
+
+**Lesson.** A stub is a hypothesis about which properties of the real thing
+matter. Replacing it is worth doing even when you expect nothing to change,
+because the value is not in confirming the behaviour — it is in finding out
+which of your assumptions were being supplied by the stub.

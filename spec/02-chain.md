@@ -160,7 +160,27 @@ insert synchroniser flops and drive the failure probability down until the MTBF
 exceeds the life of the product. You do not eliminate the impossibility; you
 push its probability below the threshold that matters.
 
-### The teaching path
+### The teaching path — **built**
+
+Both engines exist and implement one trait, `bc_block::Consensus`. That is
+what makes the argument below an experiment rather than an assertion: the
+adjudicator, the escrow and the channel are byte-identical in both runs, so
+the only variable is finality.
+
+| | crate | `finality()` | fork choice | `is_final` |
+|---|---|---|---|---|
+| episode 05 | `bc-pow` | `Probabilistic` | heaviest cumulative work | **`false`, at any depth** |
+| episode 06 | `bc-bft` | `Deterministic` | height; committed blocks never move | committed |
+
+`cargo run --release -p bc-node --bin reorg` runs the same wagered dispute on
+both. Black defends inside the window, is buried seven deep, and under
+proof-of-work loses the pot to a heavier private fork that reaches past the
+deadline. Under BFT every fork block is refused. Neither outcome is staged:
+both chains are really mined or really signed.
+
+`ProofOfWork::deep_enough_by_convention` implements the six-confirmations
+folklore separately from `is_final`, so the demo can call it, believe it,
+and lose the money anyway.
 
 Build proof-of-work first — one episode, ~300 lines, and it is the clearest
 possible demonstration of "consensus as an economic race". Then show that its
@@ -169,6 +189,10 @@ it. Building the wrong thing on purpose and then explaining precisely why it is
 wrong is better pedagogy than never building it.
 
 ### Difficulty adjustment is a control loop
+
+**`G0` — this is episode 05's filmed subject.** `bc_pow::retarget::next_target`
+is `todo!()` with six tests specifying it, including a closed-loop hashrate
+step. See `docs/g0-holes.md`.
 
 If you do build the PoW stage: Bitcoin's retarget is a **proportional
 controller** with gain 1, sampling every 2016 blocks, on a plant with enormous
@@ -194,6 +218,14 @@ which is the resource you actually need, rather than time, which is only a proxy
 for it.
 
 ### 2. Reserved dispute gas
+
+`Payload::is_dispute` is the membership test, and it is deliberately narrow:
+the five `Dispute*` variants and nothing else. `CloseGame` is excluded
+although it settles a game, because it is the cooperative path — both
+players signed it, nobody is under a deadline, and delaying it robs nobody.
+`Block::dispute_gas` reports what a block's dispute family claimed.
+
+Enforcement of the reserve itself is **episode 10** and is not built.
 
 Every block reserves a fixed fraction of its gas limit (proposal: 25%) that only
 dispute-family transactions may consume. A proposer stuffing the block with
